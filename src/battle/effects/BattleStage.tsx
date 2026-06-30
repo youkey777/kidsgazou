@@ -1,6 +1,7 @@
 import { AnimatePresence, motion } from 'framer-motion'
 import type { BattleCharacter, DamageEvent } from '../types'
 import { hpPercent, starsForLevel } from '../types'
+import AttackFlyEffect, { type AttackEffectData } from './AttackFlyEffect'
 import DamageNumber from './DamageNumber'
 
 type Props = {
@@ -13,6 +14,7 @@ type Props = {
   koSide?: 'left' | 'right'
   glowingSide?: 'left' | 'right'
   message?: string
+  attackEffect?: AttackEffectData | null
 }
 
 function shortName(name: string) {
@@ -93,6 +95,7 @@ export default function BattleStage({
   koSide,
   glowingSide,
   message,
+  attackEffect,
 }: Props) {
   return (
     <div
@@ -132,6 +135,7 @@ export default function BattleStage({
         />
       </div>
       <AnimatePresence>
+        {attackEffect && <AttackFlyEffect key={attackEffect.id} effect={attackEffect} />}
         {damageEvents.map((event) => (
           <DamageNumber key={event.id} event={event} />
         ))}
