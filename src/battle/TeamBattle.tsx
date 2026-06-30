@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import type { ImageRecord } from '../db'
 import { saveBattleResult } from './battle-db'
+import { calculateTeamDamage } from './character-rules'
 import BattleStage from './effects/BattleStage'
 import { fireBattleConfetti } from './effects/Confetti'
 import { playDamage, playPunch, playVictory } from './sounds'
@@ -12,11 +13,6 @@ type Props = {
 }
 
 const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms))
-
-function damage(attacker: ImageRecord, defender: ImageRecord) {
-  const attack = Math.floor(attacker.atk * (0.75 + Math.random() * 0.5))
-  return Math.max(1, Math.floor(attack - defender.def / 2))
-}
 
 export default function TeamBattle({ characters, onDone }: Props) {
   const ruiTeam = useMemo(
@@ -57,7 +53,7 @@ export default function TeamBattle({ characters, onDone }: Props) {
       while (!cancelled && currentLeft && currentRight) {
         await sleep(800)
         const attacker = leftTurn ? currentLeft : currentRight
-        const hit = damage(attacker, leftTurn ? currentRight : currentLeft)
+        const hit = calculateTeamDamage(attacker, leftTurn ? currentRight : currentLeft)
         playPunch()
         playDamage()
         setMessage(`${shortBattleName(attacker.name)}の攻撃！ ${hit}ダメージ`)

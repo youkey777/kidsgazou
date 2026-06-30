@@ -2,6 +2,7 @@ import { motion } from 'framer-motion'
 import { useEffect, useState } from 'react'
 import type { ImageRecord } from '../db'
 import { saveBattleResult } from './battle-db'
+import { calculateDiceDamage } from './character-rules'
 import BattleStage from './effects/BattleStage'
 import { fireBattleConfetti } from './effects/Confetti'
 import { playDamage, playPunch, playUltimate, playVictory } from './sounds'
@@ -28,16 +29,6 @@ const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms))
 
 function rollDie() {
   return Math.floor(Math.random() * 6) + 1
-}
-
-function calcDamage(attacker: ImageRecord, defender: ImageRecord, die: number) {
-  const baseByHp = defender.hp * (0.11 + die * 0.025)
-  const statBonus = attacker.atk * (0.45 + die * 0.04) - defender.def * 0.2
-  const speedBonus = Math.max(0, attacker.spd - defender.spd) * 0.18
-  const raw = baseByHp + statBonus + speedBonus
-  const minimum = Math.max(18, Math.floor(defender.hp * 0.18))
-  const maximum = Math.max(34, Math.floor(defender.hp * 0.42))
-  return Math.max(minimum, Math.min(maximum, Math.floor(raw)))
 }
 
 function DicePanel({
@@ -139,7 +130,7 @@ export default function DiceBattle({ left, right, onDone }: Props) {
         await sleep(520)
 
         const attackName = die === 6 ? attacker.ultimateName : ATTACKS[(localTurn + die) % ATTACKS.length]
-        const damage = calcDamage(attacker, defender, die)
+        const damage = calculateDiceDamage(attacker, defender, die)
         const attackText = `${attackerName}の${attackName}！ ${damage}ダメージ`
         setActiveSide(attackerSide)
         setMessage(attackText)

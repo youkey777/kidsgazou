@@ -2,6 +2,7 @@ import { motion } from 'framer-motion'
 import { useState } from 'react'
 import type { ImageRecord } from '../db'
 import { saveBattleResult } from './battle-db'
+import { calculateRpsDamage } from './character-rules'
 import BattleStage from './effects/BattleStage'
 import { fireBattleConfetti } from './effects/Confetti'
 import { playDamage, playPunch, playVictory } from './sounds'
@@ -105,13 +106,13 @@ export default function RpsBattle({ left, right, onDone }: Props) {
     let nextLeftHp = leftHp
     let nextRightHp = rightHp
     if (result > 0) {
-      const damage = Math.max(24, Math.floor(left.atk * 2.4))
+      const damage = calculateRpsDamage(left, right)
       nextRightHp = Math.max(0, rightHp - damage)
       setRightHp(nextRightHp)
       setMessage(`${HAND_LABELS[hand]}で勝ち！ ${damage}ダメージ`)
       setEvents((prev) => [...prev, { id: makeEventId(), target: 'right', amount: damage }])
     } else {
-      const damage = Math.max(24, Math.floor(right.atk * 2.4))
+      const damage = calculateRpsDamage(right, left)
       nextLeftHp = Math.max(0, leftHp - damage)
       setLeftHp(nextLeftHp)
       setMessage(`CPUの${HAND_LABELS[cpu]}が勝ち！ ${damage}ダメージ`)

@@ -6,6 +6,7 @@ import DiceBattle from './DiceBattle'
 import Ranking from './Ranking'
 import RpsBattle from './RpsBattle'
 import TeamBattle from './TeamBattle'
+import Training from './Training'
 import { MODE_LABELS, type BattleTab, type PlayableBattleMode } from './types'
 
 const MODES: PlayableBattleMode[] = ['dice', 'rps', 'team']
@@ -70,8 +71,8 @@ export default function BattleHub() {
     <main className="px-3 pb-10 sm:px-4">
       <div className="mx-auto max-w-md">
         <div className="sticky top-0 z-20 -mx-3 bg-gradient-to-br from-violet-800 via-fuchsia-700 to-indigo-900 px-3 pb-3 pt-2 sm:-mx-4 sm:px-4">
-          <div className="grid grid-cols-2 gap-2 rounded-2xl bg-white/15 p-1.5">
-            {(['battle', 'ranking'] as BattleTab[]).map((item) => (
+          <div className="grid grid-cols-3 gap-2 rounded-2xl bg-white/15 p-1.5">
+            {(['battle', 'training', 'ranking'] as BattleTab[]).map((item) => (
               <button
                 key={item}
                 onClick={() => {
@@ -82,7 +83,7 @@ export default function BattleHub() {
                   tab === item ? 'bg-white text-purple-800' : 'text-white'
                 }`}
               >
-                {item === 'battle' ? 'バトル' : 'ランキング'}
+                {item === 'battle' ? 'バトル' : item === 'training' ? '育てる' : 'ランキング'}
               </button>
             ))}
           </div>
@@ -97,6 +98,10 @@ export default function BattleHub() {
         {tab === 'ranking' ? (
           <div className="mt-4">
             <Ranking />
+          </div>
+        ) : tab === 'training' ? (
+          <div className="mt-4">
+            <Training characters={characters} onChanged={refresh} />
           </div>
         ) : (
           <div className="mt-3 space-y-3">

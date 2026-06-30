@@ -91,7 +91,7 @@ export default function Ranking() {
       </section>
 
       <section className="rounded-3xl bg-cyan-100 p-3 shadow-lg">
-        <h3 className="mb-2 text-lg font-black text-cyan-900">種族別（しゅぞくべつ）最強</h3>
+        <h3 className="mb-2 text-lg font-black text-cyan-900">属性別（ぞくせいべつ）最強</h3>
         <div className="space-y-2">
           {data.speciesChampions.map((character) => (
             <RankCard

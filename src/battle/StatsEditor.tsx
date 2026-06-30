@@ -1,5 +1,12 @@
 import { useMemo, useState } from 'react'
 import { updateImageStats, type ImageRecord } from '../db'
+import {
+  ATTRIBUTES,
+  randomAttribute,
+  randomStat,
+  STAT_LABELS,
+  type StatKey,
+} from './character-rules'
 import { clampStat, starsForLevel } from './types'
 
 type Props = {
@@ -8,19 +15,18 @@ type Props = {
   onSaved: () => Promise<void> | void
 }
 
-const SPECIES = ['ドラゴン', 'まほう', 'ロボ', 'けもの', 'みず', 'ひかり', 'やみ', 'ふしぎ']
 const ULTIMATES = ['きらきらバースト', 'ぐるぐるアタック', 'スターキャノン', 'にじいろスラッシュ']
-
-function randomStat() {
-  return Math.floor(25 + Math.random() * 65)
-}
+const STAT_KEYS: StatKey[] = ['atk', 'def', 'spd', 'luck', 'tech']
 
 export default function StatsEditor({ character, onClose, onSaved }: Props) {
-  const [hp, setHp] = useState(character.hp)
-  const [atk, setAtk] = useState(character.atk)
-  const [def, setDef] = useState(character.def)
-  const [spd, setSpd] = useState(character.spd)
-  const [species, setSpecies] = useState(character.species)
+  const [stats, setStats] = useState<Record<StatKey, number>>({
+    atk: character.atk,
+    def: character.def,
+    spd: character.spd,
+    luck: character.luck,
+    tech: character.tech,
+  })
+  const [attribute, setAttribute] = useState(character.species)
   const [ultimateName, setUltimateName] = useState(character.ultimateName)
   const [saving, setSaving] = useState(false)
   const [message, setMessage] = useState<string | null>(null)
@@ -28,13 +34,16 @@ export default function StatsEditor({ character, onClose, onSaved }: Props) {
   const stars = useMemo(() => '★'.repeat(starsForLevel(character.level)), [character.level])
 
   const randomize = () => {
-    setHp(randomStat())
-    setAtk(randomStat())
-    setDef(randomStat())
-    setSpd(randomStat())
-    setSpecies(SPECIES[Math.floor(Math.random() * SPECIES.length)])
+    setStats({
+      atk: randomStat(),
+      def: randomStat(),
+      spd: randomStat(),
+      luck: randomStat(),
+      tech: randomStat(),
+    })
+    setAttribute(randomAttribute())
     setUltimateName(ULTIMATES[Math.floor(Math.random() * ULTIMATES.length)])
-    setMessage('ランダムでつよさを作ったよ')
+    setMessage('ランダムでパラメータを作ったよ')
   }
 
   const autoGenerate = async () => {
@@ -66,13 +75,16 @@ export default function StatsEditor({ character, onClose, onSaved }: Props) {
       red /= pixels
       green /= pixels
       blue /= pixels
-      setAtk(clampStat(20 + red / 3))
-      setDef(clampStat(20 + blue / 3))
-      setSpd(clampStat(20 + green / 3))
-      setHp(clampStat(45 + (red + green + blue) / 12))
-      setSpecies(red > blue && red > green ? 'ほのお' : blue > green ? 'みず' : 'しぜん')
+      setStats({
+        atk: clampStat(15 + red / 3),
+        def: clampStat(15 + blue / 3),
+        spd: clampStat(15 + green / 3),
+        luck: clampStat(10 + (red + blue) / 5),
+        tech: clampStat(10 + (green + blue) / 5),
+      })
+      setAttribute(red > blue && red > green ? 'ほのお' : blue > green ? 'みず' : 'くさ')
       setUltimateName(red + blue > green * 2 ? 'レインボーフラッシュ' : 'ミラクルスパーク')
-      setMessage('画像の色からつよさを作ったよ')
+      setMessage('画像の色からパラメータを作ったよ')
     } catch {
       randomize()
       setMessage('画像解析ができなかったのでランダム生成したよ')
@@ -84,11 +96,12 @@ export default function StatsEditor({ character, onClose, onSaved }: Props) {
     setMessage(null)
     try {
       await updateImageStats(character.id, {
-        hp: clampStat(hp),
-        atk: clampStat(atk),
-        def: clampStat(def),
-        spd: clampStat(spd),
-        species: species.trim() || 'ふしぎ',
+        atk: clampStat(stats.atk),
+        def: clampStat(stats.def),
+        spd: clampStat(stats.spd),
+        luck: clampStat(stats.luck),
+        tech: clampStat(stats.tech),
+        species: attribute.trim() || 'ふしぎ',
         ultimateName: ultimateName.trim() || 'ひっさつわざ',
       })
       await onSaved()
@@ -100,67 +113,66 @@ export default function StatsEditor({ character, onClose, onSaved }: Props) {
     }
   }
 
-  const statRows = [
-    ['HP', hp, setHp],
-    ['ATK', atk, setAtk],
-    ['DEF', def, setDef],
-    ['SPD', spd, setSpd],
-  ] as const
-
   return (
     <div className="fixed inset-0 z-[80] overflow-y-auto bg-black/75 p-4 safe-top safe-bottom">
       <div className="mx-auto max-w-md rounded-3xl bg-white p-4 shadow-2xl">
         <div className="flex items-start gap-3">
           <img src={character.url} alt="" className="h-24 w-24 rounded-2xl object-cover" />
           <div className="min-w-0 flex-1">
-            <h2 className="truncate text-xl font-black text-zinc-900">
-              つよさへんしゅう
-            </h2>
+            <h2 className="truncate text-xl font-black text-zinc-900">パラメータ編集</h2>
             <p className="truncate text-sm font-bold text-purple-700">{character.name}</p>
             <p className="mt-1 text-sm font-black text-yellow-500">
-              Lv.{character.level} {stars}
+              Lv.{character.level} {stars} / 💎 {character.crystals}
             </p>
           </div>
           <button
             onClick={onClose}
             className="h-11 w-11 rounded-full bg-zinc-900 text-xl font-black text-white"
-            aria-label="とじる"
+            aria-label="閉じる"
           >
             ×
           </button>
         </div>
 
         <div className="mt-4 space-y-4">
-          {statRows.map(([label, value, setter]) => (
-            <label key={label} className="block">
+          {STAT_KEYS.map((key) => (
+            <label key={key} className="block">
               <div className="mb-1 flex items-center justify-between">
-                <span className="text-sm font-black text-zinc-700">{label}</span>
+                <span className="text-sm font-black text-zinc-700">{STAT_LABELS[key]}</span>
                 <span className="rounded-full bg-purple-100 px-3 py-1 text-sm font-black text-purple-700">
-                  {value}
+                  {stats[key]}
                 </span>
               </div>
               <input
                 type="range"
                 min="1"
                 max="99"
-                value={value}
-                onChange={(event) => setter(Number(event.target.value))}
+                value={stats[key]}
+                onChange={(event) =>
+                  setStats((current) => ({ ...current, [key]: Number(event.target.value) }))
+                }
                 className="h-10 w-full accent-purple-600"
               />
             </label>
           ))}
 
           <label className="block">
-            <span className="text-sm font-black text-zinc-700">種族（しゅぞく）</span>
-            <input
-              value={species}
-              onChange={(event) => setSpecies(event.target.value)}
+            <span className="text-sm font-black text-zinc-700">属性</span>
+            <select
+              value={attribute}
+              onChange={(event) => setAttribute(event.target.value)}
               className="mt-1 h-12 w-full rounded-2xl border-2 border-purple-200 px-3 text-base font-bold outline-none focus:border-purple-500"
-            />
+            >
+              {ATTRIBUTES.map((item) => (
+                <option key={item} value={item}>
+                  {item}
+                </option>
+              ))}
+            </select>
           </label>
 
           <label className="block">
-            <span className="text-sm font-black text-zinc-700">必殺技（ひっさつわざ）</span>
+            <span className="text-sm font-black text-zinc-700">必殺技</span>
             <input
               value={ultimateName}
               onChange={(event) => setUltimateName(event.target.value)}
@@ -194,7 +206,7 @@ export default function StatsEditor({ character, onClose, onSaved }: Props) {
           disabled={saving}
           className="mt-3 min-h-14 w-full rounded-2xl bg-zinc-900 px-4 py-3 text-lg font-black text-yellow-300 shadow-xl disabled:opacity-50"
         >
-          {saving ? 'ほぞん中...' : 'このつよさでほぞん'}
+          {saving ? '保存中...' : 'このパラメータで保存'}
         </button>
       </div>
     </div>

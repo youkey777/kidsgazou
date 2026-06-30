@@ -115,3 +115,42 @@ alter table battle_records enable row level security;
 create policy "anon read"   on battle_records for select using (true);
 create policy "anon insert" on battle_records for insert with check (true);
 ```
+
+## 育成機能の追加SQL
+
+既存環境へ育成・クリスタル・新パラメータを追加する場合は、Supabase SQL Editorで以下を実行してください。
+
+```sql
+alter table images add column if not exists luck int default 50;
+alter table images add column if not exists tech int default 50;
+alter table images add column if not exists crystals int default 0;
+
+update images
+set
+  atk = coalesce(atk, floor(random() * 99 + 1)::int),
+  def = coalesce(def, floor(random() * 99 + 1)::int),
+  spd = coalesce(spd, floor(random() * 99 + 1)::int),
+  luck = coalesce(luck, floor(random() * 99 + 1)::int),
+  tech = coalesce(tech, floor(random() * 99 + 1)::int),
+  species = coalesce(
+    species,
+    (array[
+      'ほのお', 'みず', 'かぜ', 'つち', 'ひかり',
+      'やみ', 'でんき', 'こおり', 'くさ', 'はがね',
+      'まほう', 'ドラゴン', 'ロボ', 'スター', 'ふしぎ'
+    ])[floor(random() * 15 + 1)::int]
+  ),
+  crystals = coalesce(crystals, 0);
+
+do $$
+begin
+  if not exists (
+    select 1 from pg_policies
+    where schemaname = 'public'
+      and tablename = 'images'
+      and policyname = 'anon update'
+  ) then
+    create policy "anon update" on images for update using (true) with check (true);
+  end if;
+end $$;
+```

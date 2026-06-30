@@ -1,3 +1,4 @@
+import { randomBattleStats, growWinnerStats, type StatKey } from './battle/character-rules'
 import { supabase, BUCKET, isConfigured } from './lib/supabase'
 
 export type ChildKey = 'rui' | 'mio'
@@ -13,16 +14,22 @@ export interface ImageRecord {
   atk: number
   def: number
   spd: number
+  luck: number
+  tech: number
   species: string
   ultimateName: string
   level: number
   wins: number
   losses: number
   streak: number
+  crystals: number
 }
 
 export type ImageStatsUpdate = Partial<
-  Pick<ImageRecord, 'hp' | 'atk' | 'def' | 'spd' | 'species' | 'ultimateName'>
+  Pick<
+    ImageRecord,
+    'hp' | 'atk' | 'def' | 'spd' | 'luck' | 'tech' | 'species' | 'ultimateName' | 'crystals'
+  >
 >
 
 type ImageRow = {
@@ -35,17 +42,22 @@ type ImageRow = {
   atk?: number | null
   def?: number | null
   spd?: number | null
+  luck?: number | null
+  tech?: number | null
   species?: string | null
   ultimate_name?: string | null
   level?: number | null
   wins?: number | null
   losses?: number | null
   streak?: number | null
+  crystals?: number | null
 }
 
 const BASE_SELECT = 'id, child, path, name, created_at'
-const BATTLE_SELECT =
+const OLD_BATTLE_SELECT =
   'id, child, path, name, created_at, hp, atk, def, spd, species, ultimate_name, level, wins, losses, streak'
+const BATTLE_SELECT =
+  'id, child, path, name, created_at, hp, atk, def, spd, luck, tech, species, ultimate_name, level, wins, losses, streak, crystals'
 
 function uid() {
   return `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`
@@ -74,15 +86,18 @@ export function normalizeImageRow(row: ImageRow): ImageRecord {
     url: publicUrl(row.path),
     createdAt: new Date(row.created_at).getTime(),
     hp: row.hp ?? 100,
-    atk: row.atk ?? 10,
-    def: row.def ?? 10,
-    spd: row.spd ?? 10,
+    atk: row.atk ?? 50,
+    def: row.def ?? 50,
+    spd: row.spd ?? 50,
+    luck: row.luck ?? 50,
+    tech: row.tech ?? 50,
     species: row.species ?? 'ふしぎ',
     ultimateName: row.ultimate_name ?? 'ひっさつわざ',
     level: row.level ?? 1,
     wins: row.wins ?? 0,
     losses: row.losses ?? 0,
     streak: row.streak ?? 0,
+    crystals: row.crystals ?? 0,
   }
 }
 
@@ -95,57 +110,80 @@ export async function addImages(
   const records: ImageRecord[] = []
 
   for (let i = 0; i < files.length; i++) {
-    const f = files[i]
+    const file = files[i]
     const id = uid() + i
-    const ext = (f.name.split('.').pop() || 'png').toLowerCase().slice(0, 5)
+    const ext = (file.name.split('.').pop() || 'png').toLowerCase().slice(0, 5)
     const path = `${child}/${id}.${ext}`
 
-    const up = await sb.storage.from(BUCKET).upload(path, f, {
+    const upload = await sb.storage.from(BUCKET).upload(path, file, {
       cacheControl: '3600',
-      contentType: f.type || 'image/png',
+      contentType: file.type || 'image/png',
       upsert: false,
     })
-    if (up.error) throw new Error(`アップロード失敗: ${up.error.message}`)
+    if (upload.error) throw new Error(`アップロード失敗: ${upload.error.message}`)
 
     const createdAt = now + i
-    const ins = await sb.from('images').insert({
+    const stats = randomBattleStats()
+    const basePayload = {
       id,
       child,
       path,
-      name: f.name || 'image',
+      name: file.name || 'image',
       created_at: new Date(createdAt).toISOString(),
-    })
-    if (ins.error) {
+    }
+    const fullPayload = {
+      ...basePayload,
+      hp: stats.hp,
+      atk: stats.atk,
+      def: stats.def,
+      spd: stats.spd,
+      luck: stats.luck,
+      tech: stats.tech,
+      species: stats.species,
+      ultimate_name: stats.ultimateName,
+      level: 1,
+      wins: 0,
+      losses: 0,
+      streak: 0,
+      crystals: 0,
+    }
+
+    let insert = await sb.from('images').insert(fullPayload)
+    if (insert.error && /column|schema|cache/i.test(insert.error.message)) {
+      insert = await sb.from('images').insert(basePayload)
+    }
+    if (insert.error) {
       await sb.storage.from(BUCKET).remove([path])
-      throw new Error(`DB保存失敗: ${ins.error.message}`)
+      throw new Error(`DB保存失敗: ${insert.error.message}`)
     }
 
     records.push(
       normalizeImageRow({
-        id,
-        child,
-        path,
-        name: f.name || 'image',
-        created_at: new Date(createdAt).toISOString(),
+        ...basePayload,
+        ...fullPayload,
       })
     )
   }
   return records
 }
 
-async function selectImages(child?: ChildKey): Promise<ImageRow[]> {
+async function selectWithColumns(select: string, child?: ChildKey) {
   const sb = ensure()
-  let query = sb.from('images').select(BATTLE_SELECT)
+  let query = sb.from('images').select(select)
   if (child) query = query.eq('child', child)
-  const battleResult = await query.order('created_at', { ascending: false })
+  return query.order('created_at', { ascending: false })
+}
 
-  if (!battleResult.error) return (battleResult.data || []) as ImageRow[]
+async function selectImages(child?: ChildKey): Promise<ImageRow[]> {
+  const battleResult = await selectWithColumns(BATTLE_SELECT, child)
+  if (!battleResult.error) return (battleResult.data || []) as unknown as ImageRow[]
 
-  let fallback = sb.from('images').select(BASE_SELECT)
-  if (child) fallback = fallback.eq('child', child)
-  const baseResult = await fallback.order('created_at', { ascending: false })
+  const oldBattleResult = await selectWithColumns(OLD_BATTLE_SELECT, child)
+  if (!oldBattleResult.error) return (oldBattleResult.data || []) as unknown as ImageRow[]
+
+  const baseResult = await selectWithColumns(BASE_SELECT, child)
   if (baseResult.error) throw new Error(`一覧取得失敗: ${baseResult.error.message}`)
-  return (baseResult.data || []) as ImageRow[]
+  return (baseResult.data || []) as unknown as ImageRow[]
 }
 
 export async function listImages(child: ChildKey): Promise<ImageRecord[]> {
@@ -168,15 +206,50 @@ export async function updateImageStats(
     atk: stats.atk,
     def: stats.def,
     spd: stats.spd,
+    luck: stats.luck,
+    tech: stats.tech,
     species: stats.species,
     ultimate_name: stats.ultimateName,
+    crystals: stats.crystals,
   }
   const { error } = await sb.from('images').update(payload).eq('id', id)
   if (error) {
     throw new Error(
-      `ステータス保存失敗: ${error.message}。SETUP.md の「バトル機能の追加SQL」を実行してください`
+      `ステータス保存失敗: ${error.message}。SETUP.md の追加SQLを実行してください`
     )
   }
+}
+
+export async function addCharacterCrystals(
+  character: ImageRecord,
+  amount: number
+): Promise<number> {
+  const next = Math.max(0, character.crystals + amount)
+  await updateImageStats(character.id, { crystals: next })
+  return next
+}
+
+export async function rerollCharacterStat(
+  character: ImageRecord,
+  stat: StatKey,
+  nextValue: number
+): Promise<void> {
+  if (character.crystals <= 0) throw new Error('クリスタルが足りません')
+  await updateImageStats(character.id, {
+    [stat]: nextValue,
+    crystals: character.crystals - 1,
+  } as ImageStatsUpdate)
+}
+
+export async function rerollCharacterAttribute(
+  character: ImageRecord,
+  attribute: string
+): Promise<void> {
+  if (character.crystals <= 0) throw new Error('クリスタルが足りません')
+  await updateImageStats(character.id, {
+    species: attribute,
+    crystals: character.crystals - 1,
+  })
 }
 
 export async function updateBattleResultStats(
@@ -185,12 +258,14 @@ export async function updateBattleResultStats(
 ): Promise<void> {
   const sb = ensure()
   const winnerLevel = Math.min(99, winner.level + 1)
+  const growth = growWinnerStats(winner)
   const winnerUpdate = sb
     .from('images')
     .update({
       wins: winner.wins + 1,
       streak: winner.streak + 1,
       level: winnerLevel,
+      ...growth,
     })
     .eq('id', winner.id)
 
