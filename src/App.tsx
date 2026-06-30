@@ -7,6 +7,9 @@ import {
   type ChildKey,
   type ImageRecord,
 } from './db'
+import { isConfigured } from './lib/supabase'
+import Lock, { isUnlocked, lock } from './Lock'
+import { migrateFromIndexedDB } from './migrate'
 
 type Theme = {
   key: ChildKey
@@ -14,7 +17,6 @@ type Theme = {
   emoji: string
   gradient: string
   accent: string
-  accentBg: string
   ring: string
   tabActive: string
   tabIdle: string
@@ -30,7 +32,6 @@ const THEMES: Record<ChildKey, Theme> = {
     emoji: '🦖',
     gradient: 'from-zinc-900 via-zinc-800 to-neutral-900',
     accent: 'text-amber-300',
-    accentBg: 'bg-zinc-800',
     ring: 'ring-amber-300',
     tabActive: 'bg-zinc-900 text-amber-300 shadow-lg shadow-zinc-900/40',
     tabIdle: 'bg-white/70 text-zinc-500',
@@ -45,7 +46,6 @@ const THEMES: Record<ChildKey, Theme> = {
     emoji: '🌸',
     gradient: 'from-pink-100 via-rose-100 to-pink-200',
     accent: 'text-pink-600',
-    accentBg: 'bg-pink-100',
     ring: 'ring-pink-400',
     tabActive: 'bg-pink-500 text-white shadow-lg shadow-pink-400/40',
     tabIdle: 'bg-white/70 text-pink-400',
@@ -56,54 +56,82 @@ const THEMES: Record<ChildKey, Theme> = {
   },
 }
 
-function useObjectUrls(images: ImageRecord[]) {
-  const [urls, setUrls] = useState<Record<string, string>>({})
-  useEffect(() => {
-    const next: Record<string, string> = {}
-    images.forEach((img) => {
-      next[img.id] = URL.createObjectURL(img.blob)
-    })
-    setUrls(next)
-    return () => {
-      Object.values(next).forEach((u) => URL.revokeObjectURL(u))
-    }
-  }, [images])
-  return urls
-}
-
 export default function App() {
+  const [unlocked, setUnlocked] = useState(isUnlocked())
+  const [migrating, setMigrating] = useState<{ done: number; total: number } | null>(null)
+  const [initialized, setInitialized] = useState(false)
+  const [globalError, setGlobalError] = useState<string | null>(null)
+
   const [active, setActive] = useState<ChildKey>('rui')
   const [images, setImages] = useState<ImageRecord[]>([])
   const [pending, setPending] = useState<File[]>([])
   const [counts, setCounts] = useState<{ rui: number; mio: number }>({ rui: 0, mio: 0 })
   const [viewer, setViewer] = useState<ImageRecord | null>(null)
   const [editing, setEditing] = useState(false)
+  const [loading, setLoading] = useState(false)
+  const [saving, setSaving] = useState(false)
   const fileInput = useRef<HTMLInputElement | null>(null)
 
   const theme = THEMES[active]
-  const urls = useObjectUrls(images)
+
   const pendingPreviews = useMemo(
     () => pending.map((f) => ({ file: f, url: URL.createObjectURL(f) })),
     [pending]
   )
-
   useEffect(() => {
     return () => pendingPreviews.forEach((p) => URL.revokeObjectURL(p.url))
   }, [pendingPreviews])
 
   const refresh = useCallback(async (child: ChildKey) => {
-    const [list, ruiCount, mioCount] = await Promise.all([
-      listImages(child),
-      countImages('rui'),
-      countImages('mio'),
-    ])
-    setImages(list)
-    setCounts({ rui: ruiCount, mio: mioCount })
+    setLoading(true)
+    try {
+      const [list, ruiCount, mioCount] = await Promise.all([
+        listImages(child),
+        countImages('rui'),
+        countImages('mio'),
+      ])
+      setImages(list)
+      setCounts({ rui: ruiCount, mio: mioCount })
+    } catch (e) {
+      setGlobalError((e as Error).message)
+    } finally {
+      setLoading(false)
+    }
   }, [])
 
+  // 初回: 移行 → 一覧取得
   useEffect(() => {
-    refresh(active)
-  }, [active, refresh])
+    if (!unlocked || !isConfigured || initialized) return
+    let cancelled = false
+    ;(async () => {
+      try {
+        const result = await migrateFromIndexedDB((done, total) => {
+          if (!cancelled) setMigrating({ done, total })
+        })
+        if (cancelled) return
+        setMigrating(null)
+        if (result.migrated > 0) {
+          console.log(`migrated ${result.migrated} images`)
+        }
+        setInitialized(true)
+      } catch (e) {
+        if (!cancelled) {
+          setGlobalError(`移行失敗: ${(e as Error).message}`)
+          setMigrating(null)
+          setInitialized(true)
+        }
+      }
+    })()
+    return () => {
+      cancelled = true
+    }
+  }, [unlocked, initialized])
+
+  useEffect(() => {
+    if (initialized && unlocked && isConfigured) {
+      refresh(active)
+    }
+  }, [active, refresh, initialized, unlocked])
 
   const onPick = (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = Array.from(e.target.files ?? []).filter((f) =>
@@ -120,17 +148,71 @@ export default function App() {
   }
 
   const onSave = async () => {
-    if (pending.length === 0) return
-    await addImages(active, pending)
-    setPending([])
-    await refresh(active)
+    if (pending.length === 0 || saving) return
+    setSaving(true)
+    try {
+      await addImages(active, pending)
+      setPending([])
+      await refresh(active)
+    } catch (e) {
+      alert(`保存失敗: ${(e as Error).message}`)
+    } finally {
+      setSaving(false)
+    }
   }
 
   const onDelete = async (id: string) => {
     if (!confirm('この画像を削除しますか？')) return
-    await deleteImage(id)
-    if (viewer?.id === id) setViewer(null)
-    await refresh(active)
+    try {
+      await deleteImage(id)
+      if (viewer?.id === id) setViewer(null)
+      await refresh(active)
+    } catch (e) {
+      alert(`削除失敗: ${(e as Error).message}`)
+    }
+  }
+
+  const onLogout = () => {
+    if (!confirm('ロックしますか？（次回パスコードが必要）')) return
+    lock()
+    setUnlocked(false)
+  }
+
+  if (!isConfigured) {
+    return (
+      <div className="min-h-full bg-zinc-900 text-white flex items-center justify-center p-6">
+        <div className="max-w-sm text-center">
+          <div className="text-5xl mb-3">⚙️</div>
+          <h1 className="text-xl font-bold mb-2">Supabase 未設定</h1>
+          <p className="text-zinc-300 text-sm">
+            Vercelに以下の環境変数を設定してください：
+          </p>
+          <ul className="text-left text-xs bg-zinc-800 rounded-lg p-3 mt-3 space-y-1 font-mono">
+            <li>VITE_SUPABASE_URL</li>
+            <li>VITE_SUPABASE_ANON_KEY</li>
+            <li>VITE_GALLERY_PASSCODE</li>
+          </ul>
+        </div>
+      </div>
+    )
+  }
+
+  if (!unlocked) {
+    return <Lock onUnlock={() => setUnlocked(true)} />
+  }
+
+  if (migrating) {
+    return (
+      <div className="min-h-full bg-gradient-to-br from-zinc-900 to-pink-900 text-white flex items-center justify-center p-6">
+        <div className="text-center">
+          <div className="text-5xl mb-3 animate-wiggle inline-block">☁️</div>
+          <h1 className="text-xl font-bold mb-2">クラウドに移行中…</h1>
+          <p className="text-pink-200 text-sm">
+            {migrating.done} / {migrating.total} まい
+          </p>
+        </div>
+      </div>
+    )
   }
 
   return (
@@ -148,20 +230,42 @@ export default function App() {
           >
             {theme.emoji} {theme.name}のギャラリー
           </h1>
-          {images.length > 0 && (
+          <div className="flex gap-2">
+            {images.length > 0 && (
+              <button
+                onClick={() => setEditing((v) => !v)}
+                className={`text-xs font-bold px-3 py-1.5 rounded-full ${
+                  active === 'rui'
+                    ? 'bg-zinc-800 text-amber-200'
+                    : 'bg-white text-pink-600'
+                } shadow`}
+              >
+                {editing ? '完了' : '編集'}
+              </button>
+            )}
             <button
-              onClick={() => setEditing((v) => !v)}
-              className={`text-xs font-bold px-3 py-1.5 rounded-full ${
+              onClick={onLogout}
+              className={`text-xs font-bold px-2.5 py-1.5 rounded-full ${
                 active === 'rui'
-                  ? 'bg-zinc-800 text-amber-200'
-                  : 'bg-white text-pink-600'
+                  ? 'bg-zinc-800/60 text-amber-200/80'
+                  : 'bg-white/70 text-pink-500'
               } shadow`}
+              aria-label="ロック"
             >
-              {editing ? '完了' : '編集'}
+              🔒
             </button>
-          )}
+          </div>
         </div>
       </header>
+
+      {globalError && (
+        <div className="mx-4 mb-2 px-3 py-2 rounded-lg bg-red-500/90 text-white text-xs">
+          {globalError}
+          <button onClick={() => setGlobalError(null)} className="ml-2 underline">
+            閉じる
+          </button>
+        </div>
+      )}
 
       <nav className="px-4 mt-2">
         <div className="bg-white/40 backdrop-blur p-1.5 rounded-2xl flex gap-1.5 shadow-inner">
@@ -207,7 +311,8 @@ export default function App() {
               </p>
               <button
                 onClick={() => setPending([])}
-                className="text-xs text-zinc-500 underline"
+                disabled={saving}
+                className="text-xs text-zinc-500 underline disabled:opacity-30"
               >
                 すべてキャンセル
               </button>
@@ -225,7 +330,8 @@ export default function App() {
                   />
                   <button
                     onClick={() => removePending(i)}
-                    className="absolute top-1 right-1 w-6 h-6 rounded-full bg-black/60 text-white text-xs font-bold flex items-center justify-center"
+                    disabled={saving}
+                    className="absolute top-1 right-1 w-6 h-6 rounded-full bg-black/60 text-white text-xs font-bold flex items-center justify-center disabled:opacity-30"
                     aria-label="けす"
                   >
                     ×
@@ -236,7 +342,18 @@ export default function App() {
           </section>
         )}
 
-        {images.length === 0 && pending.length === 0 ? (
+        {loading && images.length === 0 ? (
+          <div className="mt-16 text-center">
+            <div className="text-6xl mb-3 animate-wiggle inline-block">⏳</div>
+            <p
+              className={`text-base font-bold ${
+                active === 'rui' ? 'text-amber-200' : 'text-pink-600'
+              }`}
+            >
+              よみこみちゅう…
+            </p>
+          </div>
+        ) : images.length === 0 && pending.length === 0 ? (
           <div className="mt-16 text-center">
             <div className="text-7xl mb-3 animate-wiggle inline-block">
               {theme.emoji}
@@ -266,14 +383,13 @@ export default function App() {
                 }`}
                 onClick={() => !editing && setViewer(img)}
               >
-                {urls[img.id] && (
-                  <img
-                    src={urls[img.id]}
-                    alt={img.name}
-                    className="w-full h-full object-cover"
-                    draggable={false}
-                  />
-                )}
+                <img
+                  src={img.url}
+                  alt={img.name}
+                  loading="lazy"
+                  className="w-full h-full object-cover"
+                  draggable={false}
+                />
                 {editing && (
                   <button
                     onClick={(e) => {
@@ -304,18 +420,20 @@ export default function App() {
           />
           <button
             onClick={() => fileInput.current?.click()}
+            disabled={saving}
             className={`flex-1 py-4 rounded-2xl bg-white/90 backdrop-blur font-bold shadow-xl border-2 ${theme.cardBorder} ${
               active === 'rui' ? 'text-zinc-800' : 'text-pink-600'
-            } active:scale-95 transition-transform`}
+            } active:scale-95 transition-transform disabled:opacity-50`}
           >
             ＋ がぞうを えらぶ
           </button>
           {pending.length > 0 && (
             <button
               onClick={onSave}
-              className={`flex-1 py-4 rounded-2xl font-bold ${theme.saveBtn} active:scale-95 transition-transform animate-pop-in`}
+              disabled={saving}
+              className={`flex-1 py-4 rounded-2xl font-bold ${theme.saveBtn} active:scale-95 transition-transform animate-pop-in disabled:opacity-70`}
             >
-              💾 ほぞん（{pending.length}）
+              {saving ? '⏳ ほぞんちゅう…' : `💾 ほぞん（${pending.length}）`}
             </button>
           )}
         </div>
@@ -336,29 +454,21 @@ export default function App() {
             </button>
           </div>
           <div className="flex-1 flex items-center justify-center px-4">
-            {urls[viewer.id] && (
-              <img
-                src={urls[viewer.id]}
-                alt={viewer.name}
-                className="max-w-full max-h-full object-contain"
-              />
-            )}
+            <img
+              src={viewer.url}
+              alt={viewer.name}
+              className="max-w-full max-h-full object-contain"
+            />
           </div>
           <div className="p-4 flex justify-center gap-3">
-            <button
-              onClick={(e) => {
-                e.stopPropagation()
-                if (urls[viewer.id]) {
-                  const a = document.createElement('a')
-                  a.href = urls[viewer.id]
-                  a.download = viewer.name
-                  a.click()
-                }
-              }}
-              className="px-5 py-3 rounded-full bg-white/20 text-white font-bold"
+            <a
+              href={viewer.url}
+              download={viewer.name}
+              onClick={(e) => e.stopPropagation()}
+              className="px-5 py-3 rounded-full bg-white/20 text-white font-bold no-underline"
             >
               ⬇ ほぞん
-            </button>
+            </a>
             <button
               onClick={(e) => {
                 e.stopPropagation()
