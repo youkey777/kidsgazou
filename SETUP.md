@@ -1,21 +1,21 @@
 # Supabase セットアップ手順
 
-クラウド共有を有効にするための初期設定。所要時間 約10分。
+クラウド共有を有効にするための初期設定です。作業時間は約10分です。
 
 ## 1. Supabaseプロジェクト作成
 
 1. [supabase.com](https://supabase.com) にアクセス
-2. **Sign in with GitHub** でログイン（既存GitHubアカウントでOK）
-3. **New project** をクリック
-4. 入力：
-   - **Project name**: `kidsgazou`（何でもOK）
-   - **Database Password**: 適当な強いパスワード（後で使わないので忘れてOK）
-   - **Region**: `Northeast Asia (Tokyo)` ←推奨
-5. **Create new project** → 2分くらい待つ
+2. GitHubアカウントでログイン
+3. `New project` をクリック
+4. 次のように入力
+   - `Project name`: `kidsgazou`
+   - `Database Password`: 任意の強いパスワード
+   - `Region`: `Northeast Asia (Tokyo)` 推奨
+5. `Create new project` をクリック
 
-## 2. テーブル作成
+## 2. images テーブル作成
 
-左サイドバーの **SQL Editor** → **New query** を開いて以下を貼り付け→ **Run**:
+左サイドバーの `SQL Editor` で `New query` を開き、以下を実行してください。
 
 ```sql
 create table images (
@@ -33,82 +33,85 @@ create policy "anon insert" on images for insert with check (true);
 create policy "anon delete" on images for delete using (true);
 ```
 
-## 3. Storageバケット作成
+## 3. Storage バケット作成
 
-1. 左サイドバー **Storage** → **New bucket**
-2. 入力：
-   - **Name**: `images`
-   - **Public bucket**: ✅ ON（クリックして緑にする）
-3. **Save**
+1. 左サイドバーの `Storage` を開く
+2. `New bucket` をクリック
+3. 次のように設定
+   - `Name`: `images`
+   - `Public bucket`: ON
+4. `Save` をクリック
 
-### バケットの書き込み権限
+## 4. Storage ポリシー設定
 
-**Storage** → **Policies** タブ → `images` バケットの **New policy**:
+`Storage` の `Policies` から `images` バケットへ以下のポリシーを作成してください。
 
-- **Policy name**: `anon all`
-- **Allowed operations**: SELECT, INSERT, UPDATE, DELETE 全部チェック
-- **Target roles**: `anon`
-- **USING expression**: `true`
-- **WITH CHECK expression**: `true`
-- **Save policy**
+- `Policy name`: `anon all`
+- `Allowed operations`: SELECT, INSERT, UPDATE, DELETE
+- `Target roles`: `anon`
+- `USING expression`: `true`
+- `WITH CHECK expression`: `true`
 
-（または「Get started quickly」テンプレから「Give anon users full access」を選択でもOK）
+## 5. Vercel 環境変数
 
-## 4. APIキーをコピー
-
-左サイドバー **Project Settings** （歯車） → **API**:
-
-- **Project URL** — 後で使う
-- **Project API keys** の **anon / public** の方をコピー — 後で使う
-
-## 5. Vercelに環境変数を設定
-
-[vercel.com/dashboard](https://vercel.com/dashboard) で `kidsgazou` プロジェクトを開く:
-
-1. **Settings** → **Environment Variables**
-2. 以下3つを追加（**All Environments** にチェック）:
+Vercelの `kidsgazou` プロジェクトで `Settings` → `Environment Variables` を開き、以下を設定してください。
 
 | Key | Value |
 |---|---|
-| `VITE_SUPABASE_URL` | (手順4で取得したProject URL) |
-| `VITE_SUPABASE_ANON_KEY` | (手順4で取得したanon public key) |
-| `VITE_GALLERY_PASSCODE` | 4桁の数字（例: `2580`）家族で共有 |
+| `VITE_SUPABASE_URL` | SupabaseのProject URL |
+| `VITE_SUPABASE_ANON_KEY` | Supabaseのanon public key |
+| `VITE_GALLERY_PASSCODE` | 家族用パスコード |
 
-3. **Save** で各項目を保存
+## 6. ローカル開発
 
-## 6. 再デプロイ
+プロジェクト直下に `.env.local` を作成します。
 
-**Deployments** タブ → 最新のデプロイの **⋯** メニュー → **Redeploy** → **Redeploy** ボタン
-
-（または GitHub に何かpushすれば自動再デプロイされる）
-
-## 7. 動作確認
-
-1. スマホで [kidsgazou.vercel.app](https://kidsgazou.vercel.app/) を開く
-2. パスコード入力画面 → 設定した4桁を入力
-3. ルイ/ミオに切り替えて画像を追加・保存
-4. **別のスマホ・PC** で同じURL＋パスコードを入れて、同じ画像が見えれば成功
-
----
-
-## ローカル開発（任意）
-
-ローカルで動かすなら、プロジェクト直下に `.env.local` ファイルを作成:
-
-```
+```env
 VITE_SUPABASE_URL=https://xxxxxxxxxxxxx.supabase.co
 VITE_SUPABASE_ANON_KEY=eyJhbGciOi...
 VITE_GALLERY_PASSCODE=1234
 ```
 
-`npm run dev` で起動。
+起動コマンド:
 
-## トラブルシュート
+```bash
+npm run dev
+```
 
-| 症状 | 原因 / 対処 |
-|---|---|
-| 「Supabase 未設定」と表示 | Vercel環境変数が反映されてない。再デプロイ必要 |
-| パスコード突破できない | 環境変数 `VITE_GALLERY_PASSCODE` の値を確認 |
-| 画像アップロードでエラー | Storageバケット `images` が無い / Public OFF / バケットPolicyが無い |
-| 画像が他端末で見えない | Storageバケットが Public じゃない |
-| 「DB保存失敗」 | テーブル `images` が無い / RLSポリシー未設定 |
+## 7. 動作確認
+
+1. スマホまたはPCでアプリを開く
+2. パスコードを入力
+3. `🦖ルイ` / `🌸ミオ` に画像を追加して保存
+4. `⚔️バトル` で保存済み画像をキャラとして選択
+5. バトル結果とランキングが表示されることを確認
+
+## バトル機能の追加SQL
+
+既存環境へバトル機能を追加する場合は、Supabase SQL Editorで以下を実行してください。
+
+```sql
+alter table images add column if not exists hp int default 100;
+alter table images add column if not exists atk int default 10;
+alter table images add column if not exists def int default 10;
+alter table images add column if not exists spd int default 10;
+alter table images add column if not exists species text;
+alter table images add column if not exists ultimate_name text default 'ひっさつわざ';
+alter table images add column if not exists level int default 1;
+alter table images add column if not exists wins int default 0;
+alter table images add column if not exists losses int default 0;
+alter table images add column if not exists streak int default 0;
+
+create table if not exists battle_records (
+  id text primary key,
+  mode text not null,
+  winner_id text references images(id) on delete cascade,
+  loser_id text references images(id) on delete cascade,
+  winner_team text,
+  created_at timestamptz default now()
+);
+create index if not exists battle_records_created_idx on battle_records (created_at desc);
+alter table battle_records enable row level security;
+create policy "anon read"   on battle_records for select using (true);
+create policy "anon insert" on battle_records for insert with check (true);
+```

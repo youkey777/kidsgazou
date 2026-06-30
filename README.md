@@ -1,45 +1,51 @@
 # ルイとミオのギャラリー
 
-ルイ（男の子）とミオ（女の子）の作った画像を、全端末で共有してクラウドに累積保存するPWA。
+ルイ（男の子）とミオ（女の子）が作った画像を、スマホやPCで共有してクラウドに保存できるPWAです。画像はSupabase StorageとPostgresに保存します。
 
 ## 機能
 
-- **タブ切替**: ルイ（ブラック基調）/ ミオ（ピンク基調）
-- **クラウド共有**: Supabase Storage + Postgres。どの端末から開いても同じデータ
-- **パスコード保護**: 4桁の合言葉で家族だけがアクセス可能
-- **アップロード**: ファイル選択（複数OK）→「ほぞん」で確定
-- **削除**: 編集モードで個別削除
-- **拡大表示**: タップで全画面プレビュー → ダウンロード可能
-- **PWA**: スマホのホーム画面に追加でアプリ化
+- **3タブ構成**: `🦖ルイ`、`🌸ミオ`、`⚔️バトル`
+- **クラウド保存**: Supabase Storage + Postgresで画像を累積保存
+- **パスコード保護**: `VITE_GALLERY_PASSCODE` でロック
+- **画像アップロード**: 複数画像をまとめて選択して保存
+- **編集モード**: 画像削除、長押しによるキャラステータス編集
+- **キャラクターバトル**: 保存済み画像をキャラ化して遊べる
+- **4種類のバトル**: ダイス、じゃんけん、ターン制、タップ
+- **兄妹チーム戦**: ルイチーム vs ミオチームの3vs3勝ち抜き
+- **派手な演出**: 揺れ、吹っ飛び、ダメージ数字、必殺技カットイン、紙吹雪、Web Audio効果音
+- **ランキング**: 通算勝利、連勝、今日のMVP、種族別最強、チーム戦履歴
+- **PWA**: スマホのホーム画面に追加してアプリ風に起動
 
 ## 初期セットアップ
 
-**重要**: 動かす前にSupabaseの設定が必要です。詳細は [SETUP.md](./SETUP.md) を参照。
+Supabaseの設定が必要です。詳しくは [SETUP.md](./SETUP.md) を確認してください。
 
-必要な環境変数（Vercelで設定）:
+Vercelで必要な環境変数:
 
 | Key | 説明 |
 |---|---|
 | `VITE_SUPABASE_URL` | SupabaseプロジェクトURL |
 | `VITE_SUPABASE_ANON_KEY` | Supabase anon public key |
-| `VITE_GALLERY_PASSCODE` | 4桁の合言葉 |
+| `VITE_GALLERY_PASSCODE` | 4桁などの家族用パスコード |
 
 ## 開発
 
 ```bash
 npm install
-cp .env.example .env.local  # 値を埋める
+cp .env.example .env.local
 npm run dev
 npm run build
 ```
 
-## デプロイ（Vercel）
+## デプロイ
 
-GitHubに push すれば自動デプロイ。環境変数は [SETUP.md](./SETUP.md) を参照。
+GitHubの `main` ブランチにpushすると、Vercelで自動デプロイされます。
 
 ## 技術スタック
 
 - Vite + React + TypeScript
 - Tailwind CSS v3
-- Supabase（Storage + Postgres）
-- vite-plugin-pwa（Service Worker + Manifest）
+- Supabase Storage + Postgres
+- framer-motion
+- canvas-confetti
+- vite-plugin-pwa
