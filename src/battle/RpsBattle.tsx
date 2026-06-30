@@ -66,6 +66,37 @@ function ResultBadge({ result }: { result: RoundResult }) {
   )
 }
 
+function HandSlot({ hand, cycling }: { hand: RpsHand; cycling: boolean }) {
+  const reel = [...HANDS, ...HANDS, ...HANDS]
+  if (!cycling) {
+    return (
+      <motion.div
+        key={hand}
+        className="grid h-16 place-items-center text-5xl"
+        initial={{ y: -18, opacity: 0, scale: 0.9 }}
+        animate={{ y: 0, opacity: 1, scale: 1 }}
+      >
+        {HAND_EMOJI[hand]}
+      </motion.div>
+    )
+  }
+
+  return (
+    <div className="mx-auto h-16 w-16 overflow-hidden rounded-2xl bg-white/70 shadow-inner">
+      <motion.div
+        animate={{ y: [0, -192] }}
+        transition={{ duration: 0.62, repeat: Infinity, ease: 'linear' }}
+      >
+        {reel.map((item, index) => (
+          <div key={`${item}-${index}`} className="grid h-16 place-items-center text-5xl">
+            {HAND_EMOJI[item]}
+          </div>
+        ))}
+      </motion.div>
+    </div>
+  )
+}
+
 export default function RpsBattle({ left, right, onDone }: Props) {
   const [leftHp, setLeftHp] = useState(left.hp)
   const [rightHp, setRightHp] = useState(right.hp)
@@ -234,17 +265,9 @@ export default function RpsBattle({ left, right, onDone }: Props) {
           <ResultBadge result={roundResult} />
           <div className="rounded-2xl bg-pink-100 p-2 text-center">
             <p className="text-xs font-black text-pink-950">CPU</p>
-            <motion.div
-              key={visibleCpuHand}
-              className="text-5xl"
-              initial={{ rotate: cycling ? -24 : 0, scale: cycling ? 0.86 : 1 }}
-              animate={{ rotate: cycling ? 24 : 0, scale: cycling ? [0.95, 1.12, 0.95] : 1 }}
-              transition={{ duration: cycling ? 0.16 : 0.22 }}
-            >
-              {HAND_EMOJI[visibleCpuHand]}
-            </motion.div>
+            <HandSlot hand={visibleCpuHand} cycling={cycling} />
             <p className="text-sm font-black text-pink-950">
-              {cpuHand ? HAND_LABELS[cpuHand] : 'ぐるぐる'}
+              {cpuHand ? HAND_LABELS[cpuHand] : 'スロット'}
             </p>
           </div>
         </div>

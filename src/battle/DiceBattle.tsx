@@ -6,6 +6,7 @@ import { calculateDiceDamage } from './character-rules'
 import type { AttackEffectData } from './effects/AttackFlyEffect'
 import BattleStage from './effects/BattleStage'
 import { fireBattleConfetti } from './effects/Confetti'
+import type { DiceThrowEffectData } from './effects/DiceThrowEffect'
 import { playDamage, playPunch, playUltimate, playVictory } from './sounds'
 import { type BattleResult, type DamageEvent, makeEventId, shortBattleName } from './types'
 
@@ -18,7 +19,6 @@ type Props = {
 type DiceSide = 'left' | 'right'
 type Phase = 'ready' | 'rolling' | 'attacking' | 'finished'
 
-const DICE_FACES = ['⚀', '⚁', '⚂', '⚃', '⚄', '⚅']
 const DICE_ATTACKS = [
   'ころころショット',
   'ジャンプスロー',
@@ -45,44 +45,22 @@ function DicePanel({
   rolling: boolean
   label: string
 }) {
-  const pipMap: Record<number, number[]> = {
-    1: [4],
-    2: [0, 8],
-    3: [0, 4, 8],
-    4: [0, 2, 6, 8],
-    5: [0, 2, 4, 6, 8],
-    6: [0, 2, 3, 5, 6, 8],
-  }
-
   return (
     <div
-      className={`rounded-3xl p-3 text-center shadow-lg ${
+      className={`rounded-3xl px-3 py-4 text-center shadow-lg ${
         side === 'left' ? 'bg-cyan-100 text-cyan-950' : 'bg-pink-100 text-pink-950'
       }`}
     >
       <p className="text-xs font-black">{label}</p>
-      <motion.div
-        className="mx-auto mt-1 grid h-20 w-20 grid-cols-3 grid-rows-3 gap-1 rounded-2xl bg-white p-3 shadow-inner"
-        animate={
-          rolling
-            ? {
-                rotate: [0, -28, 35, -24, 42, -12, 0],
-                y: [0, -10, 8, -14, 6, 0],
-                scale: [1, 1.16, 0.94, 1.2, 0.98, 1],
-              }
-            : { rotate: 0, y: 0, scale: 1 }
-        }
-        transition={{ duration: 0.75, ease: 'easeInOut' }}
+      <motion.p
+        className="mt-1 min-h-8 text-2xl font-black"
+        animate={rolling ? { scale: [1, 1.1, 1], y: [0, -3, 0] } : { scale: 1, y: 0 }}
+        transition={{ duration: 0.35, repeat: rolling ? Infinity : 0 }}
       >
-        {Array.from({ length: 9 }).map((_, index) => (
-          <span
-            key={index}
-            className={`rounded-full ${face && pipMap[face].includes(index) ? 'bg-zinc-900' : 'bg-transparent'}`}
-          />
-        ))}
-      </motion.div>
-      <p className="mt-1 min-h-5 text-sm font-black">
-        {rolling ? 'ころころ...' : face ? `${face} が出た！` : 'まち'}
+        {rolling ? '転がり中' : face ? `出目 ${face}` : '準備OK'}
+      </motion.p>
+      <p className="text-[11px] font-black opacity-70">
+        サイコロはバトル画面に飛び出すよ
       </p>
     </div>
   )
@@ -113,6 +91,7 @@ export default function DiceBattle({ left, right, onDone }: Props) {
   const [log, setLog] = useState<string[]>(['ダイスバトル開始（かいし）！'])
   const [saveMessage, setSaveMessage] = useState<string | null>(null)
   const [attackEffect, setAttackEffect] = useState<AttackEffectData | null>(null)
+  const [diceThrowEffect, setDiceThrowEffect] = useState<DiceThrowEffectData | null>(null)
 
   const finish = async (leftCurrent: number, rightCurrent: number) => {
     if (doneRef.current) return
@@ -136,6 +115,8 @@ export default function DiceBattle({ left, right, onDone }: Props) {
     setPhase('rolling')
     setActiveSide(undefined)
     setAttackEffect(null)
+    const throwId = makeEventId()
+    setDiceThrowEffect({ id: throwId, side, face: null })
     const attacker = side === 'left' ? left : right
     const defender = side === 'left' ? right : left
     const target: DiceSide = side === 'left' ? 'right' : 'left'
@@ -147,15 +128,17 @@ export default function DiceBattle({ left, right, onDone }: Props) {
       const preview = rollDie()
       if (side === 'left') setLeftDie(preview)
       else setRightDie(preview)
+      setDiceThrowEffect({ id: throwId, side, face: preview })
       await sleep(70 + i * 8)
     }
 
     const die = rollDie()
     if (side === 'left') setLeftDie(die)
     else setRightDie(die)
+    setDiceThrowEffect({ id: throwId, side, face: die })
     setRollingSide(null)
     setMessage(`${attackerName} は ${die} を出した！`)
-    await sleep(280)
+    await sleep(420)
 
     const attackName = die === 6 ? attacker.ultimateName : DICE_ATTACKS[die - 1]
     setPhase('attacking')
@@ -166,9 +149,10 @@ export default function DiceBattle({ left, right, onDone }: Props) {
       kind: 'dice',
       attribute: attacker.species,
       variant: die,
-      symbol: DICE_FACES[die - 1],
+      symbol: String(die),
       label: `${attacker.species}・${attackName}`,
     })
+    setDiceThrowEffect(null)
     setMessage(`${attackName}！ サイコロが飛（と）んでいく！`)
     if (die === 6) playUltimate()
     else playPunch()
@@ -196,6 +180,7 @@ export default function DiceBattle({ left, right, onDone }: Props) {
     setMessage(`${attackerName} の攻撃（こうげき）！ ${damage}ダメージ！`)
     await sleep(660)
     setAttackEffect(null)
+    setDiceThrowEffect(null)
     setActiveSide(undefined)
 
     if (nextLeftHp <= 0 || nextRightHp <= 0 || turnCount >= 10) {
@@ -238,6 +223,7 @@ export default function DiceBattle({ left, right, onDone }: Props) {
         koSide={koSide}
         message={message}
         attackEffect={attackEffect}
+        diceThrowEffect={diceThrowEffect}
       />
 
       <div className="grid grid-cols-2 gap-2">

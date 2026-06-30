@@ -3,6 +3,7 @@ import type { BattleCharacter, DamageEvent } from '../types'
 import { hpPercent, starsForLevel } from '../types'
 import AttackFlyEffect, { type AttackEffectData } from './AttackFlyEffect'
 import DamageNumber from './DamageNumber'
+import DiceThrowEffect, { type DiceThrowEffectData } from './DiceThrowEffect'
 
 type Props = {
   left: BattleCharacter
@@ -15,6 +16,7 @@ type Props = {
   glowingSide?: 'left' | 'right'
   message?: string
   attackEffect?: AttackEffectData | null
+  diceThrowEffect?: DiceThrowEffectData | null
 }
 
 function shortName(name: string) {
@@ -96,6 +98,7 @@ export default function BattleStage({
   glowingSide,
   message,
   attackEffect,
+  diceThrowEffect,
 }: Props) {
   return (
     <div
@@ -135,6 +138,7 @@ export default function BattleStage({
         />
       </div>
       <AnimatePresence>
+        {diceThrowEffect && <DiceThrowEffect key={diceThrowEffect.id} effect={diceThrowEffect} />}
         {attackEffect && <AttackFlyEffect key={attackEffect.id} effect={attackEffect} />}
         {damageEvents.map((event) => (
           <DamageNumber key={event.id} event={event} />
