@@ -5,16 +5,14 @@ import CharSelect from './CharSelect'
 import DiceBattle from './DiceBattle'
 import Ranking from './Ranking'
 import RpsBattle from './RpsBattle'
-import TapBattle from './TapBattle'
 import TeamBattle from './TeamBattle'
-import TurnBattle from './TurnBattle'
-import { MODE_LABELS, type BattleMode, type BattleTab } from './types'
+import { MODE_LABELS, type BattleTab, type PlayableBattleMode } from './types'
 
-const MODES: BattleMode[] = ['dice', 'rps', 'turn', 'tap', 'team']
+const MODES: PlayableBattleMode[] = ['dice', 'rps', 'team']
 
 export default function BattleHub() {
   const [tab, setTab] = useState<BattleTab>('battle')
-  const [mode, setMode] = useState<BattleMode>('dice')
+  const [mode, setMode] = useState<PlayableBattleMode>('dice')
   const [characters, setCharacters] = useState<ImageRecord[]>([])
   const [leftId, setLeftId] = useState<string | null>(null)
   const [rightId, setRightId] = useState<string | null>(null)
@@ -65,9 +63,7 @@ export default function BattleHub() {
     }
     if (!left || !right) return null
     if (mode === 'dice') return <DiceBattle key={startedKey} left={left} right={right} onDone={refresh} />
-    if (mode === 'rps') return <RpsBattle key={startedKey} left={left} right={right} onDone={refresh} />
-    if (mode === 'turn') return <TurnBattle key={startedKey} left={left} right={right} onDone={refresh} />
-    return <TapBattle key={startedKey} left={left} right={right} onDone={refresh} />
+    return <RpsBattle key={startedKey} left={left} right={right} onDone={refresh} />
   }
 
   return (
@@ -108,12 +104,12 @@ export default function BattleHub() {
               <>
                 <section className="rounded-3xl bg-white/85 p-3 shadow-lg">
                   <h2 className="mb-2 text-xl font-black text-purple-900">モードをえらぶ</h2>
-                  <div className="grid grid-cols-2 gap-2">
+                  <div className="grid grid-cols-3 gap-2">
                     {MODES.map((item) => (
                       <button
                         key={item}
                         onClick={() => setMode(item)}
-                        className={`min-h-12 rounded-2xl px-2 text-sm font-black shadow ${
+                        className={`min-h-14 rounded-2xl px-2 text-sm font-black shadow ${
                           mode === item ? 'bg-yellow-300 text-zinc-900' : 'bg-purple-600 text-white'
                         }`}
                       >

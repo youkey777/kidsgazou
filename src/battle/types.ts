@@ -1,6 +1,7 @@
 import type { ChildKey, ImageRecord } from '../db'
 
 export type BattleMode = 'dice' | 'rps' | 'turn' | 'tap' | 'team'
+export type PlayableBattleMode = 'dice' | 'rps' | 'team'
 export type BattleTab = 'battle' | 'ranking'
 export type RpsHand = 'rock' | 'scissors' | 'paper'
 export type TurnAction = 'attack' | 'ultimate' | 'guard' | 'run'
@@ -47,6 +48,12 @@ export const HAND_LABELS: Record<RpsHand, string> = {
   rock: 'グー',
   scissors: 'チョキ',
   paper: 'パー',
+}
+
+export const HAND_EMOJI: Record<RpsHand, string> = {
+  rock: '✊',
+  scissors: '✌️',
+  paper: '✋',
 }
 
 export function starsForLevel(level: number) {
