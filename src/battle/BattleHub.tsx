@@ -71,14 +71,17 @@ export default function BattleHub() {
   }
 
   return (
-    <main className="px-4 pb-10">
+    <main className="px-3 pb-10 sm:px-4">
       <div className="mx-auto max-w-md">
-        <div className="sticky top-0 z-20 -mx-4 bg-gradient-to-br from-violet-800 via-fuchsia-700 to-indigo-900 px-4 pb-3 pt-2">
+        <div className="sticky top-0 z-20 -mx-3 bg-gradient-to-br from-violet-800 via-fuchsia-700 to-indigo-900 px-3 pb-3 pt-2 sm:-mx-4 sm:px-4">
           <div className="grid grid-cols-2 gap-2 rounded-2xl bg-white/15 p-1.5">
             {(['battle', 'ranking'] as BattleTab[]).map((item) => (
               <button
                 key={item}
-                onClick={() => setTab(item)}
+                onClick={() => {
+                  setTab(item)
+                  setStartedKey(null)
+                }}
                 className={`min-h-12 rounded-xl text-base font-black ${
                   tab === item ? 'bg-white text-purple-800' : 'text-white'
                 }`}
@@ -100,65 +103,69 @@ export default function BattleHub() {
             <Ranking />
           </div>
         ) : (
-          <div className="mt-4 space-y-4">
-            <section className="rounded-3xl bg-white/85 p-3 shadow-lg">
-              <h2 className="mb-2 text-xl font-black text-purple-900">モードをえらぶ</h2>
-              <div className="grid grid-cols-2 gap-2">
-                {MODES.map((item) => (
-                  <button
-                    key={item}
-                    onClick={() => {
-                      setMode(item)
-                      setStartedKey(null)
-                    }}
-                    className={`min-h-12 rounded-2xl px-2 text-sm font-black shadow ${
-                      mode === item ? 'bg-yellow-300 text-zinc-900' : 'bg-purple-600 text-white'
-                    }`}
-                  >
-                    {MODE_LABELS[item]}
-                  </button>
-                ))}
-              </div>
-            </section>
-
-            {loading ? (
-              <div className="rounded-3xl bg-white/85 p-6 text-center font-black text-purple-800">
-                キャラをよみこみ中...
-              </div>
-            ) : mode !== 'team' ? (
+          <div className="mt-3 space-y-3">
+            {!startedKey && (
               <>
-                <CharSelect
-                  title="1Pキャラ"
-                  characters={characters}
-                  selectedId={leftId}
-                  onSelect={(character) => {
-                    setLeftId(character.id)
-                    setStartedKey(null)
-                  }}
-                />
-                <CharSelect
-                  title="CPUキャラ"
-                  characters={characters.filter((character) => character.id !== leftId)}
-                  selectedId={rightId}
-                  onSelect={(character) => {
-                    setRightId(character.id)
-                    setStartedKey(null)
-                  }}
-                />
+                <section className="rounded-3xl bg-white/85 p-3 shadow-lg">
+                  <h2 className="mb-2 text-xl font-black text-purple-900">モードをえらぶ</h2>
+                  <div className="grid grid-cols-2 gap-2">
+                    {MODES.map((item) => (
+                      <button
+                        key={item}
+                        onClick={() => setMode(item)}
+                        className={`min-h-12 rounded-2xl px-2 text-sm font-black shadow ${
+                          mode === item ? 'bg-yellow-300 text-zinc-900' : 'bg-purple-600 text-white'
+                        }`}
+                      >
+                        {MODE_LABELS[item]}
+                      </button>
+                    ))}
+                  </div>
+                </section>
+
+                {loading ? (
+                  <div className="rounded-3xl bg-white/85 p-6 text-center font-black text-purple-800">
+                    キャラをよみこみ中...
+                  </div>
+                ) : mode !== 'team' ? (
+                  <>
+                    <CharSelect
+                      title="1Pキャラ"
+                      characters={characters}
+                      selectedId={leftId}
+                      onSelect={(character) => setLeftId(character.id)}
+                    />
+                    <CharSelect
+                      title="CPUキャラ"
+                      characters={characters.filter((character) => character.id !== leftId)}
+                      selectedId={rightId}
+                      onSelect={(character) => setRightId(character.id)}
+                    />
+                  </>
+                ) : (
+                  <div className="rounded-3xl bg-white/85 p-4 text-sm font-bold text-purple-900 shadow-lg">
+                    ルイチームとミオチームから3キャラずつが自動で出るよ。
+                  </div>
+                )}
+
+                <button
+                  onClick={start}
+                  disabled={loading || (mode !== 'team' && (!left || !right))}
+                  className="min-h-16 w-full rounded-3xl bg-gradient-to-r from-yellow-300 to-orange-400 text-2xl font-black text-zinc-900 shadow-2xl active:scale-95 disabled:opacity-50"
+                >
+                  バトルスタート！
+                </button>
               </>
-            ) : (
-              <div className="rounded-3xl bg-white/85 p-4 text-sm font-bold text-purple-900 shadow-lg">
-                ルイチームとミオチームから新しい3キャラずつが自動で出るよ。
-              </div>
             )}
 
-            <button
-              onClick={start}
-              disabled={loading || (mode !== 'team' && (!left || !right))}
-              className="min-h-16 w-full rounded-3xl bg-gradient-to-r from-yellow-300 to-orange-400 text-2xl font-black text-zinc-900 shadow-2xl active:scale-95 disabled:opacity-50"
-            >
-              バトルスタート！
-            </button>
+            {startedKey && (
+              <button
+                onClick={() => setStartedKey(null)}
+                className="min-h-11 rounded-2xl bg-white/85 px-4 text-sm font-black text-purple-800 shadow"
+              >
+                ← えらびなおす
+              </button>
+            )}
 
             {battle()}
           </div>

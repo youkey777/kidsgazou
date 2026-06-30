@@ -9,6 +9,7 @@ import {
   type DamageEvent,
   type RpsHand,
   makeEventId,
+  shortBattleName,
 } from './types'
 
 type Props = {
@@ -36,6 +37,7 @@ export default function RpsBattle({ left, right, onDone }: Props) {
   const [rightHp, setRightHp] = useState(right.hp)
   const [round, setRound] = useState(1)
   const [events, setEvents] = useState<DamageEvent[]>([])
+  const [message, setMessage] = useState('じゃんけんを選んでね')
   const [log, setLog] = useState<string[]>(['5ラウンドじゃんけん！'])
   const [finished, setFinished] = useState(false)
   const [saveMessage, setSaveMessage] = useState<string | null>(null)
@@ -46,7 +48,8 @@ export default function RpsBattle({ left, right, onDone }: Props) {
     setFinished(true)
     playVictory()
     fireBattleConfetti()
-    setLog((prev) => [`${result.winner.name} の勝ち！`, ...prev])
+    setMessage(`${shortBattleName(result.winner.name)}の勝ち！`)
+    setLog((prev) => [`${shortBattleName(result.winner.name)}の勝ち！`, ...prev])
     setSaveMessage(await saveBattleResult('rps', result))
     await onDone()
   }
@@ -56,10 +59,11 @@ export default function RpsBattle({ left, right, onDone }: Props) {
     const cpu = HANDS[Math.floor(Math.random() * HANDS.length)]
     const result = judge(hand, cpu)
     setLog((prev) => [
-      `ラウンド${round}: ${HAND_LABELS[hand]} vs ${HAND_LABELS[cpu]}`,
-      ...prev.slice(0, 6),
+      `R${round}: ${HAND_LABELS[hand]} vs ${HAND_LABELS[cpu]}`,
+      ...prev.slice(0, 5),
     ])
     if (result === 0) {
+      setMessage(`あいこ！ ${HAND_LABELS[hand]} vs ${HAND_LABELS[cpu]}`)
       setEvents((prev) => [...prev, { id: makeEventId(), target: 'left', amount: 0, label: 'あいこ' }])
       return
     }
@@ -72,11 +76,13 @@ export default function RpsBattle({ left, right, onDone }: Props) {
       const damage = left.atk * 2
       nextRightHp = Math.max(0, rightHp - damage)
       setRightHp(nextRightHp)
+      setMessage(`${HAND_LABELS[hand]}の勝ち！ ${damage}ダメージ`)
       setEvents((prev) => [...prev, { id: makeEventId(), target: 'right', amount: damage }])
     } else {
       const damage = right.atk * 2
       nextLeftHp = Math.max(0, leftHp - damage)
       setLeftHp(nextLeftHp)
+      setMessage(`CPUの勝ち！ ${damage}ダメージ`)
       setEvents((prev) => [...prev, { id: makeEventId(), target: 'left', amount: damage }])
     }
 
@@ -96,6 +102,7 @@ export default function RpsBattle({ left, right, onDone }: Props) {
         rightHp={rightHp}
         damageEvents={events}
         koSide={finished ? (leftHp >= rightHp ? 'right' : 'left') : undefined}
+        message={message}
       />
       <div className="rounded-3xl bg-white/90 p-3 shadow-lg">
         <p className="mb-2 text-center text-lg font-black text-purple-800">
@@ -115,7 +122,7 @@ export default function RpsBattle({ left, right, onDone }: Props) {
         </div>
       </div>
       {saveMessage && <p className="rounded-2xl bg-red-100 p-3 text-sm font-bold text-red-700">{saveMessage}</p>}
-      <div className="max-h-44 overflow-y-auto rounded-3xl bg-white/85 p-3">
+      <div className="max-h-32 overflow-y-auto rounded-3xl bg-white/85 p-3">
         {log.map((item, index) => (
           <p key={`${item}-${index}`} className="text-sm font-bold text-zinc-800">{item}</p>
         ))}

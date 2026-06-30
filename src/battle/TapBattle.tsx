@@ -4,7 +4,7 @@ import { saveBattleResult } from './battle-db'
 import BattleStage from './effects/BattleStage'
 import { fireBattleConfetti } from './effects/Confetti'
 import { playDamage, playPunch, playVictory } from './sounds'
-import { type DamageEvent, makeEventId } from './types'
+import { type DamageEvent, makeEventId, shortBattleName } from './types'
 
 type Props = {
   left: ImageRecord
@@ -19,6 +19,7 @@ export default function TapBattle({ left, right, onDone }: Props) {
   const [rightGauge, setRightGauge] = useState(0)
   const [timeLeft, setTimeLeft] = useState(30)
   const [events, setEvents] = useState<DamageEvent[]>([])
+  const [message, setMessage] = useState('タップでゲージをためよう！')
   const [finished, setFinished] = useState(false)
   const [saveMessage, setSaveMessage] = useState<string | null>(null)
 
@@ -27,6 +28,7 @@ export default function TapBattle({ left, right, onDone }: Props) {
     const result =
       nextLeftHp >= nextRightHp ? { winner: left, loser: right } : { winner: right, loser: left }
     setFinished(true)
+    setMessage(`${shortBattleName(result.winner.name)}の勝ち！`)
     playVictory()
     fireBattleConfetti()
     setSaveMessage(await saveBattleResult('tap', result))
@@ -41,12 +43,14 @@ export default function TapBattle({ left, right, onDone }: Props) {
         const damage = Math.floor(left.atk * 1.5)
         const nextRightHp = Math.max(0, rightHp - damage)
         setRightHp(nextRightHp)
+        setMessage(`${shortBattleName(left.name)}のタップ攻撃！ ${damage}ダメージ`)
         setEvents((prev) => [...prev, { id: makeEventId(), target: 'right', amount: damage }])
         playPunch()
         playDamage()
         if (nextRightHp <= 0) void finish(leftHp, nextRightHp)
         return 0
       }
+      setMessage(`ゲージ ${next}/20`)
       return next
     })
   }
@@ -75,6 +79,7 @@ export default function TapBattle({ left, right, onDone }: Props) {
           const damage = Math.floor(right.atk * 1.5)
           const nextLeftHp = Math.max(0, leftHp - damage)
           setLeftHp(nextLeftHp)
+          setMessage(`CPUの攻撃！ ${damage}ダメージ`)
           setEvents((prev) => [...prev, { id: makeEventId(), target: 'left', amount: damage }])
           playPunch()
           playDamage()
@@ -96,9 +101,10 @@ export default function TapBattle({ left, right, onDone }: Props) {
         rightHp={rightHp}
         damageEvents={events}
         koSide={finished ? (leftHp >= rightHp ? 'right' : 'left') : undefined}
+        message={message}
       />
       <div className="rounded-3xl bg-white/90 p-3 shadow-lg">
-        <p className="text-center text-3xl font-black text-purple-800">{timeLeft}</p>
+        <p className="text-center text-2xl font-black text-purple-800">のこり {timeLeft}秒</p>
         <div className="mt-2 grid grid-cols-2 gap-2 text-xs font-black">
           <div>
             こちらゲージ
@@ -117,11 +123,11 @@ export default function TapBattle({ left, right, onDone }: Props) {
       <button
         onClick={playerAttack}
         disabled={finished}
-        className="min-h-[44vh] w-full rounded-3xl bg-gradient-to-br from-yellow-300 to-orange-500 text-4xl font-black text-zinc-900 shadow-2xl active:scale-95 disabled:opacity-50"
+        className="min-h-[28vh] w-full rounded-3xl bg-gradient-to-br from-yellow-300 to-orange-500 text-4xl font-black text-zinc-900 shadow-2xl active:scale-95 disabled:opacity-50 sm:min-h-[260px]"
       >
         タップ！
       </button>
-      {finished && <div className="rounded-3xl bg-yellow-300 p-4 text-center text-3xl font-black text-zinc-900">YOU WIN!</div>}
+      {finished && <div className="rounded-3xl bg-yellow-300 p-3 text-center text-2xl font-black text-zinc-900">YOU WIN!</div>}
       {saveMessage && <p className="rounded-2xl bg-red-100 p-3 text-sm font-bold text-red-700">{saveMessage}</p>}
     </div>
   )

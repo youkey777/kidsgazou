@@ -4,7 +4,7 @@ import { saveBattleResult } from './battle-db'
 import BattleStage from './effects/BattleStage'
 import { fireBattleConfetti } from './effects/Confetti'
 import { playDamage, playPunch, playVictory } from './sounds'
-import { type DamageEvent, makeEventId } from './types'
+import { type DamageEvent, makeEventId, shortBattleName } from './types'
 
 type Props = {
   characters: ImageRecord[]
@@ -32,6 +32,7 @@ export default function TeamBattle({ characters, onDone }: Props) {
   const [leftHp, setLeftHp] = useState(ruiTeam[0]?.hp ?? 1)
   const [rightHp, setRightHp] = useState(mioTeam[0]?.hp ?? 1)
   const [events, setEvents] = useState<DamageEvent[]>([])
+  const [message, setMessage] = useState('3vs3 勝ち抜きスタート！')
   const [log, setLog] = useState<string[]>(['3vs3 勝ち抜きバトル！'])
   const [winnerTeam, setWinnerTeam] = useState<'rui' | 'mio' | null>(null)
   const [saveMessage, setSaveMessage] = useState<string | null>(null)
@@ -56,10 +57,10 @@ export default function TeamBattle({ characters, onDone }: Props) {
       while (!cancelled && currentLeft && currentRight) {
         await sleep(800)
         const attacker = leftTurn ? currentLeft : currentRight
-        const defender = leftTurn ? currentRight : currentLeft
-        const hit = damage(attacker, defender)
+        const hit = damage(attacker, leftTurn ? currentRight : currentLeft)
         playPunch()
         playDamage()
+        setMessage(`${shortBattleName(attacker.name)}の攻撃！ ${hit}ダメージ`)
         setEvents((prev) => [
           ...prev,
           { id: makeEventId(), target: leftTurn ? 'right' : 'left', amount: hit },
@@ -72,12 +73,13 @@ export default function TeamBattle({ characters, onDone }: Props) {
           currentLeftHp = Math.max(0, currentLeftHp - hit)
           setLeftHp(currentLeftHp)
         }
-        setLog((prev) => [`${attacker.name} が ${hit} ダメージ！`, ...prev.slice(0, 8)])
+        setLog((prev) => [`${shortBattleName(attacker.name)}: ${hit}ダメージ`, ...prev.slice(0, 6)])
 
         if (currentRightHp <= 0) {
           currentRightIndex += 1
           if (currentRightIndex >= mioTeam.length) {
             setWinnerTeam('rui')
+            setMessage('ルイチーム勝利！')
             playVictory()
             fireBattleConfetti()
             setSaveMessage(
@@ -94,13 +96,15 @@ export default function TeamBattle({ characters, onDone }: Props) {
           currentRightHp = currentRight.hp
           setRightIndex(currentRightIndex)
           setRightHp(currentRightHp)
-          setLog((prev) => [`ミオチーム次のキャラ登場！`, ...prev.slice(0, 8)])
+          setMessage('ミオチーム次のキャラ登場！')
+          setLog((prev) => ['ミオチーム次のキャラ登場！', ...prev.slice(0, 6)])
         }
 
         if (currentLeftHp <= 0) {
           currentLeftIndex += 1
           if (currentLeftIndex >= ruiTeam.length) {
             setWinnerTeam('mio')
+            setMessage('ミオチーム勝利！')
             playVictory()
             fireBattleConfetti()
             setSaveMessage(
@@ -117,7 +121,8 @@ export default function TeamBattle({ characters, onDone }: Props) {
           currentLeftHp = currentLeft.hp
           setLeftIndex(currentLeftIndex)
           setLeftHp(currentLeftHp)
-          setLog((prev) => [`ルイチーム次のキャラ登場！`, ...prev.slice(0, 8)])
+          setMessage('ルイチーム次のキャラ登場！')
+          setLog((prev) => ['ルイチーム次のキャラ登場！', ...prev.slice(0, 6)])
         }
         leftTurn = !leftTurn
       }
@@ -155,14 +160,15 @@ export default function TeamBattle({ characters, onDone }: Props) {
         rightHp={rightHp}
         damageEvents={events}
         koSide={winnerTeam === 'rui' ? 'right' : winnerTeam === 'mio' ? 'left' : undefined}
+        message={message}
       />
       {winnerTeam && (
-        <div className="rounded-3xl bg-yellow-300 p-4 text-center text-3xl font-black text-zinc-900 shadow-xl">
+        <div className="rounded-3xl bg-yellow-300 p-3 text-center text-2xl font-black text-zinc-900 shadow-xl">
           🏆 {winnerTeam === 'rui' ? 'ルイチーム' : 'ミオチーム'} 勝利！
         </div>
       )}
       {saveMessage && <p className="rounded-2xl bg-red-100 p-3 text-sm font-bold text-red-700">{saveMessage}</p>}
-      <div className="max-h-52 overflow-y-auto rounded-3xl bg-white/85 p-3">
+      <div className="max-h-36 overflow-y-auto rounded-3xl bg-white/85 p-3">
         {log.map((item, index) => (
           <p key={`${item}-${index}`} className="text-sm font-bold text-zinc-800">{item}</p>
         ))}

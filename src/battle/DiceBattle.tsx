@@ -3,12 +3,8 @@ import type { ImageRecord } from '../db'
 import { saveBattleResult } from './battle-db'
 import BattleStage from './effects/BattleStage'
 import { fireBattleConfetti } from './effects/Confetti'
-import {
-  type DamageEvent,
-  makeEventId,
-  type BattleResult,
-} from './types'
 import { playDamage, playPunch, playVictory } from './sounds'
+import { type BattleResult, type DamageEvent, makeEventId, shortBattleName } from './types'
 
 type Props = {
   left: ImageRecord
@@ -29,6 +25,7 @@ export default function DiceBattle({ left, right, onDone }: Props) {
   const [events, setEvents] = useState<DamageEvent[]>([])
   const [activeSide, setActiveSide] = useState<'left' | 'right' | undefined>()
   const [koSide, setKoSide] = useState<'left' | 'right' | undefined>()
+  const [message, setMessage] = useState('すばやい方からスタート！')
   const [log, setLog] = useState<string[]>(['ダイスバトル開始！'])
   const [saveMessage, setSaveMessage] = useState<string | null>(null)
 
@@ -46,7 +43,9 @@ export default function DiceBattle({ left, right, onDone }: Props) {
         const damage = calcDamage(attacker, defender)
         const target = leftTurn ? 'right' : 'left'
         const attackerSide = leftTurn ? 'left' : 'right'
+        const text = `${shortBattleName(attacker.name)}の攻撃！ ${damage}ダメージ`
         setActiveSide(attackerSide)
+        setMessage(text)
         playPunch()
         playDamage()
         setEvents((prev) => [...prev, { id: makeEventId(), target, amount: damage }])
@@ -58,8 +57,8 @@ export default function DiceBattle({ left, right, onDone }: Props) {
           setLeftHp(leftCurrent)
         }
         setLog((prev) => [
-          `${attacker.name} のこうげき！ ${defender.name} に ${damage} ダメージ`,
-          ...prev.slice(0, 5),
+          `${shortBattleName(attacker.name)} → ${shortBattleName(defender.name)}: ${damage}ダメージ`,
+          ...prev.slice(0, 4),
         ])
         await sleep(1000)
         leftTurn = !leftTurn
@@ -69,11 +68,12 @@ export default function DiceBattle({ left, right, onDone }: Props) {
       const result: BattleResult =
         leftCurrent > 0 ? { winner: left, loser: right } : { winner: right, loser: left }
       setKoSide(leftCurrent > 0 ? 'right' : 'left')
-      setLog((prev) => [`${result.winner.name} の勝ち！`, ...prev])
+      setMessage(`${shortBattleName(result.winner.name)}の勝ち！`)
+      setLog((prev) => [`${shortBattleName(result.winner.name)}の勝ち！`, ...prev])
       playVictory()
       fireBattleConfetti()
-      const message = await saveBattleResult('dice', result)
-      setSaveMessage(message)
+      const saveError = await saveBattleResult('dice', result)
+      setSaveMessage(saveError)
       await onDone()
     })()
     return () => {
@@ -91,9 +91,10 @@ export default function DiceBattle({ left, right, onDone }: Props) {
         damageEvents={events}
         activeSide={activeSide}
         koSide={koSide}
+        message={message}
       />
       {koSide && (
-        <div className="rounded-3xl bg-yellow-300 p-4 text-center text-3xl font-black text-zinc-900 shadow-xl">
+        <div className="rounded-3xl bg-yellow-300 p-3 text-center text-2xl font-black text-zinc-900 shadow-xl">
           KO! YOU WIN!
         </div>
       )}
@@ -102,7 +103,7 @@ export default function DiceBattle({ left, right, onDone }: Props) {
           {saveMessage}
         </p>
       )}
-      <div className="max-h-44 overflow-y-auto rounded-3xl bg-white/85 p-3">
+      <div className="max-h-32 overflow-y-auto rounded-3xl bg-white/85 p-3">
         {log.map((item, index) => (
           <p key={`${item}-${index}`} className="text-sm font-bold text-zinc-800">
             {item}
