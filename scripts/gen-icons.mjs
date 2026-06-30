@@ -1,48 +1,89 @@
 import sharp from 'sharp'
-import { writeFile } from 'node:fs/promises'
+import { writeFile, readFile } from 'node:fs/promises'
 
-const SVG = `
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+const SOURCE = 'scripts/tung-source.jpg'
+
+const TEXT_SVG = (size) => {
+  const charSize = Math.round(size * 0.18)
+  const ampSize = Math.round(size * 0.13)
+  const y = Math.round(size * 0.95)
+  return `<svg xmlns="http://www.w3.org/2000/svg" width="${size}" height="${size}" viewBox="0 0 ${size} ${size}">
   <defs>
-    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
-      <stop offset="0" stop-color="#18181b"/>
-      <stop offset="0.5" stop-color="#27272a"/>
-      <stop offset="0.5" stop-color="#fbcfe8"/>
-      <stop offset="1" stop-color="#f9a8d4"/>
-    </linearGradient>
-    <filter id="shadow">
-      <feDropShadow dx="0" dy="4" stdDeviation="6" flood-opacity="0.3"/>
+    <filter id="ds" x="-20%" y="-20%" width="140%" height="140%">
+      <feDropShadow dx="0" dy="${Math.round(size * 0.006)}" stdDeviation="${Math.round(size * 0.008)}" flood-color="#fff" flood-opacity="0.9"/>
+      <feDropShadow dx="0" dy="${Math.round(size * 0.012)}" stdDeviation="${Math.round(size * 0.014)}" flood-color="#000" flood-opacity="0.35"/>
     </filter>
   </defs>
-  <rect width="512" height="512" rx="96" fill="url(#bg)"/>
-  <g filter="url(#shadow)">
-    <circle cx="160" cy="220" r="80" fill="#fbbf24"/>
-    <circle cx="135" cy="200" r="14" fill="#18181b"/>
-    <circle cx="185" cy="200" r="14" fill="#18181b"/>
-    <path d="M 130 245 Q 160 270 190 245" stroke="#18181b" stroke-width="8" fill="none" stroke-linecap="round"/>
-  </g>
-  <g filter="url(#shadow)">
-    <circle cx="350" cy="220" r="60" fill="#ec4899"/>
-    <circle cx="350" cy="140" r="50" fill="#fbcfe8"/>
-    <circle cx="290" cy="180" r="50" fill="#fbcfe8"/>
-    <circle cx="410" cy="180" r="50" fill="#fbcfe8"/>
-    <circle cx="320" cy="260" r="50" fill="#fbcfe8"/>
-    <circle cx="380" cy="260" r="50" fill="#fbcfe8"/>
-    <circle cx="350" cy="220" r="35" fill="#fde047"/>
-  </g>
-  <text x="256" y="430" font-size="56" text-anchor="middle" font-weight="bold" fill="#fff" font-family="system-ui,sans-serif">ルイ &amp; ミオ</text>
-</svg>
-`.trim()
-
-const sizes = [
-  { name: 'pwa-192x192.png', size: 192 },
-  { name: 'pwa-512x512.png', size: 512 },
-  { name: 'apple-touch-icon.png', size: 180 },
-]
-
-const buf = Buffer.from(SVG)
-for (const { name, size } of sizes) {
-  const out = await sharp(buf).resize(size, size).png().toBuffer()
-  await writeFile(`public/${name}`, out)
-  console.log(`✓ public/${name}`)
+  <text x="50%" y="${y}" text-anchor="middle"
+        font-family="'Hiragino Maru Gothic ProN','Yu Gothic UI',sans-serif"
+        font-weight="900" font-size="${charSize}" fill="#831843" filter="url(#ds)"
+        stroke="#fff" stroke-width="${Math.round(size * 0.012)}" paint-order="stroke fill">ルイ <tspan font-size="${ampSize}" fill="#be185d">&amp;</tspan> ミオ</text>
+</svg>`
 }
+
+async function buildIcon(size, outPath) {
+  const charImg = await sharp(SOURCE)
+    .resize(Math.round(size * 0.78), Math.round(size * 0.78), { fit: 'contain' })
+    .toBuffer()
+
+  // base gradient background
+  const bgSvg = `<svg xmlns="http://www.w3.org/2000/svg" width="${size}" height="${size}">
+    <defs>
+      <linearGradient id="g" x1="0" y1="0" x2="0" y2="1">
+        <stop offset="0" stop-color="#fef3c7"/>
+        <stop offset="0.5" stop-color="#fce7f3"/>
+        <stop offset="1" stop-color="#f9a8d4"/>
+      </linearGradient>
+    </defs>
+    <rect width="${size}" height="${size}" fill="url(#g)"/>
+  </svg>`
+
+  const composed = await sharp(Buffer.from(bgSvg))
+    .composite([
+      {
+        input: charImg,
+        gravity: 'north',
+        top: Math.round(size * 0.02),
+        left: Math.round(size * 0.11),
+      },
+      {
+        input: Buffer.from(TEXT_SVG(size)),
+        top: 0,
+        left: 0,
+      },
+    ])
+    .png()
+    .toBuffer()
+
+  await writeFile(outPath, composed)
+  console.log(`✓ ${outPath} (${size}x${size})`)
+}
+
+await buildIcon(512, 'public/pwa-512x512.png')
+await buildIcon(192, 'public/pwa-192x192.png')
+await buildIcon(180, 'public/apple-touch-icon.png')
+
+// favicon.svg — use embedded image data
+const sourceBuf = await readFile(SOURCE)
+const sourceB64 = sourceBuf.toString('base64')
+const faviconSvg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <defs>
+    <linearGradient id="g" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#fef3c7"/>
+      <stop offset="0.5" stop-color="#fce7f3"/>
+      <stop offset="1" stop-color="#f9a8d4"/>
+    </linearGradient>
+    <filter id="ds">
+      <feDropShadow dx="0" dy="3" stdDeviation="4" flood-color="#fff" flood-opacity="0.9"/>
+      <feDropShadow dx="0" dy="6" stdDeviation="7" flood-color="#000" flood-opacity="0.35"/>
+    </filter>
+  </defs>
+  <rect width="512" height="512" fill="url(#g)"/>
+  <image x="56" y="10" width="400" height="400" href="data:image/jpeg;base64,${sourceB64}"/>
+  <text x="50%" y="486" text-anchor="middle"
+        font-family="'Hiragino Maru Gothic ProN','Yu Gothic UI',sans-serif"
+        font-weight="900" font-size="92" fill="#831843" filter="url(#ds)"
+        stroke="#fff" stroke-width="6" paint-order="stroke fill">ルイ <tspan font-size="66" fill="#be185d">&amp;</tspan> ミオ</text>
+</svg>`
+await writeFile('public/favicon.svg', faviconSvg)
+console.log('✓ public/favicon.svg')
