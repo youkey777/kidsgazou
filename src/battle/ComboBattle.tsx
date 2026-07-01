@@ -10,10 +10,10 @@ import { fireBattleConfetti } from './effects/Confetti'
 import type { DiceThrowEffectData } from './effects/DiceThrowEffect'
 import VictoryOverlay from './effects/VictoryOverlay'
 import {
-  playDamage,
+  playAttributeHit,
+  playAttributeWhoosh,
   playDiceLand,
   playDiceRoll,
-  playPunch,
   playSelect,
   playUltimate,
   playVictory,
@@ -249,10 +249,10 @@ export default function ComboBattle({ left, right, onDone, onExit }: Props) {
       imageUrl: '/battle/durian-3d.png',
       label: 'ドリアン投げ',
     })
-    playPunch()
-    await sleep(1380)
+    playAttributeWhoosh('durian')
+    await sleep(1840)
 
-    playDamage()
+    playAttributeHit('durian')
     applyDamage(attackerSide, 10, 'counter')
     setConfusedSide(attackerSide)
     setMessage('10ダメージ！相手(あいて)が混乱(こんらん)！')
@@ -273,11 +273,10 @@ export default function ComboBattle({ left, right, onDone, onExit }: Props) {
       label: '通常攻撃',
     })
     setMessage('さらに通常攻撃(つうじょうこうげき)！')
-    playWhoosh()
-    playPunch()
-    await sleep(1300)
+    playAttributeWhoosh(defender.species)
+    await sleep(1620)
     const followDamage = calculateDiceDamage(defender, attacker, 2)
-    playDamage()
+    playAttributeHit(defender.species)
     applyDamage(attackerSide, followDamage)
     setMessage(`${followDamage}ダメージ！`)
     await sleep(1100)
@@ -323,7 +322,7 @@ export default function ComboBattle({ left, right, onDone, onExit }: Props) {
       }
       setCinematic(cinematicData)
       playUltimate()
-      await sleep(die === 4 ? 450 : die === 5 ? 700 : 950)
+      await sleep(die === 4 ? 900 : die === 5 ? 1120 : 1320)
     }
 
     setActiveSide(winnerSide)
@@ -337,12 +336,11 @@ export default function ComboBattle({ left, right, onDone, onExit }: Props) {
     })
     setDiceThrowEffect(null)
     setMessage(die >= 4 ? `${attackName}！` : `${shortBattleName(winner.name)} の攻撃(こうげき)！`)
-    playWhoosh()
-    if (die < 4) playPunch()
-    await sleep(die >= 4 ? 980 : 1280)
+    playAttributeWhoosh(winner.species)
+    await sleep(die >= 4 ? 1520 : 1620)
 
     const damage = die === 6 ? (target === 'right' ? rightHpRef.current : leftHpRef.current) : calculateDiceDamage(winner, loser, die)
-    playDamage()
+    playAttributeHit(winner.species)
     let nextLeftHp = leftHpRef.current
     let nextRightHp = rightHpRef.current
     if (winnerSide === 'left') {

@@ -50,17 +50,17 @@ function variantMotion(direction: number, style: AttributeStyle) {
   const mid = direction * 22
   switch (style.motion) {
     case 'beam':
-      return { x: ['0vw', `${reach * 0.88}vw`, `${reach}vw`, `${reach}vw`], y: [0, 0, 0, 0], rotate: 0, scale: [0.72, 1.28, 1.4, 0.18], opacity: [0, 1, 1, 0] }
+      return { x: ['0vw', '0vw', `${reach * 0.88}vw`, `${reach}vw`, `${reach}vw`], y: [0, 0, 0, 0, 0], rotate: 0, scale: [0.72, 1.08, 1.28, 1.4, 0.18], opacity: [0, 1, 1, 1, 0] }
     case 'slash':
-      return { x: ['0vw', `${mid * 0.45}vw`, `${reach}vw`, `${reach}vw`], y: [-74, 16, 0, 0], rotate: [direction * -10, direction * -10, direction * -10, direction * -10], scale: [1.05, 1.26, 1.38, 0.2], opacity: [0, 1, 1, 0] }
+      return { x: ['0vw', '0vw', `${mid * 0.45}vw`, `${reach}vw`, `${reach}vw`], y: [-74, -74, 16, 0, 0], rotate: [direction * -10, direction * -10, direction * -10, direction * -10, direction * -10], scale: [0.86, 1.05, 1.26, 1.38, 0.2], opacity: [0, 1, 1, 1, 0] }
     case 'drop':
-      return { x: ['0vw', `${mid * 0.6}vw`, `${reach}vw`, `${reach}vw`], y: [-110, -48, 0, 0], rotate: [0, direction * 5, direction * 6, direction * 6], scale: [0.88, 1.18, 1.38, 0.24], opacity: [0, 1, 1, 0] }
+      return { x: ['0vw', '0vw', `${mid * 0.6}vw`, `${reach}vw`, `${reach}vw`], y: [-110, -110, -48, 0, 0], rotate: [0, 0, direction * 5, direction * 6, direction * 6], scale: [0.72, 0.98, 1.18, 1.38, 0.24], opacity: [0, 1, 1, 1, 0] }
     case 'arc':
-      return { x: ['0vw', `${mid * 0.75}vw`, `${reach}vw`, `${reach}vw`], y: [0, -52, 0, 0], rotate: [0, direction * 5, direction * 5, direction * 5], scale: [0.86, 1.2, 1.36, 0.2], opacity: [0, 1, 1, 0] }
+      return { x: ['0vw', '0vw', `${mid * 0.75}vw`, `${reach}vw`, `${reach}vw`], y: [0, 0, -52, 0, 0], rotate: [0, 0, direction * 5, direction * 5, direction * 5], scale: [0.72, 1, 1.2, 1.36, 0.2], opacity: [0, 1, 1, 1, 0] }
     case 'spiral':
-      return { x: ['0vw', `${mid * 0.55}vw`, `${mid * 1.15}vw`, `${reach}vw`, `${reach}vw`], y: [0, -34, 30, 0, 0], rotate: [0, direction * 8, direction * -8, 0, 0], scale: [0.82, 1.12, 1.12, 1.36, 0.2], opacity: [0, 1, 1, 1, 0] }
+      return { x: ['0vw', '0vw', `${mid * 0.55}vw`, `${mid * 1.15}vw`, `${reach}vw`, `${reach}vw`], y: [0, 0, -34, 30, 0, 0], rotate: [0, 0, direction * 8, direction * -8, 0, 0], scale: [0.72, 1, 1.12, 1.12, 1.36, 0.2], opacity: [0, 1, 1, 1, 1, 0] }
     default:
-      return { x: ['0vw', `${reach * 0.82}vw`, `${reach}vw`, `${reach}vw`], y: [0, 0, 0, 0], rotate: 0, scale: [0.82, 1.22, 1.36, 0.22], opacity: [0, 1, 1, 0] }
+      return { x: ['0vw', '0vw', `${reach * 0.82}vw`, `${reach}vw`, `${reach}vw`], y: [0, 0, 0, 0, 0], rotate: 0, scale: [0.72, 1.02, 1.22, 1.36, 0.22], opacity: [0, 1, 1, 1, 0] }
   }
 }
 
@@ -69,7 +69,8 @@ export default function AttackFlyEffect({ effect }: { effect: AttackEffectData }
   const direction = effect.side === 'left' ? 1 : -1
   const start = effect.side === 'left' ? '24%' : '76%'
   const motionPath = variantMotion(direction, style)
-  const duration = effect.kind === 'counter' ? 1.45 : effect.kind === 'dice' ? 1.34 : 1.22
+  const duration = effect.kind === 'counter' ? 2.15 : effect.kind === 'dice' ? 1.92 : 1.72
+  const motionTimes = style.motion === 'spiral' ? [0, 0.2, 0.48, 0.68, 0.86, 1] : [0, 0.22, 0.62, 0.84, 1]
   const tokenCount = Math.min(6, Math.max(3, effect.variant + 1))
   const imageUrl =
     effect.imageUrl ??
@@ -88,7 +89,7 @@ export default function AttackFlyEffect({ effect }: { effect: AttackEffectData }
         style={{ left: start }}
         initial={{ x: '0vw', y: 0, scale: 0.7, rotate: 0, opacity: 0 }}
         animate={motionPath}
-        transition={{ duration, ease: [0.2, 0.75, 0.18, 1] }}
+        transition={{ duration, ease: [0.2, 0.75, 0.18, 1], times: motionTimes }}
       >
         <div className={`relative grid h-28 w-28 place-items-center text-4xl sm:h-36 sm:w-36 sm:text-5xl ${style.glow}`}>
           <motion.div

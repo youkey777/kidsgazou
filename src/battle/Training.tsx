@@ -178,6 +178,7 @@ function RadarChart({ character }: { character: ImageRecord }) {
           />
         ))}
         <motion.polygon
+          key={polygon}
           points={polygon}
           fill="rgba(250,204,21,0.45)"
           stroke="#facc15"
@@ -256,14 +257,14 @@ function StatRow({
   onChange: () => void
 }) {
   return (
-    <div className="grid grid-cols-[1fr_auto_auto] items-center gap-2 rounded-2xl bg-white/12 px-3 py-2 ring-1 ring-white/15">
-      <p className="font-black text-white">{label}</p>
-      <p className="min-w-12 text-right text-2xl font-black text-yellow-200">{value}</p>
+    <div className="grid grid-cols-[minmax(0,1fr)_minmax(3rem,auto)_5.7rem] items-center gap-2 rounded-2xl bg-white/12 px-3 py-2 ring-1 ring-white/15">
+      <p className="min-w-0 whitespace-normal break-keep text-sm font-black leading-tight text-white sm:text-base">{label}</p>
+      <p className="min-w-12 break-words text-right text-2xl font-black leading-tight text-yellow-200">{value}</p>
       <button
         type="button"
         disabled={disabled}
         onClick={onChange}
-        className="min-h-11 rounded-xl bg-white px-3 text-sm font-black text-purple-800 shadow-lg disabled:bg-white/25 disabled:text-white/50"
+        className="min-h-11 w-[5.7rem] rounded-xl bg-white px-2 text-xs font-black leading-tight text-purple-800 shadow-lg disabled:bg-white/25 disabled:text-white/50"
       >
         変更(へんこう)
       </button>
@@ -337,7 +338,7 @@ function QuizOverlay({
               animate={{ scale: 1, opacity: 1, y: 0 }}
               exit={{ scale: 0.7, opacity: 0 }}
             >
-              {answerState === 'correct' ? '正解(せいかい)！クリスタルゲット！' : 'おしい！'}
+              {answerState === 'correct' ? '正解(せいかい)！クリスタルゲット！' : `おしい！こたえは ${question.answer}`}
             </motion.div>
           )}
         </AnimatePresence>
@@ -355,6 +356,13 @@ function SlotOverlay({
   value: number | string | null
   rolling: boolean
 }) {
+  const displayValue =
+    typeof value === 'string' && value !== '？' ? `${attributeMark(value)} ${value}` : (value ?? '？')
+  const reelItems = Array.from({ length: 10 }, (_, index) => {
+    if (typeof value === 'number') return Math.max(1, Math.min(99, value + index - 5))
+    return displayValue
+  })
+
   return (
     <motion.div
       className="fixed inset-0 z-50 flex items-center justify-center bg-purple-950 p-4"
@@ -382,6 +390,8 @@ function SlotOverlay({
         <div
           className="relative mx-auto mt-5 h-[420px] max-w-[320px] overflow-hidden rounded-[2.4rem] bg-center bg-cover shadow-[0_0_55px_rgba(250,204,21,.8)]"
           style={{ backgroundImage: `url(${SLOT_BG})` }}
+          data-current={String(displayValue)}
+          data-reel-count={reelItems.length}
         >
           <motion.div
             className="absolute -inset-14 rounded-full bg-[conic-gradient(from_0deg,#fde047,#22d3ee,#f0abfc,#fb7185,#fde047)] opacity-55 blur-sm"
@@ -406,8 +416,8 @@ function SlotOverlay({
             className={`absolute inset-x-0 top-[50%] -translate-y-1/2 text-center font-black text-white drop-shadow-[0_0_24px_rgba(255,255,255,.95)] ${
               typeof value === 'string' ? 'text-4xl' : 'text-7xl'
             }`}
-            animate={rolling ? { y: [-98, 98, -98], filter: ['blur(0px)', 'blur(2px)', 'blur(0px)'] } : { y: 0, scale: [1.3, 1, 1.08, 1], rotateX: [0, 18, 0] }}
-            transition={rolling ? { duration: 0.28, repeat: Infinity, ease: 'linear' } : { duration: 0.65 }}
+            animate={rolling ? { y: [-180, -90, 0, 90, 180], opacity: [0, 1, 1, 1, 0], filter: ['blur(3px)', 'blur(1px)', 'blur(0px)', 'blur(1px)', 'blur(3px)'] } : { y: 0, scale: [0.6, 1.32, 1], rotateX: [0, 18, 0] }}
+            transition={rolling ? { duration: 0.46, repeat: Infinity, ease: 'linear' } : { duration: 0.72, ease: 'backOut' }}
           >
             {typeof value === 'string' && value !== '？' ? `${attributeMark(value)} ${value}` : (value ?? '？')}
           </motion.div>
@@ -581,17 +591,26 @@ export default function Training({ characters, onChanged }: Props) {
   const saveProfileDraft = async () => {
     if (!selected || profileSaving) return
     setProfileSaving(true)
-    const patch = {
-      name: profileDraft.name.trim() || selected.name,
+    const namePatch = { name: profileDraft.name.trim() || selected.name }
+    const ultimatePatch = {
       ultimate4Name: profileDraft.ultimate4Name.trim() || 'ひっさつわざ4',
       ultimate5Name: profileDraft.ultimate5Name.trim() || 'ひっさつわざ5',
       ultimate6Name: profileDraft.ultimate6Name.trim() || 'ひっさつわざ6',
     }
     try {
-      await updateImageProfile(selected.id, patch)
-      patchLocalCharacter(selected.id, patch)
-      setMessage('名前(なまえ)と必殺技(ひっさつわざ)を保存(ほぞん)しました！')
+      await updateImageProfile(selected.id, namePatch)
+      patchLocalCharacter(selected.id, namePatch)
       await onChanged()
+      patchLocalCharacter(selected.id, namePatch)
+      try {
+        await updateImageProfile(selected.id, ultimatePatch)
+        patchLocalCharacter(selected.id, ultimatePatch)
+        setMessage('名前(なまえ)と必殺技(ひっさつわざ)を保存(ほぞん)しました！')
+        await onChanged()
+        patchLocalCharacter(selected.id, { ...namePatch, ...ultimatePatch })
+      } catch (ultimateError) {
+        setMessage(`名前(なまえ)は保存(ほぞん)しました。必殺技(ひっさつわざ)は追加SQLが必要(ひつよう)です: ${(ultimateError as Error).message}`)
+      }
     } catch (error) {
       setMessage((error as Error).message)
     } finally {
@@ -866,7 +885,7 @@ export default function Training({ characters, onChanged }: Props) {
         ) : (
           <motion.section
             key="detail"
-            className="-mx-3 -mt-4 min-h-[calc(100vh-96px)] overflow-hidden bg-purple-950 pb-6 text-white shadow-2xl sm:-mx-4"
+            className="-mx-3 -mt-4 flex min-h-[calc(100vh-96px)] flex-col overflow-hidden bg-purple-950 pb-6 text-white shadow-2xl sm:-mx-4"
             style={{
               backgroundImage: `linear-gradient(rgba(27,9,58,.04),rgba(21,5,45,.72)), url(${ARENA_BG})`,
               backgroundSize: 'cover',
@@ -914,7 +933,7 @@ export default function Training({ characters, onChanged }: Props) {
               </div>
             </motion.div>
 
-            <div className="mx-4 mt-4 rounded-[2rem] bg-black/42 p-3 shadow-2xl ring-1 ring-white/20 backdrop-blur-md">
+            <div className="order-last mx-4 mt-4 rounded-[2rem] bg-black/42 p-3 shadow-2xl ring-1 ring-white/20 backdrop-blur-md">
               <h3 className="mb-3 text-left text-xl font-black text-yellow-200">
                 名前(なまえ)を編集(へんしゅう)
               </h3>

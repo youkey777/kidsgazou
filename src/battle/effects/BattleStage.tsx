@@ -144,7 +144,7 @@ export default function BattleStage({
       <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_20%,rgba(255,255,255,0.62),transparent_40%)]" />
       <motion.div
         key={message || 'empty-message'}
-        className={`relative z-20 mb-2 flex min-h-[4.4rem] items-center justify-center rounded-2xl px-3 py-2 text-center text-base font-black leading-snug shadow-lg sm:text-lg ${
+        className={`hidden ${
           message ? 'bg-white/92 text-zinc-950 ring-2 ring-zinc-900/15' : 'bg-zinc-900/20 text-transparent'
         }`}
         initial={{ scale: 0.98, opacity: 0.75 }}
@@ -177,21 +177,31 @@ export default function BattleStage({
           glowing={glowingSide === 'right'}
         />
       </div>
+      <motion.div
+        key={`below-${message || 'empty-message'}`}
+        className={`relative z-20 mt-3 flex min-h-[5.2rem] items-center justify-center rounded-2xl px-3 py-2 text-center text-base font-black leading-snug shadow-lg sm:text-lg ${
+          message ? 'bg-white/94 text-zinc-950 ring-2 ring-zinc-900/15' : 'bg-zinc-900/20 text-transparent'
+        }`}
+        initial={{ scale: 0.98, opacity: 0.75 }}
+        animate={{ scale: 1, opacity: 1 }}
+      >
+        <span className="max-h-[4.2rem] overflow-hidden">{message || '　'}</span>
+      </motion.div>
       <AnimatePresence>
         {specialTitle && (
           <motion.div
             key={specialTitle}
-            className="pointer-events-none fixed inset-x-3 top-[14dvh] z-[76] flex justify-center px-1"
+            className="pointer-events-none fixed inset-0 z-[76] flex items-center justify-center bg-black/58 px-4 pt-[12dvh]"
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             transition={{ duration: 0.15 }}
           >
             <motion.div
-              className="relative w-[min(92vw,520px)] overflow-hidden rounded-[1.55rem] border-4 border-yellow-200 bg-gradient-to-r from-purple-950 via-red-900 to-yellow-500 px-5 py-3 text-center text-[clamp(1.85rem,8.8vw,4.4rem)] font-black leading-tight text-white shadow-[0_0_34px_rgba(250,204,21,.85),0_12px_0_rgba(0,0,0,.45)] ring-4 ring-black/55"
-              initial={{ scale: 0.55, rotate: -3, y: -24 }}
-              animate={{ scale: [0.55, 1.08, 1], rotate: [-3, 1, 0], y: [-24, 4, 0] }}
-              transition={{ duration: 0.36, ease: 'backOut' }}
+              className="relative w-[min(92vw,520px)] overflow-hidden rounded-[2rem] border-4 border-yellow-200 bg-gradient-to-br from-purple-950 via-red-900 to-yellow-500 px-5 py-5 text-center text-[clamp(2.2rem,11vw,5rem)] font-black leading-tight text-white shadow-[0_0_46px_rgba(250,204,21,.95),0_14px_0_rgba(0,0,0,.48)] ring-4 ring-white/55"
+              initial={{ scale: 0.36, rotate: -6, y: 34 }}
+              animate={{ scale: [0.36, 1.16, 1], rotate: [-6, 2, 0], y: [34, -8, 0] }}
+              transition={{ duration: 0.42, ease: 'backOut' }}
             >
               <motion.span
                 className="absolute inset-y-0 -left-1/3 w-1/3 skew-x-[-18deg] bg-white/35 blur-sm"

@@ -126,7 +126,7 @@ export default function CinematicAttackOverlay({
                   y: [34, -48 - index * 4],
                   rotate: [-40, 35 + index * 18],
                 }}
-                transition={{ duration: attack.die === 4 ? 0.8 : attack.die === 5 ? 1.0 : 1.22, delay: index * 0.035 }}
+                transition={{ duration: attack.die === 4 ? 0.8 : attack.die === 5 ? 1.0 : 1.22, delay: 0.34 + index * 0.035 }}
               >
                 {item}
               </motion.span>
@@ -144,13 +144,13 @@ export default function CinematicAttackOverlay({
               rotate: attack.die === 6 ? [-14, 8, -4, 10] : [0, 4, -4],
               filter: ['brightness(1)', 'brightness(1.6)', 'brightness(1.1)', 'brightness(2)'],
             }}
-            transition={{ duration: attack.die === 4 ? 0.8 : attack.die === 5 ? 1.0 : 1.22, ease: 'easeOut' }}
+            transition={{ duration: attack.die === 4 ? 0.8 : attack.die === 5 ? 1.0 : 1.22, delay: 0.46, ease: 'easeOut' }}
           />
           <motion.div
             className="absolute inset-0 z-[3] bg-white"
             initial={{ opacity: 0 }}
             animate={{ opacity: attack.die === 6 ? [0, 0.85, 0, 0.95, 0] : [0, 0.55, 0] }}
-            transition={{ duration: attack.die === 6 ? 1.1 : 0.72, delay: 0.18 }}
+            transition={{ duration: attack.die === 6 ? 1.1 : 0.72, delay: 0.62 }}
           />
           <div
             className="absolute inset-0 flex items-center justify-center"
@@ -165,7 +165,7 @@ export default function CinematicAttackOverlay({
               className="w-full max-w-[520px] text-center"
               initial={{ y: -28, scale: 0.82, opacity: 0 }}
               animate={{ y: 0, scale: [0.82, 1.08, 1], opacity: 1 }}
-              transition={{ duration: 0.5, ease: 'backOut' }}
+              transition={{ duration: 0.5, delay: 0.2, ease: 'backOut' }}
             >
               <p className="mx-auto inline-flex max-w-full items-center justify-center rounded-full bg-black/58 px-3 py-1 text-[clamp(0.75rem,3.4vw,1rem)] font-black leading-tight text-cyan-100 shadow-lg ring-1 ring-white/25">
                 <span className="truncate">

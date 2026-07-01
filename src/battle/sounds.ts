@@ -172,6 +172,27 @@ export function playWhoosh() {
   setTimeout(() => tone(240, 0.1, 'sawtooth', 0.035), 70)
 }
 
+function attributeSeed(attribute: string) {
+  return Array.from(attribute).reduce((sum, char) => sum + char.charCodeAt(0), 0)
+}
+
+export function playAttributeWhoosh(attribute: string) {
+  const seed = attributeSeed(attribute)
+  const base = 260 + (seed % 360)
+  const type: OscillatorType = seed % 3 === 0 ? 'sawtooth' : seed % 3 === 1 ? 'triangle' : 'square'
+  tone(base, 0.08, type, 0.045)
+  setTimeout(() => tone(base * 1.45, 0.09, type, 0.038), 70)
+  setTimeout(() => tone(Math.max(120, base * 0.72), 0.1, 'sawtooth', 0.028), 145)
+}
+
+export function playAttributeHit(attribute: string) {
+  const seed = attributeSeed(attribute)
+  const low = 70 + (seed % 90)
+  const high = 420 + (seed % 520)
+  tone(low, 0.13, 'sawtooth', 0.075)
+  setTimeout(() => tone(high, 0.09, seed % 2 === 0 ? 'square' : 'triangle', 0.052), 62)
+}
+
 export function playRouletteStart() {
   tone(300, 0.08, 'triangle', 0.05)
   setTimeout(() => tone(620, 0.1, 'triangle', 0.045), 80)
