@@ -84,6 +84,53 @@ function tone(frequency: number, duration: number, type: OscillatorType, gain = 
   }
 }
 
+function sweep(startFrequency: number, endFrequency: number, duration: number, type: OscillatorType, gain = 0.06) {
+  try {
+    const ctx = getContext()
+    if (ctx.state === 'suspended') void ctx.resume()
+    const osc = ctx.createOscillator()
+    const volume = ctx.createGain()
+    osc.type = type
+    osc.frequency.setValueAtTime(startFrequency, ctx.currentTime)
+    osc.frequency.exponentialRampToValueAtTime(Math.max(1, endFrequency), ctx.currentTime + duration)
+    volume.gain.setValueAtTime(gain, ctx.currentTime)
+    volume.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + duration)
+    osc.connect(volume)
+    volume.connect(ctx.destination)
+    osc.start()
+    osc.stop(ctx.currentTime + duration)
+  } catch {
+    // Sound effects are optional when the browser blocks audio.
+  }
+}
+
+function noiseBurst(duration: number, gain = 0.045, filterFrequency = 900) {
+  try {
+    const ctx = getContext()
+    if (ctx.state === 'suspended') void ctx.resume()
+    const bufferSize = Math.max(1, Math.floor(ctx.sampleRate * duration))
+    const buffer = ctx.createBuffer(1, bufferSize, ctx.sampleRate)
+    const data = buffer.getChannelData(0)
+    for (let i = 0; i < bufferSize; i++) data[i] = Math.random() * 2 - 1
+    const source = ctx.createBufferSource()
+    const filter = ctx.createBiquadFilter()
+    const volume = ctx.createGain()
+    filter.type = 'bandpass'
+    filter.frequency.value = filterFrequency
+    filter.Q.value = 1.2
+    volume.gain.setValueAtTime(gain, ctx.currentTime)
+    volume.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + duration)
+    source.buffer = buffer
+    source.connect(filter)
+    filter.connect(volume)
+    volume.connect(ctx.destination)
+    source.start()
+    source.stop(ctx.currentTime + duration)
+  } catch {
+    // Sound effects are optional when the browser blocks audio.
+  }
+}
+
 export function playBgm() {
   try {
     if (!bgmEnabled || !isPageVisible()) return
@@ -176,21 +223,62 @@ function attributeSeed(attribute: string) {
   return Array.from(attribute).reduce((sum, char) => sum + char.charCodeAt(0), 0)
 }
 
-export function playAttributeWhoosh(attribute: string) {
+function attributeProfile(attribute: string) {
   const seed = attributeSeed(attribute)
-  const base = 260 + (seed % 360)
-  const type: OscillatorType = seed % 3 === 0 ? 'sawtooth' : seed % 3 === 1 ? 'triangle' : 'square'
-  tone(base, 0.08, type, 0.045)
-  setTimeout(() => tone(base * 1.45, 0.09, type, 0.038), 70)
-  setTimeout(() => tone(Math.max(120, base * 0.72), 0.1, 'sawtooth', 0.028), 145)
+  const profiles = [
+    { base: 210, high: 680, type: 'sawtooth' as OscillatorType, noise: 1200, style: 'fire' },
+    { base: 520, high: 1420, type: 'triangle' as OscillatorType, noise: 2400, style: 'ice' },
+    { base: 330, high: 1900, type: 'square' as OscillatorType, noise: 3200, style: 'electric' },
+    { base: 160, high: 430, type: 'sine' as OscillatorType, noise: 520, style: 'earth' },
+    { base: 390, high: 980, type: 'triangle' as OscillatorType, noise: 1600, style: 'light' },
+    { base: 95, high: 560, type: 'sawtooth' as OscillatorType, noise: 760, style: 'dark' },
+    { base: 280, high: 860, type: 'sine' as OscillatorType, noise: 1400, style: 'water' },
+    { base: 460, high: 1220, type: 'triangle' as OscillatorType, noise: 1900, style: 'magic' },
+  ]
+  return profiles[seed % profiles.length]
+}
+
+export function playAttributeWhoosh(attribute: string) {
+  const profile = attributeProfile(attribute)
+  sweep(profile.base, profile.high, 0.22, profile.type, 0.045)
+  setTimeout(() => tone(profile.high * 0.75, 0.08, profile.type, 0.034), 95)
+  if (profile.style === 'fire' || profile.style === 'dark') noiseBurst(0.18, 0.025, profile.noise)
+  if (profile.style === 'ice') {
+    ;[profile.high, profile.high * 1.22, profile.high * 1.48].forEach((frequency, index) => {
+      setTimeout(() => tone(frequency, 0.05, 'triangle', 0.026), index * 42)
+    })
+  }
+  if (profile.style === 'electric') {
+    ;[profile.high, profile.base, profile.high * 1.35].forEach((frequency, index) => {
+      setTimeout(() => tone(frequency, 0.035, 'square', 0.035), index * 35)
+    })
+  }
 }
 
 export function playAttributeHit(attribute: string) {
-  const seed = attributeSeed(attribute)
-  const low = 70 + (seed % 90)
-  const high = 420 + (seed % 520)
-  tone(low, 0.13, 'sawtooth', 0.075)
-  setTimeout(() => tone(high, 0.09, seed % 2 === 0 ? 'square' : 'triangle', 0.052), 62)
+  const profile = attributeProfile(attribute)
+  tone(Math.max(55, profile.base * 0.55), 0.16, 'sawtooth', 0.085)
+  noiseBurst(0.12, 0.05, profile.noise)
+  setTimeout(() => tone(profile.high, 0.09, profile.type, 0.055), 58)
+  setTimeout(() => sweep(profile.high * 0.85, profile.base * 0.6, 0.16, profile.type, 0.04), 120)
+}
+
+export function playAttributeCharge(attribute: string) {
+  const profile = attributeProfile(attribute)
+  sweep(profile.base * 0.65, profile.high * 0.9, 0.5, profile.type, 0.035)
+  setTimeout(() => tone(profile.high, 0.12, profile.type, 0.04), 360)
+}
+
+export function playAttributeUltimate(attribute: string, rank: 4 | 5 | 6) {
+  const profile = attributeProfile(attribute)
+  playAttributeCharge(attribute)
+  setTimeout(() => noiseBurst(0.18 + rank * 0.02, 0.035 + rank * 0.006, profile.noise), 210)
+  setTimeout(() => sweep(profile.high * 0.65, profile.high * (1.2 + rank * 0.1), 0.34, profile.type, 0.052), 420)
+  setTimeout(() => tone(Math.max(60, profile.base * 0.42), 0.25, 'sawtooth', 0.08), 720)
+  if (rank === 6) {
+    setTimeout(() => noiseBurst(0.26, 0.075, profile.noise * 1.2), 920)
+    setTimeout(() => tone(72, 0.38, 'sawtooth', 0.09), 1020)
+  }
 }
 
 export function playRouletteStart() {

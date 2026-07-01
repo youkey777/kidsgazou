@@ -11,6 +11,7 @@ import type { DiceThrowEffectData } from './effects/DiceThrowEffect'
 import VictoryOverlay from './effects/VictoryOverlay'
 import {
   playAttributeHit,
+  playAttributeUltimate,
   playAttributeWhoosh,
   playDiceLand,
   playDiceRoll,
@@ -152,6 +153,7 @@ export default function ComboBattle({ left, right, onDone, onExit }: Props) {
   const [activeSide, setActiveSide] = useState<Side | undefined>()
   const [dodgeSide, setDodgeSide] = useState<Side | undefined>()
   const [confusedSide, setConfusedSide] = useState<Side | undefined>()
+  const [hitSide, setHitSide] = useState<Side | undefined>()
   const [koSide, setKoSide] = useState<Side | undefined>()
   const [attackEffect, setAttackEffect] = useState<AttackEffectData | null>(null)
   const [diceThrowEffect, setDiceThrowEffect] = useState<DiceThrowEffectData | null>(null)
@@ -196,6 +198,7 @@ export default function ComboBattle({ left, right, onDone, onExit }: Props) {
     setCinematic(null)
     setDodgeSide(undefined)
     setConfusedSide(undefined)
+    setHitSide(undefined)
     setSpecialTitle(null)
     setRound(nextRound)
     setMessage('次(つぎ)の手(て)を選(えら)んでね')
@@ -225,6 +228,8 @@ export default function ComboBattle({ left, right, onDone, onExit }: Props) {
         rightHpRef.current = nextRightHp
         setRightHp(nextRightHp)
       }
+      setHitSide(target)
+      window.setTimeout(() => setHitSide(undefined), scale === 'ultimate' ? 760 : 560)
       setEvents((prev) => [...prev, { id: makeEventId(), target, amount, scale }])
     }
 
@@ -321,8 +326,9 @@ export default function ComboBattle({ left, right, onDone, onExit }: Props) {
         die: die as 4 | 5 | 6,
       }
       setCinematic(cinematicData)
+      playAttributeUltimate(winner.species, die as 4 | 5 | 6)
       playUltimate()
-      await sleep(die === 4 ? 900 : die === 5 ? 1120 : 1320)
+      await sleep(die === 4 ? 1700 : die === 5 ? 2200 : 2800)
     }
 
     setActiveSide(winnerSide)
@@ -341,6 +347,8 @@ export default function ComboBattle({ left, right, onDone, onExit }: Props) {
 
     const damage = die === 6 ? (target === 'right' ? rightHpRef.current : leftHpRef.current) : calculateDiceDamage(winner, loser, die)
     playAttributeHit(winner.species)
+    setHitSide(target)
+    window.setTimeout(() => setHitSide(undefined), die >= 4 ? 820 : 560)
     let nextLeftHp = leftHpRef.current
     let nextRightHp = rightHpRef.current
     if (winnerSide === 'left') {
@@ -417,6 +425,7 @@ export default function ComboBattle({ left, right, onDone, onExit }: Props) {
         activeSide={activeSide}
         dodgeSide={dodgeSide}
         confusedSide={confusedSide}
+        hitSide={hitSide}
         koSide={koSide}
         message={message}
         specialTitle={specialTitle}

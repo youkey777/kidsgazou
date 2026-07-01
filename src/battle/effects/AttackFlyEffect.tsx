@@ -46,28 +46,28 @@ function getStyle(attribute: string) {
 }
 
 function variantMotion(direction: number, style: AttributeStyle) {
-  const reach = direction * 38
-  const mid = direction * 22
+  const reach = direction * 48
+  const mid = direction * 28
   switch (style.motion) {
     case 'beam':
-      return { x: ['0vw', '0vw', `${reach * 0.88}vw`, `${reach}vw`, `${reach}vw`], y: [0, 0, 0, 0, 0], rotate: 0, scale: [0.72, 1.08, 1.28, 1.4, 0.18], opacity: [0, 1, 1, 1, 0] }
+      return { x: ['0vw', '0vw', `${reach * 0.8}vw`, `${reach}vw`, `${reach}vw`], y: [0, 0, -8, -10, -10], rotate: 0, scale: [0.72, 1.1, 1.42, 1.56, 0.2], opacity: [0, 1, 1, 1, 0] }
     case 'slash':
-      return { x: ['0vw', '0vw', `${mid * 0.45}vw`, `${reach}vw`, `${reach}vw`], y: [-74, -74, 16, 0, 0], rotate: [direction * -10, direction * -10, direction * -10, direction * -10, direction * -10], scale: [0.86, 1.05, 1.26, 1.38, 0.2], opacity: [0, 1, 1, 1, 0] }
+      return { x: ['0vw', '0vw', `${mid * 0.48}vw`, `${reach}vw`, `${reach}vw`], y: [-52, -52, -16, -8, -8], rotate: [direction * -20, direction * -20, direction * -28, direction * -34, direction * -34], scale: [0.86, 1.08, 1.36, 1.62, 0.22], opacity: [0, 1, 1, 1, 0] }
     case 'drop':
-      return { x: ['0vw', '0vw', `${mid * 0.6}vw`, `${reach}vw`, `${reach}vw`], y: [-110, -110, -48, 0, 0], rotate: [0, 0, direction * 5, direction * 6, direction * 6], scale: [0.72, 0.98, 1.18, 1.38, 0.24], opacity: [0, 1, 1, 1, 0] }
+      return { x: ['0vw', '0vw', `${mid * 0.58}vw`, `${reach}vw`, `${reach}vw`], y: [-130, -130, -72, -12, -12], rotate: [0, 0, direction * 5, direction * 7, direction * 7], scale: [0.72, 1, 1.25, 1.58, 0.24], opacity: [0, 1, 1, 1, 0] }
     case 'arc':
-      return { x: ['0vw', '0vw', `${mid * 0.75}vw`, `${reach}vw`, `${reach}vw`], y: [0, 0, -52, 0, 0], rotate: [0, 0, direction * 5, direction * 5, direction * 5], scale: [0.72, 1, 1.2, 1.36, 0.2], opacity: [0, 1, 1, 1, 0] }
+      return { x: ['0vw', '0vw', `${mid * 0.78}vw`, `${reach}vw`, `${reach}vw`], y: [10, 10, -58, -8, -8], rotate: [0, 0, direction * 8, direction * 6, direction * 6], scale: [0.72, 1, 1.28, 1.52, 0.2], opacity: [0, 1, 1, 1, 0] }
     case 'spiral':
-      return { x: ['0vw', '0vw', `${mid * 0.55}vw`, `${mid * 1.15}vw`, `${reach}vw`, `${reach}vw`], y: [0, 0, -34, 30, 0, 0], rotate: [0, 0, direction * 8, direction * -8, 0, 0], scale: [0.72, 1, 1.12, 1.12, 1.36, 0.2], opacity: [0, 1, 1, 1, 1, 0] }
+      return { x: ['0vw', '0vw', `${mid * 0.56}vw`, `${mid * 1.12}vw`, `${reach}vw`, `${reach}vw`], y: [4, 4, -42, 26, -8, -8], rotate: [0, 0, direction * 10, direction * -10, 0, 0], scale: [0.72, 1, 1.16, 1.18, 1.5, 0.2], opacity: [0, 1, 1, 1, 1, 0] }
     default:
-      return { x: ['0vw', '0vw', `${reach * 0.82}vw`, `${reach}vw`, `${reach}vw`], y: [0, 0, 0, 0, 0], rotate: 0, scale: [0.72, 1.02, 1.22, 1.36, 0.22], opacity: [0, 1, 1, 1, 0] }
+      return { x: ['0vw', '0vw', `${reach * 0.8}vw`, `${reach}vw`, `${reach}vw`], y: [0, 0, -10, -8, -8], rotate: 0, scale: [0.72, 1.04, 1.28, 1.5, 0.22], opacity: [0, 1, 1, 1, 0] }
   }
 }
 
 export default function AttackFlyEffect({ effect }: { effect: AttackEffectData }) {
   const style = getStyle(effect.attribute)
   const direction = effect.side === 'left' ? 1 : -1
-  const start = effect.side === 'left' ? '24%' : '76%'
+  const start = effect.side === 'left' ? '23%' : '77%'
   const motionPath = variantMotion(direction, style)
   const duration = effect.kind === 'counter' ? 2.15 : effect.kind === 'dice' ? 1.92 : 1.72
   const motionTimes = style.motion === 'spiral' ? [0, 0.2, 0.48, 0.68, 0.86, 1] : [0, 0.22, 0.62, 0.84, 1]
@@ -85,13 +85,13 @@ export default function AttackFlyEffect({ effect }: { effect: AttackEffectData }
       exit={{ opacity: 0 }}
     >
       <motion.div
-        className="absolute top-[46%]"
+        className="absolute top-[34%]"
         style={{ left: start }}
         initial={{ x: '0vw', y: 0, scale: 0.7, rotate: 0, opacity: 0 }}
         animate={motionPath}
         transition={{ duration, ease: [0.2, 0.75, 0.18, 1], times: motionTimes }}
       >
-        <div className={`relative grid h-28 w-28 place-items-center text-4xl sm:h-36 sm:w-36 sm:text-5xl ${style.glow}`}>
+        <div className={`relative grid h-32 w-32 place-items-center text-4xl sm:h-40 sm:w-40 sm:text-5xl ${style.glow}`}>
           <motion.div
             className={`absolute inset-3 rounded-full bg-gradient-to-br ${style.burst} opacity-55 blur-xl`}
             animate={{ scale: [0.8, 1.35, 1], opacity: [0.28, 0.65, 0.12] }}
@@ -116,6 +116,11 @@ export default function AttackFlyEffect({ effect }: { effect: AttackEffectData }
             className="absolute inset-5 rounded-full bg-white/80 blur-xl"
             animate={{ scale: [0, 1.7, 0], opacity: [0, 0, 0.95, 0] }}
             transition={{ duration: Math.min(duration, 1.12), times: [0, 0.72, 0.84, 1] }}
+          />
+          <motion.span
+            className="absolute inset-0 rounded-full bg-white/70 blur-2xl"
+            animate={{ scale: [0, 0, 1.7, 2.1], opacity: [0, 0, 0.9, 0] }}
+            transition={{ duration, times: [0, 0.72, 0.84, 1] }}
           />
           {Array.from({ length: tokenCount }).map((_, index) => (
             <motion.span

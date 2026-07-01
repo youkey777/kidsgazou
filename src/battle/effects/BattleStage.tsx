@@ -16,6 +16,7 @@ type Props = {
   activeSide?: 'left' | 'right'
   dodgeSide?: 'left' | 'right'
   confusedSide?: 'left' | 'right'
+  hitSide?: 'left' | 'right'
   koSide?: 'left' | 'right'
   glowingSide?: 'left' | 'right'
   message?: string
@@ -35,6 +36,7 @@ function FighterCard({
   active,
   dodging,
   confused,
+  hit,
   ko,
   glowing,
 }: {
@@ -44,6 +46,7 @@ function FighterCard({
   active: boolean
   dodging: boolean
   confused: boolean
+  hit: boolean
   ko: boolean
   glowing: boolean
 }) {
@@ -57,15 +60,49 @@ function FighterCard({
       animate={
         ko
           ? { x: side === 'left' ? -260 : 260, rotate: side === 'left' ? -45 : 45, opacity: 0 }
+          : hit
+            ? {
+                x: side === 'left' ? [0, -18, 12, -8, 0] : [0, 18, -12, 8, 0],
+                y: [0, -8, 5, -3, 0],
+                rotate: side === 'left' ? [0, -4, 3, -2, 0] : [0, 4, -3, 2, 0],
+                scale: [1, 0.94, 1.05, 0.98, 1],
+              }
           : dodging
             ? { x: side === 'left' ? [-8, -58, -36] : [8, 58, 36], y: [0, -12, 0], rotate: side === 'left' ? [-2, -10, -4] : [2, 10, 4], scale: [1, 0.9, 0.94] }
           : active
             ? { x: [0, side === 'left' ? 10 : -10, 0], scale: [1, 1.035, 1] }
             : { x: 0, scale: 1, rotate: 0, opacity: 1 }
       }
-      transition={{ duration: ko ? 0.75 : dodging ? 0.62 : 0.22 }}
+      transition={{ duration: ko ? 0.75 : hit ? 0.56 : dodging ? 0.62 : 0.22 }}
     >
       {glowing && <div className="absolute -inset-3 -z-10 rounded-3xl bg-yellow-300/45 blur-xl" />}
+      <AnimatePresence>
+        {hit && (
+          <>
+            <motion.div
+              className="pointer-events-none absolute inset-0 z-30 rounded-[1.2rem] bg-white"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: [0, 0.9, 0] }}
+              exit={{ opacity: 0 }}
+              transition={{ duration: 0.34 }}
+            />
+            <motion.div
+              className="pointer-events-none absolute inset-1 z-30 rounded-[1.2rem] border-4 border-red-400"
+              initial={{ scale: 0.78, opacity: 0 }}
+              animate={{ scale: [0.78, 1.18, 1.42], opacity: [0, 1, 0] }}
+              exit={{ opacity: 0 }}
+              transition={{ duration: 0.5 }}
+            />
+            <motion.div
+              className="pointer-events-none absolute left-1/2 top-1/2 z-30 h-24 w-24 -translate-x-1/2 -translate-y-1/2 rounded-full bg-yellow-200/80 blur-lg"
+              initial={{ scale: 0, opacity: 0 }}
+              animate={{ scale: [0, 1.2, 2.1], opacity: [0, 0.95, 0] }}
+              exit={{ opacity: 0 }}
+              transition={{ duration: 0.5 }}
+            />
+          </>
+        )}
+      </AnimatePresence>
       <AnimatePresence>
         {confused && (
           <motion.div
@@ -124,6 +161,7 @@ export default function BattleStage({
   activeSide,
   dodgeSide,
   confusedSide,
+  hitSide,
   koSide,
   glowingSide,
   message,
@@ -160,6 +198,7 @@ export default function BattleStage({
           active={activeSide === 'left'}
           dodging={dodgeSide === 'left'}
           confused={confusedSide === 'left'}
+          hit={hitSide === 'left'}
           ko={koSide === 'left'}
           glowing={glowingSide === 'left'}
         />
@@ -173,6 +212,7 @@ export default function BattleStage({
           active={activeSide === 'right'}
           dodging={dodgeSide === 'right'}
           confused={confusedSide === 'right'}
+          hit={hitSide === 'right'}
           ko={koSide === 'right'}
           glowing={glowingSide === 'right'}
         />

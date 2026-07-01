@@ -100,18 +100,18 @@ export default function CinematicAttackOverlay({
               scale: attack.die === 6 ? [1.14, 1.02, 1.08] : [1.06, 1.01, 1.03],
               opacity: [0.12, 0.48, 0.4],
             }}
-            transition={{ duration: attack.die === 4 ? 0.58 : attack.die === 5 ? 0.82 : 1.05, ease: 'easeOut' }}
+            transition={{ duration: attack.die === 4 ? 1.5 : attack.die === 5 ? 1.9 : 2.45, ease: 'easeOut' }}
           />
           <motion.div
             className="absolute inset-0"
             style={{
               backgroundImage: `${ATTRIBUTE_WASH[attack.attribute] ?? ATTRIBUTE_WASH.ふしぎ}, linear-gradient(rgba(0,0,0,.62),rgba(0,0,0,.56))`,
             }}
-            animate={{ opacity: [0.6, 0.76, 0.66] }}
-            transition={{ duration: 0.28, repeat: 2 }}
+            animate={{ opacity: [0.54, 0.78, 0.68, 0.82, 0.66] }}
+            transition={{ duration: attack.die === 4 ? 1.4 : attack.die === 5 ? 1.8 : 2.35 }}
           />
           {(ATTRIBUTE_PARTICLES[attack.attribute] ?? ATTRIBUTE_PARTICLES.ふしぎ).flatMap((item, groupIndex) =>
-            Array.from({ length: attack.die + 2 }, (_, index) => (
+            Array.from({ length: attack.die * 3 }, (_, index) => (
               <motion.span
                 key={`${item}-${groupIndex}-${index}`}
                 className="absolute z-[1] text-[clamp(1.4rem,7vw,4rem)] drop-shadow-[0_0_12px_rgba(255,255,255,.55)]"
@@ -121,12 +121,12 @@ export default function CinematicAttackOverlay({
                 }}
                 initial={{ opacity: 0, scale: 0.35, y: 34, rotate: -40 }}
                 animate={{
-                  opacity: [0, 0.95, 0],
-                  scale: [0.35, attack.die === 6 ? 1.5 : 1.1, 0.7],
-                  y: [34, -48 - index * 4],
+                  opacity: [0, 0.95, 0.95, 0],
+                  scale: [0.35, attack.die === 6 ? 1.8 : 1.3, attack.die === 6 ? 2.4 : 1.65, 0.7],
+                  y: [34, -58 - index * 4, -92 - index * 5],
                   rotate: [-40, 35 + index * 18],
                 }}
-                transition={{ duration: attack.die === 4 ? 0.8 : attack.die === 5 ? 1.0 : 1.22, delay: 0.34 + index * 0.035 }}
+                transition={{ duration: attack.die === 4 ? 1.45 : attack.die === 5 ? 1.85 : 2.35, delay: 0.45 + index * 0.03 }}
               >
                 {item}
               </motion.span>
@@ -135,22 +135,22 @@ export default function CinematicAttackOverlay({
           <motion.img
             src={attackAssetFor(attack.attribute)}
             alt=""
-            className="absolute left-1/2 top-1/2 z-[2] h-[min(58vw,330px)] w-[min(58vw,330px)] -translate-x-1/2 -translate-y-1/2 object-contain drop-shadow-[0_0_34px_rgba(255,255,255,.7)]"
+            className="absolute left-1/2 top-1/2 z-[2] h-[min(82vw,520px)] w-[min(82vw,520px)] -translate-x-1/2 -translate-y-1/2 object-contain drop-shadow-[0_0_46px_rgba(255,255,255,.86)]"
             initial={{ scale: 0.18, opacity: 0, y: 80, rotate: attack.die === 6 ? -14 : 0 }}
             animate={{
-              scale: attack.die === 6 ? [0.18, 1.28, 1.02, 1.5] : [0.18, 1.08, 0.92],
-              opacity: [0, 1, 1, 0],
-              y: attack.die === 6 ? [80, -12, 0, -38] : [70, -4, -20],
-              rotate: attack.die === 6 ? [-14, 8, -4, 10] : [0, 4, -4],
-              filter: ['brightness(1)', 'brightness(1.6)', 'brightness(1.1)', 'brightness(2)'],
+              scale: attack.die === 6 ? [0.18, 1.18, 1.04, 1.42, 1.72] : [0.18, 1.05, 1.16, 0.98],
+              opacity: attack.die === 6 ? [0, 1, 1, 1, 0] : [0, 1, 1, 0.95, 0],
+              y: attack.die === 6 ? [80, -16, 0, -24, -52] : [70, -6, -10, -26],
+              rotate: attack.die === 6 ? [-14, 8, -4, 10, -6] : [0, 4, -4, 2],
+              filter: ['brightness(1)', 'brightness(1.75)', 'brightness(1.2)', 'brightness(2.2)'],
             }}
-            transition={{ duration: attack.die === 4 ? 0.8 : attack.die === 5 ? 1.0 : 1.22, delay: 0.46, ease: 'easeOut' }}
+            transition={{ duration: attack.die === 4 ? 1.55 : attack.die === 5 ? 2.0 : 2.55, delay: 0.7, ease: 'easeOut' }}
           />
           <motion.div
             className="absolute inset-0 z-[3] bg-white"
             initial={{ opacity: 0 }}
-            animate={{ opacity: attack.die === 6 ? [0, 0.85, 0, 0.95, 0] : [0, 0.55, 0] }}
-            transition={{ duration: attack.die === 6 ? 1.1 : 0.72, delay: 0.62 }}
+            animate={{ opacity: attack.die === 6 ? [0, 0.55, 0, 0.9, 0, 0.95, 0] : [0, 0.36, 0, 0.52, 0] }}
+            transition={{ duration: attack.die === 6 ? 2.25 : attack.die === 5 ? 1.65 : 1.35, delay: 1.0 }}
           />
           <div
             className="absolute inset-0 flex items-center justify-center"
@@ -165,7 +165,7 @@ export default function CinematicAttackOverlay({
               className="w-full max-w-[520px] text-center"
               initial={{ y: -28, scale: 0.82, opacity: 0 }}
               animate={{ y: 0, scale: [0.82, 1.08, 1], opacity: 1 }}
-              transition={{ duration: 0.5, delay: 0.2, ease: 'backOut' }}
+              transition={{ duration: 0.72, delay: 0.32, ease: 'backOut' }}
             >
               <p className="mx-auto inline-flex max-w-full items-center justify-center rounded-full bg-black/58 px-3 py-1 text-[clamp(0.75rem,3.4vw,1rem)] font-black leading-tight text-cyan-100 shadow-lg ring-1 ring-white/25">
                 <span className="truncate">
@@ -190,7 +190,7 @@ export default function CinematicAttackOverlay({
             className="absolute inset-0"
             initial={{ opacity: 0 }}
             animate={{ opacity: [0, 0, 1, 0] }}
-            transition={{ duration: 1.0, times: [0, 0.74, 0.84, 1] }}
+            transition={{ duration: attack.die === 6 ? 2.3 : attack.die === 5 ? 1.9 : 1.55, times: [0, 0.78, 0.9, 1] }}
           >
             <div className="h-full w-full bg-white" />
           </motion.div>
