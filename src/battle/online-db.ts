@@ -3,7 +3,7 @@ import { isConfigured, supabase } from '../lib/supabase'
 import type { RpsHand } from './types'
 
 export type OnlineSide = 'host' | 'guest'
-export type OnlinePhase = 'waiting' | 'selecting' | 'choose' | 'rolling' | 'result' | 'finished'
+export type OnlinePhase = 'waiting' | 'selecting' | 'choose' | 'reveal' | 'rolling' | 'result' | 'finished'
 
 export type BattleRoom = {
   id: string
@@ -154,7 +154,18 @@ export async function startOnlineBattle(room: BattleRoom) {
   const sb = ensure()
   const { data, error } = await sb
     .from('battle_rooms')
-    .update({ status: 'choose', round: 1, updated_at: new Date().toISOString() })
+    .update({
+      status: 'choose',
+      round: 1,
+      host_hand: null,
+      guest_hand: null,
+      last_winner_side: null,
+      last_die: null,
+      last_damage: null,
+      winner_side: null,
+      result_saved: false,
+      updated_at: new Date().toISOString(),
+    })
     .eq('id', room.id)
     .select(SELECT)
     .single()

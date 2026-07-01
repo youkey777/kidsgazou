@@ -10,6 +10,9 @@ type Props = {
   outcome: 'win' | 'lose' | 'team'
   teamName?: string
   onNext: () => void
+  nextLabel?: string
+  onSecondary?: () => void
+  secondaryLabel?: string
 }
 
 function nextExp(character: ImageRecord) {
@@ -23,7 +26,7 @@ function nextExp(character: ImageRecord) {
   }
 }
 
-export default function VictoryOverlay({ winner, outcome, teamName, onNext }: Props) {
+export default function VictoryOverlay({ winner, outcome, teamName, onNext, nextLabel = 'つぎへ', onSecondary, secondaryLabel }: Props) {
   const exp = nextExp(winner)
 
   useEffect(() => {
@@ -109,8 +112,17 @@ export default function VictoryOverlay({ winner, outcome, teamName, onNext }: Pr
             onClick={onNext}
             className="mt-4 min-h-14 w-full rounded-2xl bg-white px-4 text-xl font-black text-purple-950 shadow-xl active:scale-95"
           >
-            つぎへ
+            {nextLabel}
           </button>
+          {onSecondary && secondaryLabel && (
+            <button
+              type="button"
+              onClick={onSecondary}
+              className="mt-3 min-h-12 w-full rounded-2xl bg-purple-950/80 px-4 text-base font-black text-white shadow-xl ring-2 ring-white/35 active:scale-95"
+            >
+              {secondaryLabel}
+            </button>
+          )}
         </div>
       </motion.div>
     </motion.div>
