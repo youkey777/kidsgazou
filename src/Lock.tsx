@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
+import { APP_VERSION } from './version'
 
 const LS_KEY = 'gallery_unlocked_v1'
 const CODE_LEN = 4
@@ -41,7 +42,10 @@ export default function Lock({ onUnlock }: { onUnlock: () => void }) {
   }, [code, expected, onUnlock])
 
   return (
-    <div className="min-h-full bg-gradient-to-br from-zinc-900 via-zinc-800 to-pink-900 flex flex-col items-center justify-center safe-top safe-bottom px-6">
+    <div className="relative min-h-full bg-gradient-to-br from-zinc-900 via-zinc-800 to-pink-900 flex flex-col items-center justify-center safe-top safe-bottom px-6">
+      <span className="absolute right-3 top-3 rounded-full bg-black/55 px-2 py-1 text-[10px] font-black text-white/85 shadow ring-1 ring-white/20">
+        {APP_VERSION}
+      </span>
       <div className={`text-center ${shake ? 'animate-wiggle' : ''}`}>
         <div className="text-7xl mb-4">🔐</div>
         <h1 className="text-2xl font-bold text-white mb-1">ルイ＆ミオ ギャラリー</h1>

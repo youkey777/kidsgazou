@@ -14,6 +14,7 @@ import {
 import { isConfigured } from './lib/supabase'
 import Lock, { isUnlocked, lock } from './Lock'
 import { migrateFromIndexedDB } from './migrate'
+import { APP_VERSION } from './version'
 
 type ActiveTab = ChildKey | 'battle'
 
@@ -30,8 +31,6 @@ type Theme = {
   cardBorder: string
   countChip: string
 }
-
-const APP_VERSION = 'v2026.07.01-audio-3d-affinity'
 
 const THEMES: Record<ChildKey, Theme> = {
   rui: {
