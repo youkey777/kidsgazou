@@ -458,6 +458,7 @@ export default function Training({ characters, onChanged }: Props) {
   const [index, setIndex] = useState(0)
   const [earned, setEarned] = useState(0)
   const [quizStartCrystals, setQuizStartCrystals] = useState(0)
+  const [quizSaveError, setQuizSaveError] = useState<string | null>(null)
   const [answerState, setAnswerState] = useState<AnswerState>('idle')
   const [busy, setBusy] = useState(false)
   const [message, setMessage] = useState('キャラを選(えら)んで育(そだ)てよう！')
@@ -488,6 +489,7 @@ export default function Training({ characters, onChanged }: Props) {
     setIndex(0)
     setEarned(0)
     setQuizStartCrystals(character.crystals)
+    setQuizSaveError(null)
     setAnswerState('idle')
     setMessage(`${shortBattleName(character.name)}を育(そだ)てよう！`)
     setView('detail')
@@ -499,6 +501,7 @@ export default function Training({ characters, onChanged }: Props) {
     setIndex(0)
     setEarned(0)
     setQuizStartCrystals(selected.crystals)
+    setQuizSaveError(null)
     setAnswerState('idle')
     setMessage(`${shortBattleName(selected.name)}を育(そだ)てるよ！`)
   }
@@ -508,6 +511,7 @@ export default function Training({ characters, onChanged }: Props) {
     setBusy(true)
     const correct = value === currentQuestion.answer
     const nextEarned = earned + (correct ? 1 : 0)
+    let saveError: string | null = null
     setAnswerState(correct ? 'correct' : 'wrong')
     if (correct) {
       setEarned(nextEarned)
@@ -517,8 +521,10 @@ export default function Training({ characters, onChanged }: Props) {
       try {
         await updateImageProfile(selected.id, { crystals: nextCrystals })
       } catch (error) {
+        saveError = (error as Error).message
+        setQuizSaveError(saveError)
         patchLocalCharacter(selected.id, { crystals: quizStartCrystals + earned })
-        setMessage(`クリスタル保存(ほぞん)に失敗(しっぱい)しました: ${(error as Error).message}`)
+        setMessage(`クリスタル保存(ほぞん)に失敗(しっぱい)しました: ${saveError}`)
       }
     } else {
       setMessage(`おしい！こたえは ${currentQuestion.answer}`)
@@ -530,9 +536,14 @@ export default function Training({ characters, onChanged }: Props) {
     if (nextIndex >= quiz.length) {
       setQuiz([])
       setIndex(0)
-      setQuizStartCrystals(quizStartCrystals + nextEarned)
-      setMessage(`育成(いくせい)おわり！クリスタル ${nextEarned}こゲット！`)
-      await onChanged()
+      const finalSaveError = saveError || quizSaveError
+      if (finalSaveError) {
+        setMessage(`保存(ほぞん)できていません。Supabase SQL を先(さき)に実行(じっこう)してください: ${finalSaveError}`)
+      } else {
+        setQuizStartCrystals(quizStartCrystals + nextEarned)
+        setMessage(`育成(いくせい)おわり！クリスタル ${nextEarned}こゲット！`)
+        await onChanged()
+      }
     } else {
       setIndex(nextIndex)
     }

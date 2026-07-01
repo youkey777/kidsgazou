@@ -176,3 +176,64 @@ begin
   end if;
 end $$;
 ```
+
+## 2026-07-01 既存キャラ修復SQL
+
+既存キャラの名前が `file_0000...` のまま、能力が `10/10/10` のまま、クリスタルが保存されない場合は、Supabase SQL Editor で以下を実行してください。
+
+```sql
+alter table images add column if not exists luck int default 50;
+alter table images add column if not exists tech int default 50;
+alter table images add column if not exists crystals int default 0;
+alter table images add column if not exists xp int default 0;
+
+alter table images enable row level security;
+
+do $$
+begin
+  if not exists (
+    select 1 from pg_policies
+    where schemaname = 'public'
+      and tablename = 'images'
+      and policyname = 'anon update'
+  ) then
+    create policy "anon update" on images for update using (true) with check (true);
+  end if;
+end $$;
+
+update images
+set
+  atk = floor(random() * 99 + 1)::int,
+  def = floor(random() * 99 + 1)::int,
+  spd = floor(random() * 99 + 1)::int,
+  luck = floor(random() * 99 + 1)::int,
+  tech = floor(random() * 99 + 1)::int,
+  species = (array[
+    'ほのお', 'みず', 'かぜ', 'つち', 'ひかり',
+    'やみ', 'でんき', 'こおり', 'くさ', 'はがね',
+    'まほう', 'ドラゴン', 'ロボ', 'スター', 'ふしぎ'
+  ])[floor(random() * 15 + 1)::int],
+  crystals = greatest(coalesce(crystals, 0), 3),
+  xp = coalesce(xp, 0);
+
+update images
+set name = case id
+  when 'mr1fcffa-zpl3900' then 'ミオぴょんぴょん'
+  when 'mr1eqopu-2w31550' then 'オクトパスフロッグ'
+  when 'mr0panc5-qvnlm10' then 'タオルケットもふもふしかちゃん'
+  when 'mr0pa9q7-lmq4pn0' then 'ストロベリーピョン'
+  when 'mr0pa9fv-ypib1x0' then 'キングガルビー'
+  when 'mr0pa92q-axyh3w0' then 'キャプテンフロッグ'
+  when 'mr0pa7o3-pkaaxx0' then 'ブルーベリーハシニーニ'
+  else name
+end
+where id in (
+  'mr1fcffa-zpl3900',
+  'mr1eqopu-2w31550',
+  'mr0panc5-qvnlm10',
+  'mr0pa9q7-lmq4pn0',
+  'mr0pa9fv-ypib1x0',
+  'mr0pa92q-axyh3w0',
+  'mr0pa7o3-pkaaxx0'
+);
+```

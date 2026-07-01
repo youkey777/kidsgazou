@@ -30,7 +30,7 @@ type Theme = {
   countChip: string
 }
 
-const APP_VERSION = 'v2026.07.01-training-save-fix'
+const APP_VERSION = 'v2026.07.01-db-save-detect'
 
 const THEMES: Record<ChildKey, Theme> = {
   rui: {

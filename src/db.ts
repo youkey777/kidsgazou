@@ -238,10 +238,15 @@ export async function updateImageStats(
       crystals: stats.crystals,
     }).filter(([, value]) => value !== undefined)
   )
-  const { error } = await sb.from('images').update(payload).eq('id', id)
+  const { data, error } = await sb.from('images').update(payload).eq('id', id).select('id')
   if (error) {
     throw new Error(
       `ステータス保存失敗: ${error.message}。SETUP.md の追加SQLを実行してください`
+    )
+  }
+  if (!data || data.length === 0) {
+    throw new Error(
+      'ステータス保存失敗: Supabase の UPDATE ポリシーが未設定です。SETUP.md の追加SQLを実行してください'
     )
   }
 }
