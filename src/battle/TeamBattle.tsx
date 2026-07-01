@@ -14,11 +14,12 @@ type Props = {
   mioTeam?: ImageRecord[]
   teamMode?: 'dice' | 'rps'
   onDone: () => Promise<void> | void
+  onExit: () => void
 }
 
 const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms))
 
-export default function TeamBattle({ characters, ruiTeam: selectedRuiTeam, mioTeam: selectedMioTeam, teamMode = 'dice', onDone }: Props) {
+export default function TeamBattle({ characters, ruiTeam: selectedRuiTeam, mioTeam: selectedMioTeam, teamMode = 'dice', onDone, onExit }: Props) {
   const ruiTeam = useMemo(
     () => selectedRuiTeam?.slice(0, 3) ?? characters.filter((character) => character.child === 'rui').slice(0, 3),
     [characters, selectedRuiTeam]
@@ -175,6 +176,7 @@ export default function TeamBattle({ characters, ruiTeam: selectedRuiTeam, mioTe
           winner={winnerCharacter}
           outcome="team"
           teamName={winnerTeam === 'rui' ? 'ルイチーム' : 'ミオチーム'}
+          onNext={onExit}
         />
       )}
       {saveMessage && <p className="rounded-2xl bg-red-100 p-3 text-sm font-bold text-red-700">{saveMessage}</p>}

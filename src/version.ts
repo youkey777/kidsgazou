@@ -1,1 +1,1 @@
-export const APP_VERSION = 'v2026.07.01-battle-cinematic'
+export const APP_VERSION = 'v2026.07.01-battle-readable'

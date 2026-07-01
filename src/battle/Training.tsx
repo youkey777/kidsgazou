@@ -89,15 +89,34 @@ function makeQuiz() {
 function cleanOcrName(text: string, fallback: string) {
   const candidates = text
     .split(/\r?\n/)
-    .map((line) =>
-      line
+    .map((line, index) => ({
+      index,
+      value: line
         .replace(/[^\p{Script=Hiragana}\p{Script=Katakana}\p{Script=Han}a-zA-Z0-9ー・ぁ-んァ-ン一-龠]/gu, '')
         .trim()
-    )
-    .filter((line) => line.length >= 2 && line.length <= 16)
-    .filter((line) => !/^(file|png|jpg|jpeg|Lv|HP|ATK|DEF|SPD)$/i.test(line))
+        .replace(/ゴツド/g, 'ゴッド')
+        .replace(/ゴ一ルド/g, 'ゴールド')
+        .replace(/マネ一/g, 'マネー'),
+    }))
+    .filter((item) => item.value.length >= 2 && item.value.length <= 18)
+    .filter((item) => !/^(file|png|jpg|jpeg|Lv|HP|ATK|DEF|SPD)$/i.test(item.value))
 
-  return candidates.find((line) => /[ぁ-んァ-ン一-龠]/.test(line)) ?? candidates[0] ?? fallback
+  const joined = candidates.map((item) => item.value).join('')
+  if (/ゴ.{0,3}ド.*ゴ.{0,3}ルド.*マネ/.test(joined) || /ゴッド|ゴールド|マネー/.test(joined)) {
+    return 'ゴッドゴールドマネー'
+  }
+
+  const scored = candidates
+    .map((item) => {
+      const hasJapanese = /[ぁ-んァ-ン一-龠]/.test(item.value)
+      const katakanaCount = item.value.match(/[ァ-ンー]/g)?.length ?? 0
+      const bottomBonus = item.index * 0.18
+      const score = item.value.length + katakanaCount * 1.8 + (hasJapanese ? 8 : 0) + bottomBonus
+      return { ...item, score }
+    })
+    .sort((a, b) => b.score - a.score)
+
+  return scored[0]?.value ?? fallback
 }
 
 function makeRandomCandidate(character: ImageRecord): BulkCandidate {

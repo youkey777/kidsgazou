@@ -14,6 +14,7 @@ type Props = {
   left: ImageRecord
   right: ImageRecord
   onDone: () => Promise<void> | void
+  onExit: () => void
 }
 
 type DiceSide = 'left' | 'right'
@@ -34,7 +35,7 @@ function rollDie() {
   return Math.floor(Math.random() * 6) + 1
 }
 
-export default function DiceBattle({ left, right, onDone }: Props) {
+export default function DiceBattle({ left, right, onDone, onExit }: Props) {
   const firstSide: DiceSide = left.spd >= right.spd ? 'left' : 'right'
   const [leftHp, setLeftHp] = useState(left.hp)
   const [rightHp, setRightHp] = useState(right.hp)
@@ -99,7 +100,7 @@ export default function DiceBattle({ left, right, onDone }: Props) {
     setDiceThrowEffect({ id: throwId, side, face: die })
     playDiceLand()
     setMessage(`出目(でめ) ${die}`)
-    await sleep(1050)
+    await sleep(1800)
 
     const attackName = die === 6 ? attacker.ultimateName : DICE_ATTACKS[die - 1]
     setPhase('attacking')
@@ -118,7 +119,7 @@ export default function DiceBattle({ left, right, onDone }: Props) {
     playWhoosh()
     if (die === 6) playUltimate()
     else playPunch()
-    await sleep(760)
+    await sleep(1200)
 
     const damage = calculateDiceDamage(attacker, defender, die)
     playDamage()
@@ -136,7 +137,7 @@ export default function DiceBattle({ left, right, onDone }: Props) {
       setLeftHp(nextLeftHp)
     }
     setMessage(`${attackerName} の攻撃（こうげき）！ ${damage}ダメージ！`)
-    await sleep(660)
+    await sleep(1500)
     setAttackEffect(null)
     setDiceThrowEffect(null)
     setActiveSide(undefined)
@@ -163,7 +164,7 @@ export default function DiceBattle({ left, right, onDone }: Props) {
     if (turnSide !== 'right' || phase !== 'ready' || doneRef.current) return
     const timer = window.setTimeout(() => {
       void runTurn('right')
-    }, 720)
+    }, 1200)
     return () => window.clearTimeout(timer)
     // runTurn intentionally reads refs and current state through closures from this render.
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -193,7 +194,7 @@ export default function DiceBattle({ left, right, onDone }: Props) {
         サイコロをふる
       </button>
 
-      {victory && <VictoryOverlay winner={victory.winner} outcome={victory.winner.id === left.id ? 'win' : 'lose'} />}
+      {victory && <VictoryOverlay winner={victory.winner} outcome={victory.winner.id === left.id ? 'win' : 'lose'} onNext={onExit} />}
       {saveMessage && (
         <p className="rounded-2xl bg-red-100 p-3 text-sm font-bold text-red-700">
           {saveMessage}

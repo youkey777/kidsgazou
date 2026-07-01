@@ -112,16 +112,16 @@ export default function BattleStage({
       }}
     >
       <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_20%,rgba(255,255,255,0.35),transparent_34%)]" />
-      {message && (
-        <motion.div
-          key={message}
-          className="relative z-20 mb-2 rounded-2xl bg-black/60 px-3 py-2 text-center text-sm font-black text-yellow-200 shadow-lg sm:text-base"
-          initial={{ scale: 0.92, opacity: 0 }}
-          animate={{ scale: 1, opacity: 1 }}
-        >
-          {message}
-        </motion.div>
-      )}
+      <motion.div
+        key={message || 'empty-message'}
+        className={`relative z-20 mb-2 flex min-h-[4.4rem] items-center justify-center rounded-2xl px-3 py-2 text-center text-base font-black leading-snug shadow-lg sm:text-lg ${
+          message ? 'bg-black/60 text-yellow-200' : 'bg-black/28 text-transparent'
+        }`}
+        initial={{ scale: 0.98, opacity: 0.75 }}
+        animate={{ scale: 1, opacity: 1 }}
+      >
+        <span className="max-h-[3.2rem] overflow-hidden">{message || '　'}</span>
+      </motion.div>
       <div className="relative z-10 grid min-w-0 grid-cols-[minmax(0,1fr)_42px_minmax(0,1fr)] items-center gap-2">
         <FighterCard
           character={left}

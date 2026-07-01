@@ -9,6 +9,7 @@ type Props = {
   winner: ImageRecord
   outcome: 'win' | 'lose' | 'team'
   teamName?: string
+  onNext: () => void
 }
 
 function nextExp(character: ImageRecord) {
@@ -22,7 +23,7 @@ function nextExp(character: ImageRecord) {
   }
 }
 
-export default function VictoryOverlay({ winner, outcome, teamName }: Props) {
+export default function VictoryOverlay({ winner, outcome, teamName, onNext }: Props) {
   const exp = nextExp(winner)
 
   useEffect(() => {
@@ -103,6 +104,13 @@ export default function VictoryOverlay({ winner, outcome, teamName }: Props) {
               LEVEL UP!
             </motion.div>
           )}
+          <button
+            type="button"
+            onClick={onNext}
+            className="mt-4 min-h-14 w-full rounded-2xl bg-white px-4 text-xl font-black text-purple-950 shadow-xl active:scale-95"
+          >
+            つぎへ
+          </button>
         </div>
       </motion.div>
     </motion.div>

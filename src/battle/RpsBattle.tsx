@@ -21,6 +21,7 @@ type Props = {
   left: ImageRecord
   right: ImageRecord
   onDone: () => Promise<void> | void
+  onExit: () => void
 }
 
 type RoundResult = 'win' | 'lose' | 'draw' | null
@@ -52,7 +53,7 @@ function judge(leftHand: RpsHand, rightHand: RpsHand) {
 }
 
 function ResultBadge({ result }: { result: RoundResult }) {
-  if (!result) return null
+  if (!result) return <div className="min-h-16 w-24 sm:w-28" />
   const text = result === 'win' ? '勝（か）ち！' : result === 'lose' ? '負（ま）け...' : 'あいこ！'
   const color =
     result === 'win'
@@ -63,7 +64,7 @@ function ResultBadge({ result }: { result: RoundResult }) {
   return (
     <motion.div
       key={result}
-      className={`rounded-2xl px-4 py-2 text-center text-xl font-black shadow-lg sm:text-2xl ${color}`}
+      className={`grid min-h-16 w-24 place-items-center rounded-2xl px-2 py-2 text-center text-lg font-black shadow-lg sm:w-28 sm:text-xl ${color}`}
       initial={{ scale: 0.7, rotate: -8 }}
       animate={{ scale: 1, rotate: 0 }}
     >
@@ -78,24 +79,24 @@ function HandSlot({ hand, cycling }: { hand: RpsHand; cycling: boolean }) {
     return (
       <motion.div
         key={hand}
-        className="grid h-20 place-items-center"
-        initial={{ y: -18, opacity: 0, scale: 0.9 }}
+        className="grid h-28 w-full place-items-center"
+        initial={{ opacity: 0, scale: 0.92 }}
         animate={{ y: 0, opacity: 1, scale: 1 }}
       >
-        <img src={HAND_IMAGES[hand]} alt="" className="h-20 w-20 rounded-2xl object-cover shadow-lg" />
+        <img src={HAND_IMAGES[hand]} alt="" className="h-24 w-full rounded-2xl object-contain shadow-lg" />
       </motion.div>
     )
   }
 
   return (
-    <div className="mx-auto h-20 w-20 overflow-hidden rounded-2xl bg-white/70 shadow-inner">
+    <div className="mx-auto h-28 w-full overflow-hidden rounded-2xl bg-white/70 shadow-inner">
       <motion.div
-        animate={{ y: [0, -240] }}
+        animate={{ y: [0, -336] }}
         transition={{ duration: 0.62, repeat: Infinity, ease: 'linear' }}
       >
         {reel.map((item, index) => (
-          <div key={`${item}-${index}`} className="grid h-20 place-items-center">
-            <img src={HAND_IMAGES[item]} alt="" className="h-20 w-20 rounded-2xl object-cover" />
+          <div key={`${item}-${index}`} className="grid h-28 place-items-center">
+            <img src={HAND_IMAGES[item]} alt="" className="h-24 w-full rounded-2xl object-contain" />
           </div>
         ))}
       </motion.div>
@@ -103,7 +104,7 @@ function HandSlot({ hand, cycling }: { hand: RpsHand; cycling: boolean }) {
   )
 }
 
-export default function RpsBattle({ left, right, onDone }: Props) {
+export default function RpsBattle({ left, right, onDone, onExit }: Props) {
   const [leftHp, setLeftHp] = useState(left.hp)
   const [rightHp, setRightHp] = useState(right.hp)
   const leftHpRef = useRef(left.hp)
@@ -144,7 +145,7 @@ export default function RpsBattle({ left, right, onDone }: Props) {
   }
 
   const prepareNextRound = async (nextRound: number) => {
-    await sleep(900)
+    await sleep(1800)
     setAttackEffect(null)
     setPlayerHand(null)
     setCpuHand(null)
@@ -163,7 +164,7 @@ export default function RpsBattle({ left, right, onDone }: Props) {
     setAttackEffect(null)
     setPlayerHand(hand)
     setMessage('じゃんけん...')
-    await sleep(220)
+    await sleep(700)
 
     const cpu = cpuPreview
     const result = judge(hand, cpu)
@@ -177,6 +178,7 @@ export default function RpsBattle({ left, right, onDone }: Props) {
           ? `${HAND_LABELS[hand]} の勝（か）ち！`
           : `CPUの ${HAND_LABELS[cpu]} が勝（か）ち！`
     )
+    await sleep(1300)
 
     if (result === 0) {
       setEvents((prev) => [...prev, { id: makeEventId(), target: 'left', amount: 0, label: 'あいこ' }])
@@ -201,7 +203,7 @@ export default function RpsBattle({ left, right, onDone }: Props) {
     })
     playWhoosh()
     playPunch()
-    await sleep(560)
+    await sleep(1050)
 
     const damage = calculateRpsDamage(winner, loser)
     playDamage()
@@ -221,7 +223,7 @@ export default function RpsBattle({ left, right, onDone }: Props) {
 
     const nextRound = round + 1
     if (nextRound > 5 || nextLeftHp <= 0 || nextRightHp <= 0) {
-      await sleep(650)
+      await sleep(1600)
       await finish(nextLeftHp, nextRightHp)
       return
     }
@@ -247,17 +249,17 @@ export default function RpsBattle({ left, right, onDone }: Props) {
         <p className="mb-2 text-center text-lg font-black text-purple-800">
           ラウンド {Math.min(round, 5)} / 5
         </p>
-        <div className="grid grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] items-center gap-2">
+        <div className="grid grid-cols-[minmax(0,1fr)_96px_minmax(0,1fr)] items-center gap-2 sm:grid-cols-[minmax(0,1fr)_112px_minmax(0,1fr)]">
           <div className="rounded-2xl bg-cyan-100 p-2 text-center">
             <p className="text-xs font-black text-cyan-950">じぶん</p>
             <motion.div
               key={playerHand ?? 'none'}
-              className="text-5xl"
+              className="grid h-28 place-items-center text-5xl"
               initial={{ y: 8, scale: 0.8 }}
               animate={{ y: 0, scale: 1 }}
             >
               {playerHand ? (
-                <img src={HAND_IMAGES[playerHand]} alt="" className="mx-auto h-20 w-20 rounded-2xl object-cover shadow-lg" />
+                <img src={HAND_IMAGES[playerHand]} alt="" className="mx-auto h-24 w-full rounded-2xl object-contain shadow-lg" />
               ) : (
                 '？'
               )}
@@ -291,7 +293,7 @@ export default function RpsBattle({ left, right, onDone }: Props) {
       </div>
 
       {saveMessage && <p className="rounded-2xl bg-red-100 p-3 text-sm font-bold text-red-700">{saveMessage}</p>}
-      {victory && <VictoryOverlay winner={victory.winner} outcome={victory.outcome} />}
+      {victory && <VictoryOverlay winner={victory.winner} outcome={victory.outcome} onNext={onExit} />}
     </div>
   )
 }

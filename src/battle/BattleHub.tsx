@@ -77,12 +77,13 @@ export default function BattleHub() {
           mioTeam={mioTeamIds.map((id) => characters.find((item) => item.id === id)).filter(Boolean) as ImageRecord[]}
           teamMode={teamMode}
           onDone={refresh}
+          onExit={() => setStartedKey(null)}
         />
       )
     }
     if (!left || !right) return null
-    if (mode === 'dice') return <DiceBattle key={startedKey} left={left} right={right} onDone={refresh} />
-    return <RpsBattle key={startedKey} left={left} right={right} onDone={refresh} />
+    if (mode === 'dice') return <DiceBattle key={startedKey} left={left} right={right} onDone={refresh} onExit={() => setStartedKey(null)} />
+    return <RpsBattle key={startedKey} left={left} right={right} onDone={refresh} onExit={() => setStartedKey(null)} />
   }
 
   const toggleTeam = (id: string, side: 'rui' | 'mio') => {
