@@ -1,16 +1,15 @@
 import { AnimatePresence, motion } from 'framer-motion'
 import { useEffect, useMemo, useState } from 'react'
 import {
-  addCharacterCrystals,
-  rerollCharacterAttribute,
-  rerollCharacterStat,
   updateImageProfile,
+  type ImageStatsUpdate,
   type ImageRecord,
 } from '../db'
 import {
   ATTRIBUTES,
   randomAttribute,
   randomStat,
+  STAT_CHART_LABELS,
   STAT_LABELS,
   type StatKey,
 } from './character-rules'
@@ -114,7 +113,7 @@ function RadarChart({ character }: { character: ImageRecord }) {
     const radius = (character[key] / 99) * maxRadius
     return {
       key,
-      label: STAT_LABELS[key],
+      label: STAT_CHART_LABELS[key],
       x: center + Math.cos(angle) * radius,
       y: center + Math.sin(angle) * radius,
       lx: center + Math.cos(angle) * 103,
@@ -206,9 +205,9 @@ function CharacterCard({
       <div className="relative mt-2">
         <p className="truncate text-sm font-black text-zinc-950">{shortBattleName(character.name)}</p>
         <p className="text-xs font-black text-purple-700">
-          Lv.{character.level} / {character.species}
+          Lv.{character.level} / 属性(ぞくせい): {character.species}
         </p>
-        <p className="text-xs font-black text-cyan-700">💎 {character.crystals}</p>
+        <p className="text-xs font-black text-cyan-700">💎 {character.crystals}こ</p>
         <XpBar xp={character.xp} compact />
       </div>
     </motion.button>
@@ -236,7 +235,7 @@ function StatRow({
         onClick={onChange}
         className="min-h-11 rounded-xl bg-white px-3 text-sm font-black text-purple-800 shadow-lg disabled:bg-white/25 disabled:text-white/50"
       >
-        変更
+        変更(へんこう)
       </button>
     </div>
   )
@@ -308,7 +307,7 @@ function QuizOverlay({
               animate={{ scale: 1, opacity: 1, y: 0 }}
               exit={{ scale: 0.7, opacity: 0 }}
             >
-              {answerState === 'correct' ? '正解！クリスタルゲット！' : 'おしい！'}
+              {answerState === 'correct' ? '正解(せいかい)！クリスタルゲット！' : 'おしい！'}
             </motion.div>
           )}
         </AnimatePresence>
@@ -388,9 +387,9 @@ function BulkUpdateOverlay({
     >
       <div className="mx-auto max-w-md space-y-3 pb-10">
         <div className="sticky top-0 z-10 rounded-3xl bg-black/65 p-4 shadow-2xl backdrop-blur">
-          <h3 className="text-xl font-black text-yellow-200">キャラ設定をまとめて更新</h3>
+          <h3 className="text-xl font-black text-yellow-200">キャラ設定(せってい)をまとめて更新(こうしん)</h3>
           <p className="mt-1 text-sm font-bold text-white/80">
-            読み取った名前を確認して、違っていたら直してね。
+            読(よ)み取(と)った名前(なまえ)を確認(かくにん)して、違(ちが)っていたら直(なお)してね。
           </p>
         </div>
         {candidates.map((candidate) => (
@@ -398,7 +397,7 @@ function BulkUpdateOverlay({
             <div className="flex gap-3">
               <img src={candidate.url} alt="" className="h-20 w-20 rounded-2xl bg-white object-cover" />
               <div className="min-w-0 flex-1">
-                <p className="truncate text-xs font-bold text-white/60">現在: {candidate.currentName}</p>
+                <p className="truncate text-xs font-bold text-white/60">現在(げんざい): {candidate.currentName}</p>
                 <input
                   value={candidate.name}
                   onChange={(event) => onNameChange(candidate.id, event.target.value)}
@@ -407,20 +406,20 @@ function BulkUpdateOverlay({
                 />
                 <p className="mt-1 text-xs font-black text-cyan-200">
                   {candidate.status === 'reading'
-                    ? '読み取り中...'
+                    ? '読(よ)み取(と)り中(ちゅう)...'
                     : candidate.status === 'error'
-                      ? '読み取り失敗。手で直せます。'
-                      : '確認OK'}
+                      ? '読(よ)み取(と)り失敗(しっぱい)。手(て)で直(なお)せます。'
+                      : '確認(かくにん)OK'}
                 </p>
               </div>
             </div>
             <div className="mt-2 grid grid-cols-3 gap-1 text-center text-xs font-black">
-              <span className="rounded-full bg-yellow-300 px-2 py-1 text-zinc-900">{candidate.species}</span>
-              <span className="rounded-full bg-white/15 px-2 py-1">攻 {candidate.atk}</span>
-              <span className="rounded-full bg-white/15 px-2 py-1">防 {candidate.def}</span>
-              <span className="rounded-full bg-white/15 px-2 py-1">速 {candidate.spd}</span>
-              <span className="rounded-full bg-white/15 px-2 py-1">運 {candidate.luck}</span>
-              <span className="rounded-full bg-white/15 px-2 py-1">技 {candidate.tech}</span>
+              <span className="rounded-full bg-yellow-300 px-2 py-1 text-zinc-900">属性(ぞくせい) {candidate.species}</span>
+              <span className="rounded-full bg-white/15 px-2 py-1">攻(こう) {candidate.atk}</span>
+              <span className="rounded-full bg-white/15 px-2 py-1">防(ぼう) {candidate.def}</span>
+              <span className="rounded-full bg-white/15 px-2 py-1">速(そく) {candidate.spd}</span>
+              <span className="rounded-full bg-white/15 px-2 py-1">運(うん) {candidate.luck}</span>
+              <span className="rounded-full bg-white/15 px-2 py-1">技(わざ) {candidate.tech}</span>
             </div>
           </div>
         ))}
@@ -439,7 +438,7 @@ function BulkUpdateOverlay({
             disabled={busy || candidates.length === 0}
             className="min-h-13 rounded-2xl bg-yellow-300 font-black text-zinc-950 shadow-xl disabled:opacity-50"
           >
-            保存する
+            保存(ほぞん)する
           </button>
         </div>
       </div>
@@ -458,9 +457,10 @@ export default function Training({ characters, onChanged }: Props) {
   const [quiz, setQuiz] = useState<MathQuestion[]>([])
   const [index, setIndex] = useState(0)
   const [earned, setEarned] = useState(0)
+  const [quizStartCrystals, setQuizStartCrystals] = useState(0)
   const [answerState, setAnswerState] = useState<AnswerState>('idle')
   const [busy, setBusy] = useState(false)
-  const [message, setMessage] = useState('キャラを選んで育てよう！')
+  const [message, setMessage] = useState('キャラを選(えら)んで育(そだ)てよう！')
   const [slot, setSlot] = useState<{ label: string; value: number | string | null; rolling: boolean } | null>(null)
   const [consumeFlash, setConsumeFlash] = useState(0)
   const [bulkCandidates, setBulkCandidates] = useState<BulkCandidate[] | null>(null)
@@ -487,8 +487,9 @@ export default function Training({ characters, onChanged }: Props) {
     setQuiz([])
     setIndex(0)
     setEarned(0)
+    setQuizStartCrystals(character.crystals)
     setAnswerState('idle')
-    setMessage(`${shortBattleName(character.name)}を育てよう！`)
+    setMessage(`${shortBattleName(character.name)}を育(そだ)てよう！`)
     setView('detail')
   }
 
@@ -497,8 +498,9 @@ export default function Training({ characters, onChanged }: Props) {
     setQuiz(makeQuiz())
     setIndex(0)
     setEarned(0)
+    setQuizStartCrystals(selected.crystals)
     setAnswerState('idle')
-    setMessage(`${shortBattleName(selected.name)}を育てるよ！`)
+    setMessage(`${shortBattleName(selected.name)}を育(そだ)てるよ！`)
   }
 
   const answer = async (value: number) => {
@@ -509,13 +511,14 @@ export default function Training({ characters, onChanged }: Props) {
     setAnswerState(correct ? 'correct' : 'wrong')
     if (correct) {
       setEarned(nextEarned)
-      setMessage('正解！クリスタルを1こゲット！')
-      patchLocalCharacter(selected.id, { crystals: selected.crystals + 1 })
+      const nextCrystals = quizStartCrystals + nextEarned
+      setMessage('正解(せいかい)！クリスタルを1こゲット！')
+      patchLocalCharacter(selected.id, { crystals: nextCrystals })
       try {
-        await addCharacterCrystals(selected, 1)
+        await updateImageProfile(selected.id, { crystals: nextCrystals })
       } catch (error) {
-        patchLocalCharacter(selected.id, { crystals: selected.crystals })
-        setMessage(`クリスタル保存に失敗しました: ${(error as Error).message}`)
+        patchLocalCharacter(selected.id, { crystals: quizStartCrystals + earned })
+        setMessage(`クリスタル保存(ほぞん)に失敗(しっぱい)しました: ${(error as Error).message}`)
       }
     } else {
       setMessage(`おしい！こたえは ${currentQuestion.answer}`)
@@ -527,7 +530,8 @@ export default function Training({ characters, onChanged }: Props) {
     if (nextIndex >= quiz.length) {
       setQuiz([])
       setIndex(0)
-      setMessage(`育成おわり！クリスタル ${nextEarned}こゲット！`)
+      setQuizStartCrystals(quizStartCrystals + nextEarned)
+      setMessage(`育成(いくせい)おわり！クリスタル ${nextEarned}こゲット！`)
       await onChanged()
     } else {
       setIndex(nextIndex)
@@ -538,19 +542,23 @@ export default function Training({ characters, onChanged }: Props) {
   const runStatRoulette = async (stat: StatKey) => {
     if (!selected || selected.crystals <= 0 || busy) return
     setBusy(true)
+    const nextCrystals = Math.max(0, selected.crystals - 1)
     setConsumeFlash((value) => value + 1)
-    setSlot({ label: `${STAT_LABELS[stat]}を変更中`, value: null, rolling: true })
+    setSlot({ label: `${STAT_LABELS[stat]}を変更(へんこう)中(ちゅう)`, value: null, rolling: true })
     for (let i = 0; i < 20; i++) {
-      setSlot({ label: `${STAT_LABELS[stat]}を変更中`, value: randomStat(), rolling: true })
+      setSlot({ label: `${STAT_LABELS[stat]}を変更(へんこう)中(ちゅう)`, value: randomStat(), rolling: true })
       await sleep(38 + i * 7)
     }
     const nextValue = randomStat()
-    setSlot({ label: `${STAT_LABELS[stat]}が決定！`, value: nextValue, rolling: false })
+    setSlot({ label: `${STAT_LABELS[stat]}が決定(けってい)！`, value: nextValue, rolling: false })
     try {
-      await rerollCharacterStat(selected, stat, nextValue)
+      await updateImageProfile(selected.id, {
+        [stat]: nextValue,
+        crystals: nextCrystals,
+      } as ImageStatsUpdate)
       patchLocalCharacter(selected.id, {
         [stat]: nextValue,
-        crystals: Math.max(0, selected.crystals - 1),
+        crystals: nextCrystals,
       } as Partial<ImageRecord>)
       setMessage(`${STAT_LABELS[stat]}が ${nextValue} になった！`)
       await onChanged()
@@ -565,21 +573,25 @@ export default function Training({ characters, onChanged }: Props) {
   const runAttributeRoulette = async () => {
     if (!selected || selected.crystals <= 0 || busy) return
     setBusy(true)
+    const nextCrystals = Math.max(0, selected.crystals - 1)
     setConsumeFlash((value) => value + 1)
-    setSlot({ label: '属性を変更中', value: null, rolling: true })
+    setSlot({ label: '属性(ぞくせい)を変更(へんこう)中(ちゅう)', value: null, rolling: true })
     for (let i = 0; i < 16; i++) {
-      setSlot({ label: '属性を変更中', value: randomAttribute(), rolling: true })
+      setSlot({ label: '属性(ぞくせい)を変更(へんこう)中(ちゅう)', value: randomAttribute(), rolling: true })
       await sleep(52 + i * 8)
     }
     const nextAttribute = randomAttribute()
-    setSlot({ label: '属性が決定！', value: nextAttribute, rolling: false })
+    setSlot({ label: '属性(ぞくせい)が決定(けってい)！', value: nextAttribute, rolling: false })
     try {
-      await rerollCharacterAttribute(selected, nextAttribute)
+      await updateImageProfile(selected.id, {
+        species: nextAttribute,
+        crystals: nextCrystals,
+      })
       patchLocalCharacter(selected.id, {
         species: nextAttribute,
-        crystals: Math.max(0, selected.crystals - 1),
+        crystals: nextCrystals,
       })
-      setMessage(`属性が「${nextAttribute}」になった！`)
+      setMessage(`属性(ぞくせい)が「${nextAttribute}」になった！`)
       await onChanged()
     } catch (error) {
       setMessage((error as Error).message)
@@ -661,7 +673,7 @@ export default function Training({ characters, onChanged }: Props) {
         })
       }
       setBulkCandidates(null)
-      setMessage('キャラ設定をまとめて更新しました！')
+      setMessage('キャラ設定(せってい)をまとめて更新(こうしん)しました！')
       await onChanged()
     } catch (error) {
       setMessage((error as Error).message)
@@ -673,7 +685,7 @@ export default function Training({ characters, onChanged }: Props) {
   if (!selected) {
     return (
       <div className="rounded-3xl bg-white/85 p-6 text-center font-black text-purple-800">
-        まだキャラがいないよ。画像を追加してね。
+        まだキャラがいないよ。画像(がぞう)を追加(ついか)してね。
       </div>
     )
   }
@@ -690,15 +702,15 @@ export default function Training({ characters, onChanged }: Props) {
             exit={{ opacity: 0, y: -18 }}
           >
             <div className="rounded-3xl bg-white/90 p-4 shadow-xl">
-              <h2 className="text-2xl font-black text-purple-900">育てるキャラ</h2>
-              <p className="mt-1 text-sm font-bold text-zinc-700">キャラを押すと、くわしい画面に進むよ。</p>
+              <h2 className="text-2xl font-black text-purple-900">育(そだ)てるキャラ</h2>
+              <p className="mt-1 text-sm font-bold text-zinc-700">キャラを押(お)すと、くわしい画面(がめん)に進(すす)むよ。</p>
               <button
                 type="button"
                 onClick={() => void startBulkUpdate()}
                 disabled={bulkBusy || localCharacters.length === 0}
                 className="mt-3 min-h-12 w-full rounded-2xl bg-gradient-to-r from-cyan-300 to-yellow-300 px-3 text-sm font-black text-zinc-950 shadow-lg disabled:opacity-50"
               >
-                キャラ設定をまとめて更新
+                全員(ぜんいん)の名前(なまえ)・能力(のうりょく)・属性(ぞくせい)を更新(こうしん)
               </button>
             </div>
             <div className="grid grid-cols-2 gap-3">
@@ -747,9 +759,17 @@ export default function Training({ characters, onChanged }: Props) {
                 className="mx-auto h-56 w-56 rounded-[2rem] border-4 border-white/80 bg-white object-contain shadow-[0_0_42px_rgba(255,255,255,.65)]"
               />
               <h2 className="mt-3 truncate text-3xl font-black drop-shadow">{shortBattleName(selected.name)}</h2>
-              <p className="text-sm font-black text-yellow-200">
-                Lv.{selected.level} / {selected.species} / 💎 {selected.crystals}
-              </p>
+              <div className="mt-2 flex flex-wrap items-center justify-center gap-2">
+                <span className="rounded-full bg-black/55 px-3 py-1 text-sm font-black text-white shadow-lg">
+                  Lv.{selected.level}
+                </span>
+                <span className="rounded-full bg-yellow-300 px-3 py-1 text-sm font-black text-purple-950 shadow-[0_0_20px_rgba(250,204,21,.65)]">
+                  属性(ぞくせい): {selected.species}
+                </span>
+                <span className="rounded-full bg-cyan-200 px-3 py-1 text-sm font-black text-purple-950 shadow-[0_0_20px_rgba(34,211,238,.55)]">
+                  所持(しょじ) 💎 {selected.crystals}こ
+                </span>
+              </div>
               <div className="mx-auto max-w-56">
                 <XpBar xp={selected.xp} />
               </div>
@@ -759,9 +779,24 @@ export default function Training({ characters, onChanged }: Props) {
               <RadarChart character={selected} />
             </div>
 
+            <div className="mx-4 mt-4 rounded-[2rem] bg-white/14 p-3 text-center shadow-2xl ring-1 ring-white/20 backdrop-blur-md">
+              <p className="text-sm font-black text-cyan-100">
+                クリスタル: <span className="text-2xl text-white">💎 {selected.crystals}</span> こ
+              </p>
+              <button
+                type="button"
+                onClick={startQuiz}
+                disabled={busy || inQuiz}
+                className="mt-2 min-h-14 w-full rounded-2xl bg-gradient-to-r from-yellow-300 to-orange-400 text-2xl font-black text-zinc-950 shadow-xl disabled:opacity-50"
+              >
+                育(そだ)てる
+              </button>
+              <p className="mt-3 rounded-2xl bg-black/35 p-3 text-sm font-bold text-white">{message}</p>
+            </div>
+
             <div className="mx-4 mt-4 rounded-[2rem] bg-black/42 p-3 shadow-2xl ring-1 ring-white/20 backdrop-blur-md">
               <div className="mb-3 flex items-center justify-between gap-2">
-                <h3 className="text-xl font-black text-yellow-200">能力を変更する</h3>
+                <h3 className="text-xl font-black text-yellow-200">能力(のうりょく)を変更(へんこう)する</h3>
                 <AnimatePresence>
                   {consumeFlash > 0 && (
                     <motion.span
@@ -787,21 +822,17 @@ export default function Training({ characters, onChanged }: Props) {
                   />
                 ))}
                 <StatRow
-                  label="属性"
+                  label="属性(ぞくせい)"
                   value={selected.species}
                   disabled={busy || selected.crystals <= 0}
                   onChange={() => void runAttributeRoulette()}
                 />
               </div>
-              <p className="mt-3 rounded-2xl bg-white/12 p-3 text-sm font-bold text-white">{message}</p>
-              <button
-                type="button"
-                onClick={startQuiz}
-                disabled={busy || inQuiz}
-                className="mt-3 min-h-14 w-full rounded-2xl bg-gradient-to-r from-yellow-300 to-orange-400 text-2xl font-black text-zinc-950 shadow-xl disabled:opacity-50"
-              >
-                育てる
-              </button>
+              {selected.crystals <= 0 && (
+                <p className="mt-3 rounded-2xl bg-white/12 p-3 text-sm font-bold text-white">
+                  能力(のうりょく)を変更(へんこう)するには、先(さき)に育(そだ)ててクリスタルを集(あつ)めてね。
+                </p>
+              )}
             </div>
           </motion.section>
         )}

@@ -30,7 +30,7 @@ type Theme = {
   countChip: string
 }
 
-const APP_VERSION = 'v2026.07.01-ocr-xp'
+const APP_VERSION = 'v2026.07.01-training-save-fix'
 
 const THEMES: Record<ChildKey, Theme> = {
   rui: {
@@ -128,7 +128,7 @@ export default function App() {
         setInitialized(true)
       } catch (e) {
         if (!cancelled) {
-          setGlobalError(`移行失敗: ${(e as Error).message}`)
+          setGlobalError(`移行(いこう)失敗(しっぱい): ${(e as Error).message}`)
           setMigrating(null)
           setInitialized(true)
         }
@@ -167,25 +167,25 @@ export default function App() {
       setPending([])
       await refresh(activeChild)
     } catch (e) {
-      alert(`保存失敗: ${(e as Error).message}`)
+      alert(`保存(ほぞん)失敗(しっぱい): ${(e as Error).message}`)
     } finally {
       setSaving(false)
     }
   }
 
   const onDelete = async (id: string) => {
-    if (!confirm('この画像を削除しますか？')) return
+    if (!confirm('この画像(がぞう)を削除(さくじょ)しますか？')) return
     try {
       await deleteImage(id)
       if (viewer?.id === id) setViewer(null)
       await refresh(activeChild)
     } catch (e) {
-      alert(`削除失敗: ${(e as Error).message}`)
+      alert(`削除(さくじょ)失敗(しっぱい): ${(e as Error).message}`)
     }
   }
 
   const onLogout = () => {
-    if (!confirm('ロックしますか？次回はパスコードが必要です。')) return
+    if (!confirm('ロックしますか？次回(じかい)はパスコードが必要(ひつよう)です。')) return
     lock()
     setUnlocked(false)
   }
@@ -214,12 +214,15 @@ export default function App() {
 
   if (!isConfigured) {
     return (
-      <div className="flex min-h-full items-center justify-center bg-zinc-900 p-6 text-white">
+      <div className="relative flex min-h-full items-center justify-center bg-zinc-900 p-6 text-white">
+        <span className="absolute right-3 top-3 rounded-full bg-black/55 px-2 py-1 text-[10px] font-black text-white/85 shadow ring-1 ring-white/20">
+          {APP_VERSION}
+        </span>
         <div className="max-w-sm text-center">
           <div className="mb-3 text-5xl">⚠️</div>
-          <h1 className="mb-2 text-xl font-bold">Supabase 未設定</h1>
+          <h1 className="mb-2 text-xl font-bold">Supabase 未設定(みせってい)</h1>
           <p className="text-sm text-zinc-300">
-            Vercel に必要な環境変数を設定してください。
+            Vercel に必要(ひつよう)な環境変数(かんきょうへんすう)を設定(せってい)してください。
           </p>
           <ul className="mt-3 space-y-1 rounded-lg bg-zinc-800 p-3 text-left font-mono text-xs">
             <li>VITE_SUPABASE_URL</li>
@@ -240,7 +243,7 @@ export default function App() {
       <div className="flex min-h-full items-center justify-center bg-gradient-to-br from-zinc-900 to-pink-900 p-6 text-white">
         <div className="text-center">
           <div className="mb-3 inline-block animate-wiggle text-5xl">☁️</div>
-          <h1 className="mb-2 text-xl font-bold">クラウドへ移行中...</h1>
+          <h1 className="mb-2 text-xl font-bold">クラウドへ移行(いこう)中(ちゅう)...</h1>
           <p className="text-sm text-pink-200">
             {migrating.done} / {migrating.total} まい
           </p>
@@ -286,7 +289,7 @@ export default function App() {
                     : 'bg-white text-pink-600'
                 }`}
               >
-                {editing ? '完了' : '編集'}
+                {editing ? '完了(かんりょう)' : '編集(へんしゅう)'}
               </button>
             )}
             <button
@@ -308,7 +311,7 @@ export default function App() {
         <div className="mx-4 mb-2 rounded-lg bg-red-500/90 px-3 py-2 text-xs text-white">
           {globalError}
           <button onClick={() => setGlobalError(null)} className="ml-2 underline">
-            閉じる
+            閉(と)じる
           </button>
         </div>
       )}
@@ -365,7 +368,7 @@ export default function App() {
           <main className="mt-4 px-4 pb-40">
             {editing && (
               <p className="mb-3 rounded-2xl bg-yellow-200 px-3 py-2 text-sm font-black text-zinc-900">
-                画像を長押しすると、つよさを編集できるよ。
+                画像(がぞう)を長押(ながお)しすると、つよさを編集(へんしゅう)できるよ。
               </p>
             )}
 
@@ -377,7 +380,7 @@ export default function App() {
               >
                 <div className="mb-2 flex items-center justify-between px-1">
                   <p className={`text-sm font-black ${theme.accent}`}>
-                    保存まちの画像 {pending.length} まい
+                    保存(ほぞん)まちの画像(がぞう) {pending.length} まい
                   </p>
                   <button
                     onClick={() => setPending([])}
@@ -412,17 +415,17 @@ export default function App() {
               <div className="mt-16 text-center">
                 <div className="mb-3 inline-block animate-wiggle text-6xl">🔍</div>
                 <p className={`text-base font-black ${activeChild === 'rui' ? 'text-amber-200' : 'text-pink-600'}`}>
-                  よみこみ中...
+                  よみこみ中(ちゅう)...
                 </p>
               </div>
             ) : images.length === 0 && pending.length === 0 ? (
               <div className="mt-16 text-center">
                 <div className="mb-3 inline-block animate-wiggle text-7xl">{theme.emoji}</div>
                 <p className={`text-lg font-black ${activeChild === 'rui' ? 'text-amber-200' : 'text-pink-600'}`}>
-                  まだ画像がないよ
+                  まだ画像(がぞう)がないよ
                 </p>
                 <p className={`mt-1 text-sm ${activeChild === 'rui' ? 'text-zinc-400' : 'text-pink-500'}`}>
-                  下のボタンから追加してね
+                  下(した)のボタンから追加(ついか)してね
                 </p>
               </div>
             ) : (
@@ -460,7 +463,7 @@ export default function App() {
                             void onDelete(image.id)
                           }}
                           className="absolute -left-1 -top-1 flex h-8 w-8 items-center justify-center rounded-full bg-red-500 text-base font-black text-white shadow-lg ring-2 ring-white"
-                          aria-label="削除"
+                          aria-label="削除(さくじょ)"
                         >
                           −
                         </button>
@@ -499,7 +502,7 @@ export default function App() {
                   activeChild === 'rui' ? 'text-zinc-800' : 'text-pink-600'
                 } transition-transform active:scale-95 disabled:opacity-50`}
               >
-                📷 画像をえらぶ
+                📷 画像(がぞう)をえらぶ
               </button>
               {pending.length > 0 && (
                 <button
@@ -507,7 +510,7 @@ export default function App() {
                   disabled={saving}
                   className={`flex-1 animate-pop-in rounded-2xl py-4 font-black ${theme.saveBtn} transition-transform active:scale-95 disabled:opacity-70`}
                 >
-                  {saving ? '保存中...' : `💾 保存 ${pending.length}まい`}
+                  {saving ? '保存(ほぞん)中(ちゅう)...' : `💾 保存(ほぞん) ${pending.length}まい`}
                 </button>
               )}
             </div>
@@ -524,7 +527,7 @@ export default function App() {
             <button
               onClick={() => setViewer(null)}
               className="h-11 w-11 rounded-full bg-white/20 text-xl text-white"
-              aria-label="閉じる"
+              aria-label="閉(と)じる"
             >
               ×
             </button>
@@ -539,7 +542,7 @@ export default function App() {
               onClick={(event) => event.stopPropagation()}
               className="rounded-full bg-white/20 px-5 py-3 font-black text-white no-underline"
             >
-              保存
+              保存(ほぞん)
             </a>
             <button
               onClick={(event) => {
@@ -548,7 +551,7 @@ export default function App() {
               }}
               className="rounded-full bg-red-500/90 px-5 py-3 font-black text-white"
             >
-              削除
+              削除(さくじょ)
             </button>
           </div>
         </div>

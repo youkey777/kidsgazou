@@ -3,11 +3,19 @@ import type { ImageRecord } from '../db'
 export type StatKey = 'atk' | 'def' | 'spd' | 'luck' | 'tech'
 
 export const STAT_LABELS: Record<StatKey, string> = {
-  atk: '攻撃力',
-  def: '防御力',
-  spd: '素早さ',
-  luck: '運',
-  tech: '技術力',
+  atk: '攻撃力(こうげきりょく)',
+  def: '防御力(ぼうぎょりょく)',
+  spd: '素早(すばや)さ',
+  luck: '運(うん)',
+  tech: '技術力(ぎじゅつりょく)',
+}
+
+export const STAT_CHART_LABELS: Record<StatKey, string> = {
+  atk: 'こうげき',
+  def: 'ぼうぎょ',
+  spd: 'すばやさ',
+  luck: 'うん',
+  tech: 'ぎじゅつ',
 }
 
 export const ATTRIBUTES = [
