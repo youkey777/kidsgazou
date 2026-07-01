@@ -55,7 +55,7 @@ type BulkCandidate = {
 
 const STAT_KEYS: StatKey[] = ['atk', 'def', 'spd', 'luck', 'tech']
 const ARENA_BG = '/battle/training-arena-bg.png'
-const SLOT_BG = '/battle/training-slot-bg.png'
+const SLOT_BG = '/battle/roulette-frame-bg.png'
 
 const sleep = (ms: number) => new Promise((resolve) => window.setTimeout(resolve, ms))
 
@@ -360,14 +360,17 @@ function SlotOverlay({
         >
           {label}
         </motion.p>
-        <div className="relative mx-auto mt-8 h-52 max-w-[300px] overflow-hidden rounded-[2.4rem] border-4 border-yellow-200 bg-gradient-to-br from-purple-950/85 via-fuchsia-800/55 to-cyan-800/45 shadow-[0_0_55px_rgba(250,204,21,.8)] backdrop-blur">
+        <div
+          className="relative mx-auto mt-5 h-[420px] max-w-[320px] overflow-hidden rounded-[2.4rem] bg-center bg-cover shadow-[0_0_55px_rgba(250,204,21,.8)]"
+          style={{ backgroundImage: `url(${SLOT_BG})` }}
+        >
           <motion.div
             className="absolute -inset-14 rounded-full bg-[conic-gradient(from_0deg,#fde047,#22d3ee,#f0abfc,#fb7185,#fde047)] opacity-55 blur-sm"
             animate={{ rotate: rolling ? 360 : 720, scale: rolling ? [1, 1.08, 1] : [1.16, 1, 1.08] }}
             transition={{ duration: rolling ? 1.1 : 0.75, repeat: rolling ? Infinity : 0, ease: 'linear' }}
           />
           <motion.div
-            className="absolute inset-5 rounded-[2rem] border border-white/35 bg-black/45 shadow-inner"
+            className="absolute inset-x-12 top-[37%] h-28 rounded-[2rem] border border-white/35 bg-black/55 shadow-inner"
             animate={{ scale: rolling ? [0.96, 1, 0.96] : 1 }}
             transition={{ duration: 0.42, repeat: rolling ? Infinity : 0 }}
           />
@@ -381,7 +384,7 @@ function SlotOverlay({
             />
           ))}
           <motion.div
-            className={`absolute inset-x-0 top-1/2 -translate-y-1/2 text-center font-black text-white drop-shadow-[0_0_24px_rgba(255,255,255,.95)] ${
+            className={`absolute inset-x-0 top-[50%] -translate-y-1/2 text-center font-black text-white drop-shadow-[0_0_24px_rgba(255,255,255,.95)] ${
               typeof value === 'string' ? 'text-4xl' : 'text-7xl'
             }`}
             animate={rolling ? { y: [-98, 98, -98], filter: ['blur(0px)', 'blur(2px)', 'blur(0px)'] } : { y: 0, scale: [1.3, 1, 1.08, 1], rotateX: [0, 18, 0] }}
@@ -389,7 +392,7 @@ function SlotOverlay({
           >
             {typeof value === 'string' && value !== '？' ? `${attributeMark(value)} ${value}` : (value ?? '？')}
           </motion.div>
-          <div className="absolute inset-x-4 top-1/2 h-1 -translate-y-1/2 rounded-full bg-yellow-200/90 shadow-[0_0_18px_rgba(250,204,21,.9)]" />
+          <div className="absolute inset-x-14 top-[50%] h-1 -translate-y-1/2 rounded-full bg-yellow-200/90 shadow-[0_0_18px_rgba(250,204,21,.9)]" />
         </div>
         <motion.div
           className="mx-auto mt-6 h-3 w-48 rounded-full bg-gradient-to-r from-cyan-300 via-yellow-200 to-pink-300"

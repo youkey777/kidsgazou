@@ -5,7 +5,6 @@ import { hpPercent, starsForLevel } from '../types'
 import AttackFlyEffect, { type AttackEffectData } from './AttackFlyEffect'
 import DamageNumber from './DamageNumber'
 import DiceThrowEffect, { type DiceThrowEffectData } from './DiceThrowEffect'
-import XpBar from './XpBar'
 
 type Props = {
   left: BattleCharacter
@@ -44,7 +43,7 @@ function FighterCard({
 
   return (
     <motion.div
-      className={`relative min-w-0 rounded-2xl border-4 bg-white/95 p-2 shadow-2xl ${
+      className={`relative min-w-0 rounded-[1.35rem] border-4 bg-white/95 p-2 shadow-2xl ${
         side === 'left' ? 'border-cyan-300' : 'border-pink-300'
       } ${glowing ? 'shadow-yellow-300 ring-4 ring-yellow-300' : ''}`}
       animate={
@@ -62,7 +61,7 @@ function FighterCard({
       <img
         src={character.url}
         alt={character.name}
-        className="h-[clamp(104px,28vw,170px)] w-full rounded-xl bg-zinc-100 object-contain"
+        className="h-[clamp(150px,45vw,250px)] w-full rounded-xl bg-zinc-100 object-contain"
         draggable={false}
       />
       <div className="mt-2 min-w-0">
@@ -72,11 +71,10 @@ function FighterCard({
           </p>
           <span className="shrink-0 text-xs font-black text-yellow-500">{stars}</span>
         </div>
-        <p className="truncate text-xs font-bold text-purple-700">
+        <p className="truncate text-xs font-black text-purple-700">
           Lv.{character.level} / {attributeMark(character.species)} {character.species}
         </p>
-        <XpBar xp={character.xp} compact />
-        <div className="mt-2 h-3 overflow-hidden rounded-full bg-zinc-200">
+        <div className="mt-2 h-4 overflow-hidden rounded-full bg-zinc-200">
           <motion.div
             className="h-full rounded-full bg-gradient-to-r from-lime-400 to-emerald-500"
             animate={{ width: hpPercent(hp, character.hp) }}
@@ -106,7 +104,7 @@ export default function BattleStage({
   return (
     <div
       data-testid="battle-stage"
-      className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-violet-700 via-fuchsia-600 to-indigo-900 p-2 shadow-2xl sm:p-3"
+      className="relative min-h-[560px] overflow-hidden rounded-[2rem] bg-gradient-to-br from-violet-700 via-fuchsia-600 to-indigo-900 p-2 shadow-2xl sm:min-h-[680px] sm:p-3"
       style={{
         backgroundImage: 'linear-gradient(rgba(88,28,135,.35),rgba(49,46,129,.55)), url(/battle/rich-battle-bg.png)',
         backgroundSize: 'cover',
@@ -124,7 +122,7 @@ export default function BattleStage({
           {message}
         </motion.div>
       )}
-      <div className="relative z-10 grid min-w-0 grid-cols-[minmax(0,1fr)_44px_minmax(0,1fr)] items-center gap-2">
+      <div className="relative z-10 grid min-w-0 grid-cols-[minmax(0,1fr)_42px_minmax(0,1fr)] items-center gap-2">
         <FighterCard
           character={left}
           hp={leftHp}

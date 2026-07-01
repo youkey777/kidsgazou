@@ -42,6 +42,16 @@ export function playBgm() {
   }
 }
 
+export function primeBgmOnNextGesture() {
+  const start = () => {
+    playBgm()
+    window.removeEventListener('pointerdown', start)
+    window.removeEventListener('keydown', start)
+  }
+  window.addEventListener('pointerdown', start, { once: true })
+  window.addEventListener('keydown', start, { once: true })
+}
+
 export function stopBgm() {
   bgmEnabled = false
   bgm?.pause()
@@ -98,6 +108,12 @@ export function playRouletteStop() {
 export function playCrystal() {
   ;[880, 1175, 1568].forEach((frequency, index) => {
     setTimeout(() => tone(frequency, 0.12, 'triangle', 0.055), index * 80)
+  })
+}
+
+export function playLevelUp() {
+  ;[523, 659, 784, 1046, 1318].forEach((frequency, index) => {
+    setTimeout(() => tone(frequency, 0.16, 'triangle', 0.07), index * 90)
   })
 }
 

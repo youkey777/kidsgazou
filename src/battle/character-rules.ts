@@ -168,28 +168,28 @@ export function growWinnerStats(character: ImageRecord) {
 }
 
 export function calculateDiceDamage(attacker: ImageRecord, defender: ImageRecord, die: number) {
-  const diePower = [0, 0.58, 0.74, 0.92, 1.12, 1.36, 1.72][die] ?? 1
-  const attackScore = attacker.atk * diePower
-  const techScore = attacker.tech * (0.1 + die * 0.04)
+  const diePower = [0, 0.42, 0.56, 0.72, 0.9, 1.08, 1.32][die] ?? 1
+  const attackScore = attacker.atk * diePower * 0.58
+  const techScore = attacker.tech * (0.06 + die * 0.025)
   const luckVariance = 0.86 + (attacker.luck / 99) * 0.22 + Math.random() * 0.18
-  const defenseScore = defender.def * (0.22 + defender.tech / 650)
-  const raw = (defender.hp * (0.04 + die * 0.035) + attackScore + techScore - defenseScore) * luckVariance
+  const defenseScore = defender.def * (0.16 + defender.tech / 850)
+  const raw = (defender.hp * (0.025 + die * 0.021) + attackScore + techScore - defenseScore) * luckVariance
   const critical = Math.random() < (attacker.luck + die * 4) / 460
   const boosted = (critical ? raw * 1.24 : raw) * attributeMultiplier(attacker.species, defender.species)
-  const minimum = Math.max(8 + die * 5, Math.floor(defender.hp * (0.06 + die * 0.025)))
-  const maximum = Math.max(24 + die * 11, Math.floor(defender.hp * (0.15 + die * 0.055)))
+  const minimum = Math.max(5 + die * 3, Math.floor(defender.hp * (0.035 + die * 0.014)))
+  const maximum = Math.max(12 + die * 6, Math.floor(defender.hp * (0.075 + die * 0.032)))
   return Math.max(minimum, Math.min(maximum, Math.floor(boosted)))
 }
 
 export function calculateRpsDamage(attacker: ImageRecord, defender: ImageRecord) {
-  const attackScore = attacker.atk * 1.55
-  const techScore = attacker.tech * 0.34
-  const defenseScore = defender.def * 0.42
+  const attackScore = attacker.atk * 0.88
+  const techScore = attacker.tech * 0.22
+  const defenseScore = defender.def * 0.3
   const luckVariance = 0.84 + (attacker.luck / 99) * 0.28 + Math.random() * 0.2
   const critical = Math.random() < attacker.luck / 360
   const raw = (attackScore + techScore - defenseScore) * luckVariance
   const boosted = (critical ? raw * 1.28 : raw) * attributeMultiplier(attacker.species, defender.species)
-  return Math.max(18, Math.min(Math.floor(defender.hp * 0.5), Math.floor(boosted)))
+  return Math.max(14, Math.min(Math.floor(defender.hp * 0.34), Math.floor(boosted)))
 }
 
 export function calculateTeamDamage(attacker: ImageRecord, defender: ImageRecord) {

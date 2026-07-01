@@ -1,27 +1,31 @@
 import { useEffect, useMemo, useState } from 'react'
 import type { ImageRecord } from '../db'
 import { saveBattleResult } from './battle-db'
-import { calculateTeamDamage } from './character-rules'
+import { calculateDiceDamage, calculateRpsDamage } from './character-rules'
 import BattleStage from './effects/BattleStage'
 import { fireBattleConfetti } from './effects/Confetti'
+import VictoryOverlay from './effects/VictoryOverlay'
 import { playDamage, playPunch, playVictory, playWhoosh } from './sounds'
 import { type DamageEvent, makeEventId, shortBattleName } from './types'
 
 type Props = {
   characters: ImageRecord[]
+  ruiTeam?: ImageRecord[]
+  mioTeam?: ImageRecord[]
+  teamMode?: 'dice' | 'rps'
   onDone: () => Promise<void> | void
 }
 
 const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms))
 
-export default function TeamBattle({ characters, onDone }: Props) {
+export default function TeamBattle({ characters, ruiTeam: selectedRuiTeam, mioTeam: selectedMioTeam, teamMode = 'dice', onDone }: Props) {
   const ruiTeam = useMemo(
-    () => characters.filter((character) => character.child === 'rui').slice(0, 3),
-    [characters]
+    () => selectedRuiTeam?.slice(0, 3) ?? characters.filter((character) => character.child === 'rui').slice(0, 3),
+    [characters, selectedRuiTeam]
   )
   const mioTeam = useMemo(
-    () => characters.filter((character) => character.child === 'mio').slice(0, 3),
-    [characters]
+    () => selectedMioTeam?.slice(0, 3) ?? characters.filter((character) => character.child === 'mio').slice(0, 3),
+    [characters, selectedMioTeam]
   )
   const [leftIndex, setLeftIndex] = useState(0)
   const [rightIndex, setRightIndex] = useState(0)
@@ -32,6 +36,7 @@ export default function TeamBattle({ characters, onDone }: Props) {
   const [log, setLog] = useState<string[]>(['3vs3 勝ち抜きバトル！'])
   const [winnerTeam, setWinnerTeam] = useState<'rui' | 'mio' | null>(null)
   const [saveMessage, setSaveMessage] = useState<string | null>(null)
+  const [winnerCharacter, setWinnerCharacter] = useState<ImageRecord | null>(null)
 
   const left = ruiTeam[leftIndex]
   const right = mioTeam[rightIndex]
@@ -53,7 +58,11 @@ export default function TeamBattle({ characters, onDone }: Props) {
       while (!cancelled && currentLeft && currentRight) {
         await sleep(800)
         const attacker = leftTurn ? currentLeft : currentRight
-        const hit = calculateTeamDamage(attacker, leftTurn ? currentRight : currentLeft)
+        const defender = leftTurn ? currentRight : currentLeft
+        const hit =
+          teamMode === 'dice'
+            ? calculateDiceDamage(attacker, defender, Math.floor(Math.random() * 6) + 1)
+            : Math.max(10, Math.floor(calculateRpsDamage(attacker, defender) * 0.82))
         playWhoosh()
         playPunch()
         playDamage()
@@ -76,6 +85,7 @@ export default function TeamBattle({ characters, onDone }: Props) {
           currentRightIndex += 1
           if (currentRightIndex >= mioTeam.length) {
             setWinnerTeam('rui')
+            setWinnerCharacter(currentLeft)
             setMessage('ルイチーム勝利！')
             playVictory()
             fireBattleConfetti()
@@ -101,6 +111,7 @@ export default function TeamBattle({ characters, onDone }: Props) {
           currentLeftIndex += 1
           if (currentLeftIndex >= ruiTeam.length) {
             setWinnerTeam('mio')
+            setWinnerCharacter(currentRight)
             setMessage('ミオチーム勝利！')
             playVictory()
             fireBattleConfetti()
@@ -127,7 +138,7 @@ export default function TeamBattle({ characters, onDone }: Props) {
     return () => {
       cancelled = true
     }
-  }, [left, leftIndex, mioTeam, onDone, right, rightIndex, ruiTeam, winnerTeam])
+  }, [left, leftIndex, mioTeam, onDone, right, rightIndex, ruiTeam, teamMode, winnerTeam])
 
   if (ruiTeam.length < 3 || mioTeam.length < 3) {
     return (
@@ -159,10 +170,12 @@ export default function TeamBattle({ characters, onDone }: Props) {
         koSide={winnerTeam === 'rui' ? 'right' : winnerTeam === 'mio' ? 'left' : undefined}
         message={message}
       />
-      {winnerTeam && (
-        <div className="rounded-3xl bg-yellow-300 p-3 text-center text-2xl font-black text-zinc-900 shadow-xl">
-          🏆 {winnerTeam === 'rui' ? 'ルイチーム' : 'ミオチーム'} 勝利！
-        </div>
+      {winnerTeam && winnerCharacter && (
+        <VictoryOverlay
+          winner={winnerCharacter}
+          outcome="team"
+          teamName={winnerTeam === 'rui' ? 'ルイチーム' : 'ミオチーム'}
+        />
       )}
       {saveMessage && <p className="rounded-2xl bg-red-100 p-3 text-sm font-bold text-red-700">{saveMessage}</p>}
       <div className="max-h-36 overflow-y-auto rounded-3xl bg-white/85 p-3">

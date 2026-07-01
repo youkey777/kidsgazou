@@ -62,7 +62,7 @@ function DiceCube({ face }: { face: number | null }) {
 export default function DiceThrowEffect({ effect }: { effect: DiceThrowEffectData }) {
   const direction = effect.side === 'left' ? 1 : -1
   const startX = effect.side === 'left' ? '-58vw' : '58vw'
-  const settleX = effect.side === 'left' ? '-17vw' : '17vw'
+  const settleX = '0vw'
 
   return (
     <motion.div className="pointer-events-none absolute inset-0 z-30 grid place-items-center" style={{ perspective: 720 }}>
@@ -72,20 +72,28 @@ export default function DiceThrowEffect({ effect }: { effect: DiceThrowEffectDat
         animate={{
           x: [startX, `${direction * -12}vw`, `${direction * 5}vw`, settleX],
           y: [190, -66, 44, -28, 0],
-          rotateX: [0, 280, 540, 720, 900],
-          rotateY: [0, direction * 240, direction * 520, direction * 780, direction * 960],
-          rotateZ: [0, direction * -80, direction * 180, direction * 420, direction * 540],
+          rotateX: [0, 280, 540, 720, 720],
+          rotateY: [0, direction * 240, direction * 520, direction * 720, direction * 720],
+          rotateZ: [0, direction * -80, direction * 180, direction * 260, 0],
           scale: [0.72, 1.12, 0.9, 1.08, 1],
         }}
         transition={{ duration: 1.08, ease: 'easeInOut' }}
         style={{ transformStyle: 'preserve-3d' }}
       >
         <motion.div
-          animate={{ y: [0, -10, 0, -5, 0] }}
-          transition={{ duration: 0.5, repeat: Infinity }}
+          animate={effect.face ? { y: [0, -5, 0], scale: [1, 1.06, 1] } : { y: [0, -10, 0, -5, 0] }}
+          transition={{ duration: effect.face ? 0.62 : 0.5, repeat: effect.face ? 0 : Infinity }}
           style={{ transformStyle: 'preserve-3d' }}
         >
           <DiceCube face={effect.face} />
+          {effect.face && (
+            <motion.div
+              className="absolute -inset-10 rounded-full bg-yellow-200/40 blur-2xl"
+              initial={{ opacity: 0, scale: 0.4 }}
+              animate={{ opacity: [0, 1, 0.65], scale: [0.7, 1.55, 1.2] }}
+              transition={{ duration: 0.9 }}
+            />
+          )}
         </motion.div>
         <motion.div
           className="mx-auto mt-8 h-4 w-24 rounded-full bg-black/45 blur-md"

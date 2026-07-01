@@ -6,6 +6,7 @@ import { calculateRpsDamage } from './character-rules'
 import type { AttackEffectData } from './effects/AttackFlyEffect'
 import BattleStage from './effects/BattleStage'
 import { fireBattleConfetti } from './effects/Confetti'
+import VictoryOverlay from './effects/VictoryOverlay'
 import { playDamage, playPunch, playSelect, playVictory, playWhoosh } from './sounds'
 import {
   HAND_EMOJI,
@@ -116,10 +117,10 @@ export default function RpsBattle({ left, right, onDone }: Props) {
   const [cpuPreview, setCpuPreview] = useState<RpsHand>('rock')
   const [cycling, setCycling] = useState(true)
   const [roundResult, setRoundResult] = useState<RoundResult>(null)
-  const [log, setLog] = useState<string[]>(['5ラウンドじゃんけん！'])
   const [finished, setFinished] = useState(false)
   const [saveMessage, setSaveMessage] = useState<string | null>(null)
   const [attackEffect, setAttackEffect] = useState<AttackEffectData | null>(null)
+  const [victory, setVictory] = useState<{ winner: ImageRecord; outcome: 'win' | 'lose' } | null>(null)
 
   useEffect(() => {
     if (!cycling || finished) return
@@ -136,8 +137,8 @@ export default function RpsBattle({ left, right, onDone }: Props) {
     setCycling(false)
     playVictory()
     fireBattleConfetti()
+    setVictory({ winner: result.winner, outcome: result.winner.id === left.id ? 'win' : 'lose' })
     setMessage(`${shortBattleName(result.winner.name)} の勝（か）ち！`)
-    setLog((prev) => [`${shortBattleName(result.winner.name)} の勝（か）ち！`, ...prev])
     setSaveMessage(await saveBattleResult('rps', result))
     await onDone()
   }
@@ -164,15 +165,11 @@ export default function RpsBattle({ left, right, onDone }: Props) {
     setMessage('じゃんけん...')
     await sleep(220)
 
-    const cpu = HANDS[Math.floor(Math.random() * HANDS.length)]
+    const cpu = cpuPreview
     const result = judge(hand, cpu)
     setCpuHand(cpu)
     setCpuPreview(cpu)
     setRoundResult(result > 0 ? 'win' : result < 0 ? 'lose' : 'draw')
-    setLog((prev) => [
-      `R${round}: ${HAND_LABELS[hand]} vs ${HAND_LABELS[cpu]}`,
-      ...prev.slice(0, 5),
-    ])
     setMessage(
       result === 0
         ? `あいこ！ ${HAND_LABELS[hand]} vs ${HAND_LABELS[cpu]}`
@@ -183,12 +180,7 @@ export default function RpsBattle({ left, right, onDone }: Props) {
 
     if (result === 0) {
       setEvents((prev) => [...prev, { id: makeEventId(), target: 'left', amount: 0, label: 'あいこ' }])
-      const nextRound = round + 1
-      if (nextRound > 5) {
-        await finish(leftHpRef.current, rightHpRef.current)
-        return
-      }
-      await prepareNextRound(nextRound)
+      await prepareNextRound(round)
       return
     }
 
@@ -299,11 +291,7 @@ export default function RpsBattle({ left, right, onDone }: Props) {
       </div>
 
       {saveMessage && <p className="rounded-2xl bg-red-100 p-3 text-sm font-bold text-red-700">{saveMessage}</p>}
-      <div className="max-h-32 overflow-y-auto rounded-3xl bg-white/85 p-3">
-        {log.map((item, index) => (
-          <p key={`${item}-${index}`} className="text-sm font-bold text-zinc-800">{item}</p>
-        ))}
-      </div>
+      {victory && <VictoryOverlay winner={victory.winner} outcome={victory.outcome} />}
     </div>
   )
 }

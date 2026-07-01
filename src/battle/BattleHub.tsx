@@ -8,7 +8,7 @@ import Ranking from './Ranking'
 import RpsBattle from './RpsBattle'
 import TeamBattle from './TeamBattle'
 import Training from './Training'
-import { isBgmEnabled, playBgm, playSelect, toggleBgm } from './sounds'
+import { playBgm, playSelect } from './sounds'
 import { MODE_LABELS, type BattleTab, type PlayableBattleMode } from './types'
 
 const MODES: PlayableBattleMode[] = ['dice', 'rps', 'team']
@@ -19,10 +19,12 @@ export default function BattleHub() {
   const [characters, setCharacters] = useState<ImageRecord[]>([])
   const [leftId, setLeftId] = useState<string | null>(null)
   const [rightId, setRightId] = useState<string | null>(null)
+  const [ruiTeamIds, setRuiTeamIds] = useState<string[]>([])
+  const [mioTeamIds, setMioTeamIds] = useState<string[]>([])
+  const [teamMode, setTeamMode] = useState<'dice' | 'rps'>('dice')
   const [startedKey, setStartedKey] = useState<string | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
-  const [bgmOn, setBgmOn] = useState(isBgmEnabled())
 
   const refresh = useCallback(async () => {
     try {
@@ -30,6 +32,8 @@ export default function BattleHub() {
       setCharacters(list)
       setLeftId((current) => current ?? list[0]?.id ?? null)
       setRightId((current) => current ?? list.find((item) => item.id !== list[0]?.id)?.id ?? null)
+      setRuiTeamIds((current) => (current.length > 0 ? current : list.filter((item) => item.child === 'rui').slice(0, 3).map((item) => item.id)))
+      setMioTeamIds((current) => (current.length > 0 ? current : list.filter((item) => item.child === 'mio').slice(0, 3).map((item) => item.id)))
       setError(null)
     } catch (e) {
       setError((e as Error).message)
@@ -54,7 +58,6 @@ export default function BattleHub() {
   const start = () => {
     playSelect()
     playBgm()
-    setBgmOn(true)
     if (mode === 'team') {
       setStartedKey(`team-${Date.now()}`)
       return
@@ -66,11 +69,62 @@ export default function BattleHub() {
   const battle = () => {
     if (!startedKey) return null
     if (mode === 'team') {
-      return <TeamBattle key={startedKey} characters={characters} onDone={refresh} />
+      return (
+        <TeamBattle
+          key={startedKey}
+          characters={characters}
+          ruiTeam={ruiTeamIds.map((id) => characters.find((item) => item.id === id)).filter(Boolean) as ImageRecord[]}
+          mioTeam={mioTeamIds.map((id) => characters.find((item) => item.id === id)).filter(Boolean) as ImageRecord[]}
+          teamMode={teamMode}
+          onDone={refresh}
+        />
+      )
     }
     if (!left || !right) return null
     if (mode === 'dice') return <DiceBattle key={startedKey} left={left} right={right} onDone={refresh} />
     return <RpsBattle key={startedKey} left={left} right={right} onDone={refresh} />
+  }
+
+  const toggleTeam = (id: string, side: 'rui' | 'mio') => {
+    const setter = side === 'rui' ? setRuiTeamIds : setMioTeamIds
+    setter((current) => {
+      if (current.includes(id)) return current.filter((item) => item !== id)
+      return current.length >= 3 ? [...current.slice(1), id] : [...current, id]
+    })
+  }
+
+  const teamSelector = (side: 'rui' | 'mio') => {
+    const ids = side === 'rui' ? ruiTeamIds : mioTeamIds
+    const list = characters.filter((character) => character.child === side)
+    return (
+      <section className="rounded-3xl bg-white/85 p-3 shadow-lg">
+        <h3 className="mb-2 text-base font-black text-purple-900">
+          {side === 'rui' ? 'ルイチーム' : 'ミオチーム'} {ids.length}/3
+        </h3>
+        <div className="-mx-1 flex snap-x snap-mandatory gap-3 overflow-x-auto px-1 pb-2">
+          {Array.from({ length: Math.ceil(list.length / 9) }, (_, page) => list.slice(page * 9, page * 9 + 9)).map((page, pageIndex) => (
+            <div key={pageIndex} className="grid min-w-full snap-start grid-cols-3 gap-2">
+              {page.map((character) => {
+                const selected = ids.includes(character.id)
+                return (
+                  <button
+                    key={character.id}
+                    type="button"
+                    onClick={() => toggleTeam(character.id, side)}
+                    className={`rounded-2xl border-4 bg-white p-1 text-left shadow active:scale-95 ${
+                      selected ? 'border-yellow-400 ring-4 ring-yellow-200' : 'border-white'
+                    }`}
+                  >
+                    <img src={character.url} alt="" className="aspect-square w-full rounded-xl object-cover" />
+                    <p className="mt-1 truncate text-xs font-black text-zinc-900">{character.name}</p>
+                  </button>
+                )
+              })}
+            </div>
+          ))}
+        </div>
+      </section>
+    )
   }
 
   return (
@@ -100,16 +154,6 @@ export default function BattleHub() {
               </button>
             ))}
           </div>
-          <button
-            type="button"
-            onClick={() => {
-              playSelect()
-              setBgmOn(toggleBgm())
-            }}
-            className="mt-2 min-h-10 w-full rounded-2xl bg-black/30 px-3 text-sm font-black text-yellow-100 ring-1 ring-white/20"
-          >
-            音楽(おんがく): {bgmOn ? 'ON' : 'OFF'} / ライオンのスイッチ
-          </button>
         </div>
 
         {error && (
@@ -180,14 +224,32 @@ export default function BattleHub() {
                     />
                   </>
                 ) : (
-                  <div className="rounded-3xl bg-white/85 p-4 text-sm font-bold text-purple-900 shadow-lg">
-                    ルイチームとミオチームから3キャラずつが自動で出るよ。
-                  </div>
+                  <>
+                    <section className="rounded-3xl bg-white/85 p-3 shadow-lg">
+                      <h3 className="mb-2 text-base font-black text-purple-900">3vs3方式</h3>
+                      <div className="grid grid-cols-2 gap-2">
+                        {(['dice', 'rps'] as const).map((item) => (
+                          <button
+                            key={item}
+                            type="button"
+                            onClick={() => setTeamMode(item)}
+                            className={`min-h-12 rounded-2xl font-black ${
+                              teamMode === item ? 'bg-yellow-300 text-zinc-950' : 'bg-purple-600 text-white'
+                            }`}
+                          >
+                            {item === 'dice' ? 'ダイス' : 'じゃんけん'}
+                          </button>
+                        ))}
+                      </div>
+                    </section>
+                    {teamSelector('rui')}
+                    {teamSelector('mio')}
+                  </>
                 )}
 
                 <button
                   onClick={start}
-                  disabled={loading || (mode !== 'team' && (!left || !right))}
+                  disabled={loading || (mode !== 'team' && (!left || !right)) || (mode === 'team' && (ruiTeamIds.length < 3 || mioTeamIds.length < 3))}
                   className="min-h-16 w-full rounded-3xl bg-gradient-to-r from-yellow-300 to-orange-400 text-2xl font-black text-zinc-900 shadow-2xl active:scale-95 disabled:opacity-50"
                 >
                   バトルスタート！

@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import BattleHub from './battle/BattleHub'
 import { attributeMark } from './battle/character-rules'
 import XpBar from './battle/effects/XpBar'
+import { isBgmEnabled, playBgm, primeBgmOnNextGesture, toggleBgm } from './battle/sounds'
 import StatsEditor from './battle/StatsEditor'
 import {
   addImages,
@@ -68,6 +69,7 @@ export default function App() {
   const [migrating, setMigrating] = useState<{ done: number; total: number } | null>(null)
   const [initialized, setInitialized] = useState(false)
   const [globalError, setGlobalError] = useState<string | null>(null)
+  const [bgmOn, setBgmOn] = useState(isBgmEnabled())
 
   const [active, setActive] = useState<ActiveTab>('rui')
   const [activeChild, setActiveChild] = useState<ChildKey>('rui')
@@ -90,6 +92,19 @@ export default function App() {
     () => pending.map((file) => ({ file, url: URL.createObjectURL(file) })),
     [pending]
   )
+
+  useEffect(() => {
+    playBgm()
+    primeBgmOnNextGesture()
+    setBgmOn(isBgmEnabled())
+  }, [])
+
+  useEffect(() => {
+    if (!unlocked) return
+    playBgm()
+    primeBgmOnNextGesture()
+    setBgmOn(true)
+  }, [unlocked])
 
   useEffect(() => {
     return () => pendingPreviews.forEach((preview) => URL.revokeObjectURL(preview.url))
@@ -215,6 +230,13 @@ export default function App() {
   if (!isConfigured) {
     return (
       <div className="relative flex min-h-full items-center justify-center bg-zinc-900 p-6 text-white">
+        <button
+          type="button"
+          onClick={() => setBgmOn(toggleBgm())}
+          className="absolute left-3 top-3 min-h-10 rounded-full bg-black/55 px-3 text-xs font-black text-yellow-100 shadow ring-1 ring-white/20"
+        >
+          音(おと) {bgmOn ? 'ON' : 'OFF'}
+        </button>
         <span className="absolute right-3 top-3 rounded-full bg-black/55 px-2 py-1 text-[10px] font-black text-white/85 shadow ring-1 ring-white/20">
           {APP_VERSION}
         </span>
@@ -265,6 +287,13 @@ export default function App() {
       }}
     >
       <div className="pointer-events-none fixed inset-0 animate-[pulse_5s_ease-in-out_infinite] bg-[radial-gradient(circle_at_50%_20%,rgba(255,255,255,.24),transparent_32%)]" />
+      <button
+        type="button"
+        onClick={() => setBgmOn(toggleBgm())}
+        className="fixed left-3 top-3 z-40 min-h-10 rounded-full bg-black/55 px-3 text-xs font-black text-yellow-100 shadow-lg ring-1 ring-white/20"
+      >
+        音(おと) {bgmOn ? 'ON' : 'OFF'}
+      </button>
       <div className="safe-top" />
 
       <header className="px-4 pb-2 pt-4">

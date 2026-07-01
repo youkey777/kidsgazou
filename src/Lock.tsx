@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
+import { isBgmEnabled, playBgm, primeBgmOnNextGesture, toggleBgm } from './battle/sounds'
 import { APP_VERSION } from './version'
 
 const LS_KEY = 'gallery_unlocked_v1'
@@ -19,10 +20,14 @@ export default function Lock({ onUnlock }: { onUnlock: () => void }) {
     (import.meta.env.VITE_GALLERY_PASSCODE as string | undefined) || ''
   const [code, setCode] = useState('')
   const [shake, setShake] = useState(false)
+  const [bgmOn, setBgmOn] = useState(isBgmEnabled())
   const inputRef = useRef<HTMLInputElement>(null)
 
   useEffect(() => {
     inputRef.current?.focus()
+    playBgm()
+    primeBgmOnNextGesture()
+    setBgmOn(true)
   }, [])
 
   useEffect(() => {
@@ -43,6 +48,13 @@ export default function Lock({ onUnlock }: { onUnlock: () => void }) {
 
   return (
     <div className="relative min-h-full bg-gradient-to-br from-zinc-900 via-zinc-800 to-pink-900 flex flex-col items-center justify-center safe-top safe-bottom px-6">
+      <button
+        type="button"
+        onClick={() => setBgmOn(toggleBgm())}
+        className="absolute left-3 top-3 min-h-10 rounded-full bg-black/55 px-3 text-xs font-black text-yellow-100 shadow ring-1 ring-white/20"
+      >
+        音(おと) {bgmOn ? 'ON' : 'OFF'}
+      </button>
       <span className="absolute right-3 top-3 rounded-full bg-black/55 px-2 py-1 text-[10px] font-black text-white/85 shadow ring-1 ring-white/20">
         {APP_VERSION}
       </span>
