@@ -14,6 +14,7 @@ import {
   STAT_LABELS,
   type StatKey,
 } from './character-rules'
+import { attributeVisual } from './attribute-visuals'
 import XpBar from './effects/XpBar'
 import {
   playCrystal,
@@ -58,6 +59,58 @@ const ARENA_BG = '/battle/training-arena-bg.png'
 const SLOT_BG = '/battle/roulette-frame-bg.png'
 
 const sleep = (ms: number) => new Promise((resolve) => window.setTimeout(resolve, ms))
+
+type StatValues = Record<StatKey, number>
+type ChangeShowcase =
+  | {
+      type: 'stat'
+      character: ImageRecord
+      stat: StatKey
+      before: StatValues
+      after: StatValues
+    }
+  | {
+      type: 'attribute'
+      character: ImageRecord
+      beforeAttribute: string
+      afterAttribute: string
+    }
+
+function statValues(character: ImageRecord): StatValues {
+  return {
+    atk: character.atk,
+    def: character.def,
+    spd: character.spd,
+    luck: character.luck,
+    tech: character.tech,
+  }
+}
+
+function radarGeometry(stats: StatValues, center = 128, maxRadius = 86) {
+  const points = STAT_KEYS.map((key, index) => {
+    const angle = -Math.PI / 2 + (index * 2 * Math.PI) / STAT_KEYS.length
+    const radius = (stats[key] / 99) * maxRadius
+    return {
+      key,
+      label: STAT_CHART_LABELS[key],
+      value: stats[key],
+      x: center + Math.cos(angle) * radius,
+      y: center + Math.sin(angle) * radius,
+      lx: center + Math.cos(angle) * 111,
+      ly: center + Math.sin(angle) * 111,
+      ax: center + Math.cos(angle) * maxRadius,
+      ay: center + Math.sin(angle) * maxRadius,
+    }
+  })
+  const polygon = points.map((point) => `${point.x},${point.y}`).join(' ')
+  const rings = [0.25, 0.5, 0.75, 1].map((ratio) =>
+    STAT_KEYS.map((_, index) => {
+      const angle = -Math.PI / 2 + (index * 2 * Math.PI) / STAT_KEYS.length
+      return `${center + Math.cos(angle) * maxRadius * ratio},${center + Math.sin(angle) * maxRadius * ratio}`
+    }).join(' ')
+  )
+  return { center, maxRadius, points, polygon, rings }
+}
 
 function makeQuestion(): MathQuestion {
   const op: '+' | '-' = Math.random() > 0.45 ? '+' : '-'
@@ -205,6 +258,266 @@ function RadarChart({ character }: { character: ImageRecord }) {
         ))}
       </svg>
     </div>
+  )
+}
+
+function StatChangeOverlay({
+  showcase,
+  onClose,
+}: {
+  showcase: Extract<ChangeShowcase, { type: 'stat' }>
+  onClose: () => void
+}) {
+  const before = radarGeometry(showcase.before)
+  const after = radarGeometry(showcase.after)
+  const changedBefore = before.points.find((point) => point.key === showcase.stat) ?? before.points[0]
+  const changedAfter = after.points.find((point) => point.key === showcase.stat) ?? after.points[0]
+  const visual = attributeVisual(showcase.character.species)
+  const oldValue = showcase.before[showcase.stat]
+  const newValue = showcase.after[showcase.stat]
+  const diff = newValue - oldValue
+  const diffText = diff > 0 ? `+${diff}` : `${diff}`
+  const diffClass = diff > 0 ? 'text-emerald-200' : diff < 0 ? 'text-rose-200' : 'text-yellow-100'
+
+  return (
+    <motion.div
+      className="fixed inset-0 z-[70] flex items-center justify-center overflow-hidden bg-black/86 p-3 text-white"
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      exit={{ opacity: 0 }}
+    >
+      <div
+        className="absolute inset-0 opacity-45"
+        style={{
+          background: `radial-gradient(circle at 50% 28%, ${visual.glow}, transparent 34%), linear-gradient(145deg, ${visual.from}, ${visual.to})`,
+        }}
+      />
+      {Array.from({ length: 16 }).map((_, index) => (
+        <motion.span
+          key={index}
+          className="absolute text-2xl"
+          style={{ left: `${8 + ((index * 29) % 84)}%`, top: `${8 + ((index * 43) % 82)}%` }}
+          initial={{ scale: 0, opacity: 0 }}
+          animate={{ scale: [0, 1.2, 0.7], opacity: [0, 0.9, 0], y: [-10, -54] }}
+          transition={{ duration: 2.1, repeat: Infinity, delay: index * 0.08 }}
+        >
+          {visual.particle}
+        </motion.span>
+      ))}
+
+      <motion.div
+        className="relative w-full max-w-[430px] rounded-[2.2rem] border border-white/25 bg-zinc-950/82 p-4 text-center shadow-[0_0_70px_rgba(250,204,21,.45)] backdrop-blur-md"
+        initial={{ y: 34, scale: 0.86 }}
+        animate={{ y: 0, scale: 1 }}
+        transition={{ type: 'spring', stiffness: 160, damping: 17 }}
+      >
+        <p className="text-sm font-black text-cyan-100">{shortBattleName(showcase.character.name)}</p>
+        <h3 className="mt-1 text-2xl font-black text-yellow-200">能力(のうりょく)チェンジ！</h3>
+        <p className="mt-1 text-lg font-black text-white">{STAT_LABELS[showcase.stat]}</p>
+
+        <div className="mt-3 grid grid-cols-[1fr_auto_1fr] items-center gap-2">
+          <motion.div
+            className="rounded-3xl bg-white/12 p-3"
+            initial={{ x: -24, opacity: 0 }}
+            animate={{ x: 0, opacity: 1 }}
+          >
+            <p className="text-xs font-black text-white/70">まえ</p>
+            <p className="text-4xl font-black text-white">{oldValue}</p>
+          </motion.div>
+          <motion.p
+            className={`rounded-full bg-white/18 px-3 py-2 text-xl font-black ${diffClass}`}
+            initial={{ scale: 0.5, rotate: -12 }}
+            animate={{ scale: [0.5, 1.35, 1], rotate: [12, -8, 0] }}
+            transition={{ delay: 0.28, duration: 0.65 }}
+          >
+            {diffText}
+          </motion.p>
+          <motion.div
+            className="rounded-3xl bg-yellow-300 p-3 text-zinc-950"
+            initial={{ x: 24, opacity: 0 }}
+            animate={{ x: 0, opacity: 1 }}
+          >
+            <p className="text-xs font-black">あと</p>
+            <p className="text-4xl font-black">{newValue}</p>
+          </motion.div>
+        </div>
+
+        <div className="relative mx-auto mt-3 aspect-square w-full max-w-[310px]">
+          <svg viewBox="0 0 256 256" className="h-full w-full drop-shadow-[0_0_24px_rgba(103,232,249,.75)]">
+            {after.rings.map((points) => (
+              <polygon key={points} points={points} fill="none" stroke="rgba(255,255,255,0.25)" strokeWidth="1.6" />
+            ))}
+            {after.points.map((point) => (
+              <line
+                key={point.key}
+                x1={after.center}
+                y1={after.center}
+                x2={point.ax}
+                y2={point.ay}
+                stroke="rgba(255,255,255,0.26)"
+                strokeWidth="1.6"
+              />
+            ))}
+            <polygon points={before.polygon} fill="rgba(255,255,255,.12)" stroke="rgba(255,255,255,.5)" strokeWidth="2" strokeDasharray="5 6" />
+            <motion.polygon
+              points={after.polygon}
+              fill="rgba(250,204,21,0.46)"
+              stroke="#facc15"
+              strokeWidth="4.5"
+              initial={{ scale: 0.72, opacity: 0, transformOrigin: '128px 128px' }}
+              animate={{ scale: [0.72, 1.08, 0.98, 1], opacity: 1 }}
+              transition={{ duration: 1.05, ease: 'easeOut' }}
+            />
+            <motion.line
+              x1={after.center}
+              y1={after.center}
+              x2={changedBefore.x}
+              y2={changedBefore.y}
+              stroke="#67e8f9"
+              strokeWidth="7"
+              strokeLinecap="round"
+              initial={{ opacity: 0.4 }}
+              animate={{
+                x2: [changedBefore.x, changedAfter.x, changedAfter.x + (changedAfter.x - after.center) * 0.14, changedAfter.x],
+                y2: [changedBefore.y, changedAfter.y, changedAfter.y + (changedAfter.y - after.center) * 0.14, changedAfter.y],
+                opacity: [0.4, 1, 1, 0.75],
+              }}
+              transition={{ delay: 0.35, duration: 1.15, ease: 'easeOut' }}
+            />
+            {after.points.map((point) => (
+              <g key={point.key}>
+                <circle cx={point.x} cy={point.y} r={point.key === showcase.stat ? 5.5 : 3.8} fill={point.key === showcase.stat ? '#fde047' : '#22d3ee'} />
+                <text
+                  x={point.lx}
+                  y={point.ly}
+                  fill="white"
+                  fontSize="11"
+                  fontWeight="900"
+                  textAnchor="middle"
+                  dominantBaseline="middle"
+                >
+                  {point.label}
+                </text>
+              </g>
+            ))}
+            <motion.circle
+              cx={changedBefore.x}
+              cy={changedBefore.y}
+              r="10"
+              fill="#fef08a"
+              initial={{ opacity: 0, scale: 0.2 }}
+              animate={{
+                x: [0, changedAfter.x - changedBefore.x, changedAfter.x - changedBefore.x + (changedAfter.x - after.center) * 0.12, changedAfter.x - changedBefore.x],
+                y: [0, changedAfter.y - changedBefore.y, changedAfter.y - changedBefore.y + (changedAfter.y - after.center) * 0.12, changedAfter.y - changedBefore.y],
+                scale: [0.2, 1.5, 0.85, 1.1],
+                opacity: [0, 1, 0.72, 1],
+              }}
+              transition={{ delay: 0.3, duration: 1.2, ease: 'easeOut' }}
+            />
+          </svg>
+        </div>
+
+        <motion.p
+          className="mt-2 rounded-2xl bg-white/12 px-3 py-2 text-base font-black text-white"
+          initial={{ y: 16, opacity: 0 }}
+          animate={{ y: 0, opacity: 1 }}
+          transition={{ delay: 0.85 }}
+        >
+          変(か)わったところだけ、形(かたち)がウニョーン！
+        </motion.p>
+        <button
+          type="button"
+          onClick={onClose}
+          className="mt-3 min-h-12 w-full rounded-2xl bg-white text-base font-black text-purple-950 shadow-xl"
+        >
+          とじる
+        </button>
+      </motion.div>
+    </motion.div>
+  )
+}
+
+function AttributeChangeOverlay({
+  showcase,
+  onClose,
+}: {
+  showcase: Extract<ChangeShowcase, { type: 'attribute' }>
+  onClose: () => void
+}) {
+  const visual = attributeVisual(showcase.afterAttribute)
+
+  return (
+    <motion.div
+      className="fixed inset-0 z-[70] flex items-center justify-center overflow-hidden bg-black/88 p-4 text-white"
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      exit={{ opacity: 0 }}
+    >
+      <div
+        className="absolute inset-0 opacity-55"
+        style={{
+          background: `radial-gradient(circle at 50% 32%, ${visual.glow}, transparent 34%), linear-gradient(145deg, ${visual.from}, ${visual.to})`,
+        }}
+      />
+      {Array.from({ length: 22 }).map((_, index) => (
+        <motion.span
+          key={index}
+          className="absolute text-3xl"
+          style={{ left: `${6 + ((index * 37) % 88)}%`, top: `${9 + ((index * 31) % 80)}%` }}
+          initial={{ scale: 0, rotate: 0, opacity: 0 }}
+          animate={{ scale: [0, 1.25, 0], rotate: [0, 180, 360], opacity: [0, 0.95, 0], y: [-6, -64] }}
+          transition={{ duration: 2.4, repeat: Infinity, delay: index * 0.07 }}
+        >
+          {visual.particle}
+        </motion.span>
+      ))}
+      <motion.div
+        className="relative w-full max-w-[430px] rounded-[2.4rem] border border-white/30 bg-zinc-950/80 p-4 text-center shadow-[0_0_80px_rgba(255,255,255,.25)] backdrop-blur-md"
+        initial={{ scale: 0.78, y: 42 }}
+        animate={{ scale: 1, y: 0 }}
+        transition={{ type: 'spring', stiffness: 150, damping: 16 }}
+      >
+        <p className="text-sm font-black text-cyan-100">{shortBattleName(showcase.character.name)}</p>
+        <h3 className="mt-1 text-2xl font-black text-yellow-200">新(あたら)しい属性(ぞくせい)！</h3>
+        <motion.div
+          className="relative mx-auto mt-4 aspect-square w-full max-w-[310px]"
+          initial={{ rotateY: 90, scale: 0.68, opacity: 0 }}
+          animate={{ rotateY: [90, -14, 8, 0], scale: [0.68, 1.1, 0.98, 1], opacity: 1 }}
+          transition={{ duration: 1.1, ease: 'easeOut' }}
+        >
+          <motion.div
+            className="absolute inset-0 rounded-[4rem] blur-2xl"
+            style={{ backgroundColor: visual.glow }}
+            animate={{ scale: [0.8, 1.12, 0.95, 1.08], opacity: [0.55, 0.95, 0.65, 0.85] }}
+            transition={{ duration: 1.2, repeat: Infinity, repeatType: 'mirror' }}
+          />
+          <img
+            src={visual.image}
+            alt={`${showcase.afterAttribute} 属性(ぞくせい)`}
+            className="relative h-full w-full rounded-[3rem] object-cover shadow-2xl ring-4 ring-white/45"
+          />
+        </motion.div>
+        <motion.p
+          className="mx-auto mt-4 inline-flex items-center gap-2 rounded-full bg-white px-5 py-3 text-3xl font-black text-purple-950 shadow-xl"
+          initial={{ y: 20, scale: 0.72, opacity: 0 }}
+          animate={{ y: 0, scale: [0.72, 1.18, 1], opacity: 1 }}
+          transition={{ delay: 0.55, duration: 0.7 }}
+        >
+          <span>{attributeMark(showcase.afterAttribute)}</span>
+          <span>{showcase.afterAttribute}</span>
+        </motion.p>
+        <p className="mt-3 text-sm font-bold text-white/80">
+          まえ: {attributeMark(showcase.beforeAttribute)} {showcase.beforeAttribute}
+        </p>
+        <button
+          type="button"
+          onClick={onClose}
+          className="mt-4 min-h-12 w-full rounded-2xl bg-white text-base font-black text-purple-950 shadow-xl"
+        >
+          とじる
+        </button>
+      </motion.div>
+    </motion.div>
   )
 }
 
@@ -542,6 +855,7 @@ export default function Training({ characters, onChanged }: Props) {
     ultimate6Name: selected?.ultimate6Name ?? 'ひっさつわざ6',
   })
   const [profileSaving, setProfileSaving] = useState(false)
+  const [changeShowcase, setChangeShowcase] = useState<ChangeShowcase | null>(null)
 
   const currentQuestion = quiz[index]
   const inQuiz = quiz.length > 0 && index < quiz.length
@@ -693,7 +1007,9 @@ export default function Training({ characters, onChanged }: Props) {
     if (!selected || selected.crystals <= 0 || busy) return
     setBusy(true)
     playRouletteStart()
+    const beforeStats = statValues(selected)
     const nextCrystals = Math.max(0, selected.crystals - 1)
+    let nextShowcase: ChangeShowcase | null = null
     setConsumeFlash((value) => value + 1)
     setSlot({ label: `${STAT_LABELS[stat]}を変更(へんこう)中(ちゅう)`, value: null, rolling: true })
     for (let i = 0; i < 20; i++) {
@@ -709,6 +1025,12 @@ export default function Training({ characters, onChanged }: Props) {
         [stat]: nextValue,
         crystals: nextCrystals,
       } as ImageStatsUpdate)
+      const afterStats = { ...beforeStats, [stat]: nextValue }
+      const changedCharacter = {
+        ...selected,
+        [stat]: nextValue,
+        crystals: nextCrystals,
+      } as ImageRecord
       crystalFloorRef.current[selected.id] = nextCrystals
       patchLocalCharacter(selected.id, {
         [stat]: nextValue,
@@ -716,11 +1038,19 @@ export default function Training({ characters, onChanged }: Props) {
       } as Partial<ImageRecord>)
       setMessage(`${STAT_LABELS[stat]}が ${nextValue} になった！`)
       await onChanged()
+      nextShowcase = {
+        type: 'stat',
+        character: changedCharacter,
+        stat,
+        before: beforeStats,
+        after: afterStats,
+      }
     } catch (error) {
       setMessage((error as Error).message)
     }
     await sleep(900)
     setSlot(null)
+    if (nextShowcase) setChangeShowcase(nextShowcase)
     setBusy(false)
   }
 
@@ -728,7 +1058,9 @@ export default function Training({ characters, onChanged }: Props) {
     if (!selected || selected.crystals <= 0 || busy) return
     setBusy(true)
     playRouletteStart()
+    const beforeAttribute = selected.species
     const nextCrystals = Math.max(0, selected.crystals - 1)
+    let nextShowcase: ChangeShowcase | null = null
     setConsumeFlash((value) => value + 1)
     setSlot({ label: '属性(ぞくせい)を変更(へんこう)中(ちゅう)', value: null, rolling: true })
     for (let i = 0; i < 16; i++) {
@@ -736,7 +1068,10 @@ export default function Training({ characters, onChanged }: Props) {
       playRouletteTick()
       await sleep(52 + i * 8)
     }
-    const nextAttribute = randomAttribute()
+    let nextAttribute = randomAttribute()
+    for (let i = 0; i < 4 && nextAttribute === beforeAttribute; i++) {
+      nextAttribute = randomAttribute()
+    }
     playRouletteStop()
     setSlot({ label: '属性(ぞくせい)が決定(けってい)！', value: nextAttribute, rolling: false })
     try {
@@ -751,11 +1086,22 @@ export default function Training({ characters, onChanged }: Props) {
       })
       setMessage(`属性(ぞくせい)が「${nextAttribute}」になった！`)
       await onChanged()
+      nextShowcase = {
+        type: 'attribute',
+        character: {
+          ...selected,
+          species: nextAttribute,
+          crystals: nextCrystals,
+        },
+        beforeAttribute,
+        afterAttribute: nextAttribute,
+      }
     } catch (error) {
       setMessage((error as Error).message)
     }
     await sleep(900)
     setSlot(null)
+    if (nextShowcase) setChangeShowcase(nextShowcase)
     setBusy(false)
   }
 
@@ -1065,6 +1411,12 @@ export default function Training({ characters, onChanged }: Props) {
           />
         )}
         {slot && <SlotOverlay label={slot.label} value={slot.value} rolling={slot.rolling} />}
+        {changeShowcase?.type === 'stat' && (
+          <StatChangeOverlay showcase={changeShowcase} onClose={() => setChangeShowcase(null)} />
+        )}
+        {changeShowcase?.type === 'attribute' && (
+          <AttributeChangeOverlay showcase={changeShowcase} onClose={() => setChangeShowcase(null)} />
+        )}
       </AnimatePresence>
 
       {view === 'detail' && (
