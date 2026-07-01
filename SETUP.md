@@ -246,3 +246,17 @@ where id in (
 update images
 set crystals = 0;
 ```
+
+## じゃんけん＋サイコロ統合バトルの追加SQL
+
+必殺技5・必殺技6の名前をキャラごとに保存するため、Supabase SQL Editor で以下を実行してください。
+
+```sql
+alter table images add column if not exists ultimate5_name text default 'ひっさつわざ5';
+alter table images add column if not exists ultimate6_name text default 'ひっさつわざ6';
+
+update images
+set
+  ultimate5_name = coalesce(ultimate5_name, ultimate_name, 'ひっさつわざ5'),
+  ultimate6_name = coalesce(ultimate6_name, ultimate_name, 'ひっさつわざ6');
+```

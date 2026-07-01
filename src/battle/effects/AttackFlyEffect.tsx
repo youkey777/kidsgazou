@@ -67,6 +67,13 @@ export default function AttackFlyEffect({ effect }: { effect: AttackEffectData }
   const start = effect.side === 'left' ? '24%' : '76%'
   const motionPath = variantMotion(effect.variant, direction)
   const tokenCount = Math.min(6, Math.max(3, effect.variant + 1))
+  const imageUrl =
+    effect.imageUrl ??
+    (effect.variant >= 6
+      ? '/battle/ultimate6-cg.png'
+      : effect.variant >= 5
+        ? '/battle/ultimate5-cg.png'
+        : '/battle/attack-normal-cg.png')
 
   return (
     <motion.div
@@ -84,13 +91,17 @@ export default function AttackFlyEffect({ effect }: { effect: AttackEffectData }
         transition={{ duration: effect.kind === 'dice' ? 0.72 : 0.58, ease: 'easeInOut' }}
       >
         <div
-          className={`relative grid h-16 w-16 place-items-center rounded-2xl bg-gradient-to-br ${style.burst} text-4xl shadow-2xl ${style.glow} ring-4 ring-white/70 sm:h-20 sm:w-20 sm:text-5xl`}
+          className={`relative grid h-20 w-20 place-items-center overflow-hidden rounded-full bg-gradient-to-br ${style.burst} text-4xl shadow-2xl ${style.glow} ring-4 ring-white/70 sm:h-24 sm:w-24 sm:text-5xl`}
         >
-          {effect.imageUrl ? (
-            <img src={effect.imageUrl} alt="" className="h-full w-full rounded-2xl object-cover" />
-          ) : (
-            <span>{effect.symbol}</span>
-          )}
+          <img src={imageUrl} alt="" className="absolute inset-0 h-full w-full object-cover" />
+          <span className="relative z-10 rounded-full bg-black/45 px-3 py-1 text-yellow-100 shadow-lg">
+            {effect.symbol}
+          </span>
+          <motion.span
+            className="absolute inset-0 rounded-full border-4 border-white/70"
+            animate={{ scale: [0.72, 1.45, 1.05], opacity: [0.95, 0, 0.45] }}
+            transition={{ duration: 0.62, repeat: 1 }}
+          />
           {Array.from({ length: tokenCount }).map((_, index) => (
             <motion.span
               key={`${effect.id}-trail-${index}`}

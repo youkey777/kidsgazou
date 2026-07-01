@@ -2,7 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import BattleHub from './battle/BattleHub'
 import { attributeMark } from './battle/character-rules'
 import XpBar from './battle/effects/XpBar'
-import { isBgmEnabled, playBgm, primeBgmOnNextGesture, toggleBgm } from './battle/sounds'
+import { isBgmEnabled, pauseBgm, playBgm, primeBgmOnNextGesture, toggleBgm } from './battle/sounds'
 import StatsEditor from './battle/StatsEditor'
 import {
   addImages,
@@ -94,16 +94,31 @@ export default function App() {
   )
 
   useEffect(() => {
-    playBgm()
-    primeBgmOnNextGesture()
-    setBgmOn(isBgmEnabled())
-  }, [])
-
-  useEffect(() => {
-    if (!unlocked) return
-    playBgm()
-    primeBgmOnNextGesture()
-    setBgmOn(true)
+    const pause = () => pauseBgm()
+    const resume = () => {
+      setBgmOn(isBgmEnabled())
+      if (unlocked && document.visibilityState !== 'hidden' && isBgmEnabled()) {
+        playBgm()
+      }
+    }
+    const onVisibility = () => {
+      if (document.visibilityState === 'hidden') pause()
+      else resume()
+    }
+    if (unlocked) primeBgmOnNextGesture()
+    resume()
+    document.addEventListener('visibilitychange', onVisibility)
+    window.addEventListener('pagehide', pause)
+    window.addEventListener('blur', pause)
+    window.addEventListener('pageshow', resume)
+    window.addEventListener('focus', resume)
+    return () => {
+      document.removeEventListener('visibilitychange', onVisibility)
+      window.removeEventListener('pagehide', pause)
+      window.removeEventListener('blur', pause)
+      window.removeEventListener('pageshow', resume)
+      window.removeEventListener('focus', resume)
+    }
   }, [unlocked])
 
   useEffect(() => {
@@ -346,7 +361,8 @@ export default function App() {
       )}
 
       <nav className="mt-2 px-4">
-        <div className="flex gap-1.5 rounded-2xl bg-white/40 p-1.5 shadow-inner backdrop-blur">
+        <div className="space-y-2 rounded-2xl bg-white/40 p-1.5 shadow-inner backdrop-blur">
+          <div className="grid grid-cols-2 gap-1.5">
           {(['rui', 'mio'] as ChildKey[]).map((key) => {
             const itemTheme = THEMES[key]
             const selected = active === key
@@ -369,23 +385,24 @@ export default function App() {
               </button>
             )
           })}
+          </div>
           <button
             onClick={() => {
               setActive('battle')
               setEditing(false)
               setPending([])
             }}
-            className={`flex min-h-12 flex-1 items-center justify-center gap-1 rounded-xl text-sm font-black transition-all ${
+            className={`flex min-h-14 w-full items-center justify-center gap-2 rounded-xl text-lg font-black transition-all ${
               isBattle
                 ? 'bg-purple-700 text-yellow-200 shadow-lg shadow-purple-900/40'
                 : 'bg-white/70 text-purple-600'
             }`}
           >
             <span
-              className="h-8 w-8 rounded-lg bg-cover bg-center shadow-inner ring-1 ring-white/60"
+              className="h-10 w-10 rounded-xl bg-cover bg-center shadow-inner ring-1 ring-white/60"
               style={{ backgroundImage: 'url(/battle/rich-battle-bg.png)' }}
             />
-            <span>バトル</span>
+            <span>Battle</span>
           </button>
         </div>
       </nav>

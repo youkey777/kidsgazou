@@ -3,25 +3,23 @@ import type { ImageRecord } from '../db'
 import { listBattleCharacters } from './battle-db'
 import AttributeGuide from './AttributeGuide'
 import CharSelect from './CharSelect'
-import DiceBattle from './DiceBattle'
+import ComboBattle from './ComboBattle'
 import Ranking from './Ranking'
-import RpsBattle from './RpsBattle'
 import TeamBattle from './TeamBattle'
 import Training from './Training'
 import { playBgm, playSelect } from './sounds'
 import { MODE_LABELS, type BattleTab, type PlayableBattleMode } from './types'
 
-const MODES: PlayableBattleMode[] = ['dice', 'rps', 'team']
+const MODES: PlayableBattleMode[] = ['combo', 'team']
 
 export default function BattleHub() {
   const [tab, setTab] = useState<BattleTab>('battle')
-  const [mode, setMode] = useState<PlayableBattleMode>('dice')
+  const [mode, setMode] = useState<PlayableBattleMode>('combo')
   const [characters, setCharacters] = useState<ImageRecord[]>([])
   const [leftId, setLeftId] = useState<string | null>(null)
   const [rightId, setRightId] = useState<string | null>(null)
   const [ruiTeamIds, setRuiTeamIds] = useState<string[]>([])
   const [mioTeamIds, setMioTeamIds] = useState<string[]>([])
-  const [teamMode, setTeamMode] = useState<'dice' | 'rps'>('dice')
   const [startedKey, setStartedKey] = useState<string | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
@@ -75,15 +73,13 @@ export default function BattleHub() {
           characters={characters}
           ruiTeam={ruiTeamIds.map((id) => characters.find((item) => item.id === id)).filter(Boolean) as ImageRecord[]}
           mioTeam={mioTeamIds.map((id) => characters.find((item) => item.id === id)).filter(Boolean) as ImageRecord[]}
-          teamMode={teamMode}
           onDone={refresh}
           onExit={() => setStartedKey(null)}
         />
       )
     }
     if (!left || !right) return null
-    if (mode === 'dice') return <DiceBattle key={startedKey} left={left} right={right} onDone={refresh} onExit={() => setStartedKey(null)} />
-    return <RpsBattle key={startedKey} left={left} right={right} onDone={refresh} onExit={() => setStartedKey(null)} />
+    return <ComboBattle key={startedKey} left={left} right={right} onDone={refresh} onExit={() => setStartedKey(null)} />
   }
 
   const toggleTeam = (id: string, side: 'rui' | 'mio') => {
@@ -227,21 +223,9 @@ export default function BattleHub() {
                 ) : (
                   <>
                     <section className="rounded-3xl bg-white/85 p-3 shadow-lg">
-                      <h3 className="mb-2 text-base font-black text-purple-900">3vs3方式</h3>
-                      <div className="grid grid-cols-2 gap-2">
-                        {(['dice', 'rps'] as const).map((item) => (
-                          <button
-                            key={item}
-                            type="button"
-                            onClick={() => setTeamMode(item)}
-                            className={`min-h-12 rounded-2xl font-black ${
-                              teamMode === item ? 'bg-yellow-300 text-zinc-950' : 'bg-purple-600 text-white'
-                            }`}
-                          >
-                            {item === 'dice' ? 'ダイス' : 'じゃんけん'}
-                          </button>
-                        ))}
-                      </div>
+                      <h3 className="text-base font-black text-purple-900">
+                        3vs3は、1対1ごとに「じゃんけん＋サイコロ」で勝負(しょうぶ)します
+                      </h3>
                     </section>
                     {teamSelector('rui')}
                     {teamSelector('mio')}

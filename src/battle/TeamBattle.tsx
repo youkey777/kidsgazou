@@ -1,25 +1,46 @@
 import { useEffect, useMemo, useState } from 'react'
 import type { ImageRecord } from '../db'
 import { saveBattleResult } from './battle-db'
-import { calculateDiceDamage, calculateRpsDamage } from './character-rules'
+import { calculateDiceDamage } from './character-rules'
+import type { AttackEffectData } from './effects/AttackFlyEffect'
 import BattleStage from './effects/BattleStage'
 import { fireBattleConfetti } from './effects/Confetti'
 import VictoryOverlay from './effects/VictoryOverlay'
-import { playDamage, playPunch, playVictory, playWhoosh } from './sounds'
-import { type DamageEvent, makeEventId, shortBattleName } from './types'
+import { playDamage, playDiceLand, playDiceRoll, playPunch, playUltimate, playVictory, playWhoosh } from './sounds'
+import { HAND_LABELS, type DamageEvent, type RpsHand, makeEventId, shortBattleName } from './types'
 
 type Props = {
   characters: ImageRecord[]
   ruiTeam?: ImageRecord[]
   mioTeam?: ImageRecord[]
-  teamMode?: 'dice' | 'rps'
   onDone: () => Promise<void> | void
   onExit: () => void
 }
 
 const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms))
+const HANDS: RpsHand[] = ['rock', 'scissors', 'paper']
 
-export default function TeamBattle({ characters, ruiTeam: selectedRuiTeam, mioTeam: selectedMioTeam, teamMode = 'dice', onDone, onExit }: Props) {
+function randomHand() {
+  return HANDS[Math.floor(Math.random() * HANDS.length)]
+}
+
+function judge(leftHand: RpsHand, rightHand: RpsHand) {
+  if (leftHand === rightHand) return 0
+  if (
+    (leftHand === 'rock' && rightHand === 'scissors') ||
+    (leftHand === 'scissors' && rightHand === 'paper') ||
+    (leftHand === 'paper' && rightHand === 'rock')
+  ) {
+    return 1
+  }
+  return -1
+}
+
+function rollDie() {
+  return Math.floor(Math.random() * 6) + 1
+}
+
+export default function TeamBattle({ characters, ruiTeam: selectedRuiTeam, mioTeam: selectedMioTeam, onDone, onExit }: Props) {
   const ruiTeam = useMemo(
     () => selectedRuiTeam?.slice(0, 3) ?? characters.filter((character) => character.child === 'rui').slice(0, 3),
     [characters, selectedRuiTeam]
@@ -38,6 +59,7 @@ export default function TeamBattle({ characters, ruiTeam: selectedRuiTeam, mioTe
   const [winnerTeam, setWinnerTeam] = useState<'rui' | 'mio' | null>(null)
   const [saveMessage, setSaveMessage] = useState<string | null>(null)
   const [winnerCharacter, setWinnerCharacter] = useState<ImageRecord | null>(null)
+  const [attackEffect, setAttackEffect] = useState<AttackEffectData | null>(null)
 
   const left = ruiTeam[leftIndex]
   const right = mioTeam[rightIndex]
@@ -57,15 +79,42 @@ export default function TeamBattle({ characters, ruiTeam: selectedRuiTeam, mioTe
       setRightHp(currentRightHp)
 
       while (!cancelled && currentLeft && currentRight) {
-        await sleep(800)
+        await sleep(900)
+        const leftHand = randomHand()
+        const rightHand = randomHand()
+        const rps = judge(leftHand, rightHand)
+        setMessage(`ルイ ${HAND_LABELS[leftHand]} / ミオ ${HAND_LABELS[rightHand]}`)
+        setLog((prev) => [`じゃんけん: ルイ ${HAND_LABELS[leftHand]} / ミオ ${HAND_LABELS[rightHand]}`, ...prev.slice(0, 6)])
+        await sleep(1250)
+        if (rps === 0) {
+          setMessage('あいこ！もう一回')
+          setLog((prev) => ['あいこ。ダメージなし', ...prev.slice(0, 6)])
+          await sleep(1000)
+          continue
+        }
+        leftTurn = rps > 0
         const attacker = leftTurn ? currentLeft : currentRight
         const defender = leftTurn ? currentRight : currentLeft
-        const hit =
-          teamMode === 'dice'
-            ? calculateDiceDamage(attacker, defender, Math.floor(Math.random() * 6) + 1)
-            : Math.max(10, Math.floor(calculateRpsDamage(attacker, defender) * 0.82))
+        playDiceRoll()
+        setMessage(`${shortBattleName(attacker.name)} がサイコロ！`)
+        await sleep(900)
+        const die = rollDie()
+        playDiceLand()
+        setMessage(`出目(でめ) ${die}`)
+        await sleep(1100)
+        const hit = calculateDiceDamage(attacker, defender, die)
+        setAttackEffect({
+          id: makeEventId(),
+          side: leftTurn ? 'left' : 'right',
+          kind: 'dice',
+          attribute: attacker.species,
+          variant: die,
+          symbol: String(die),
+          label: die >= 5 ? 'ひっさつ' : 'こうげき',
+        })
         playWhoosh()
-        playPunch()
+        if (die >= 5) playUltimate()
+        else playPunch()
         playDamage()
         setMessage(`${shortBattleName(attacker.name)}の攻撃！ ${hit}ダメージ`)
         setEvents((prev) => [
@@ -81,6 +130,8 @@ export default function TeamBattle({ characters, ruiTeam: selectedRuiTeam, mioTe
           setLeftHp(currentLeftHp)
         }
         setLog((prev) => [`${shortBattleName(attacker.name)}: ${hit}ダメージ`, ...prev.slice(0, 6)])
+        await sleep(900)
+        setAttackEffect(null)
 
         if (currentRightHp <= 0) {
           currentRightIndex += 1
@@ -133,13 +184,12 @@ export default function TeamBattle({ characters, ruiTeam: selectedRuiTeam, mioTe
           setMessage('ルイチーム次のキャラ登場！')
           setLog((prev) => ['ルイチーム次のキャラ登場！', ...prev.slice(0, 6)])
         }
-        leftTurn = !leftTurn
       }
     })()
     return () => {
       cancelled = true
     }
-  }, [left, leftIndex, mioTeam, onDone, right, rightIndex, ruiTeam, teamMode, winnerTeam])
+  }, [left, leftIndex, mioTeam, onDone, right, rightIndex, ruiTeam, winnerTeam])
 
   if (ruiTeam.length < 3 || mioTeam.length < 3) {
     return (
@@ -170,6 +220,7 @@ export default function TeamBattle({ characters, ruiTeam: selectedRuiTeam, mioTe
         damageEvents={events}
         koSide={winnerTeam === 'rui' ? 'right' : winnerTeam === 'mio' ? 'left' : undefined}
         message={message}
+        attackEffect={attackEffect}
       />
       {winnerTeam && winnerCharacter && (
         <VictoryOverlay

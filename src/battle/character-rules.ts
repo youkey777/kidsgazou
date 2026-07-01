@@ -153,6 +153,8 @@ export function randomBattleStats() {
     tech: randomStat(),
     species: randomAttribute(),
     ultimateName: 'ひっさつわざ',
+    ultimate5Name: 'ひっさつわざ5',
+    ultimate6Name: 'ひっさつわざ6',
   }
 }
 

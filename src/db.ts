@@ -18,6 +18,8 @@ export interface ImageRecord {
   tech: number
   species: string
   ultimateName: string
+  ultimate5Name: string
+  ultimate6Name: string
   level: number
   xp: number
   wins: number
@@ -38,6 +40,8 @@ export type ImageStatsUpdate = Partial<
     | 'tech'
     | 'species'
     | 'ultimateName'
+    | 'ultimate5Name'
+    | 'ultimate6Name'
     | 'level'
     | 'xp'
     | 'wins'
@@ -61,6 +65,8 @@ type ImageRow = {
   tech?: number | null
   species?: string | null
   ultimate_name?: string | null
+  ultimate5_name?: string | null
+  ultimate6_name?: string | null
   level?: number | null
   xp?: number | null
   wins?: number | null
@@ -73,7 +79,7 @@ const BASE_SELECT = 'id, child, path, name, created_at'
 const OLD_BATTLE_SELECT =
   'id, child, path, name, created_at, hp, atk, def, spd, species, ultimate_name, level, wins, losses, streak'
 const BATTLE_SELECT =
-  'id, child, path, name, created_at, hp, atk, def, spd, luck, tech, species, ultimate_name, level, xp, wins, losses, streak, crystals'
+  'id, child, path, name, created_at, hp, atk, def, spd, luck, tech, species, ultimate_name, ultimate5_name, ultimate6_name, level, xp, wins, losses, streak, crystals'
 
 function uid() {
   return `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`
@@ -109,6 +115,8 @@ export function normalizeImageRow(row: ImageRow): ImageRecord {
     tech: row.tech ?? 50,
     species: row.species ?? 'ふしぎ',
     ultimateName: row.ultimate_name ?? 'ひっさつわざ',
+    ultimate5Name: row.ultimate5_name ?? row.ultimate_name ?? 'ひっさつわざ5',
+    ultimate6Name: row.ultimate6_name ?? row.ultimate_name ?? 'ひっさつわざ6',
     level: row.level ?? 1,
     xp: row.xp ?? 0,
     wins: row.wins ?? 0,
@@ -158,6 +166,8 @@ export async function addImages(
       tech: stats.tech,
       species: stats.species,
       ultimate_name: stats.ultimateName,
+      ultimate5_name: stats.ultimate5Name,
+      ultimate6_name: stats.ultimate6Name,
       level: 1,
       xp: 0,
       wins: 0,
@@ -230,6 +240,8 @@ export async function updateImageStats(
       tech: stats.tech,
       species: stats.species,
       ultimate_name: stats.ultimateName,
+      ultimate5_name: stats.ultimate5Name,
+      ultimate6_name: stats.ultimate6Name,
       level: stats.level,
       xp: stats.xp,
       wins: stats.wins,

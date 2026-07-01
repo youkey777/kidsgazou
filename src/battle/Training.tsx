@@ -524,6 +524,12 @@ export default function Training({ characters, onChanged }: Props) {
   const [consumeFlash, setConsumeFlash] = useState(0)
   const [bulkCandidates, setBulkCandidates] = useState<BulkCandidate[] | null>(null)
   const [bulkBusy, setBulkBusy] = useState(false)
+  const [profileDraft, setProfileDraft] = useState({
+    name: selected?.name ?? '',
+    ultimate5Name: selected?.ultimate5Name ?? 'ひっさつわざ5',
+    ultimate6Name: selected?.ultimate6Name ?? 'ひっさつわざ6',
+  })
+  const [profileSaving, setProfileSaving] = useState(false)
 
   const currentQuestion = quiz[index]
   const inQuiz = quiz.length > 0 && index < quiz.length
@@ -534,6 +540,15 @@ export default function Training({ characters, onChanged }: Props) {
       setSelectedId(characters[0]?.id ?? '')
     }
   }, [characters, selectedId])
+
+  useEffect(() => {
+    if (!selected) return
+    setProfileDraft({
+      name: selected.name,
+      ultimate5Name: selected.ultimate5Name || selected.ultimateName || 'ひっさつわざ5',
+      ultimate6Name: selected.ultimate6Name || selected.ultimateName || 'ひっさつわざ6',
+    })
+  }, [selected])
 
   const patchLocalCharacter = (id: string, patch: Partial<ImageRecord>) => {
     setLocalCharacters((current) =>
@@ -552,6 +567,26 @@ export default function Training({ characters, onChanged }: Props) {
     setAnswerState('idle')
     setMessage(`${shortBattleName(character.name)}を育(そだ)てよう！`)
     setView('detail')
+  }
+
+  const saveProfileDraft = async () => {
+    if (!selected || profileSaving) return
+    setProfileSaving(true)
+    const patch = {
+      name: profileDraft.name.trim() || selected.name,
+      ultimate5Name: profileDraft.ultimate5Name.trim() || 'ひっさつわざ5',
+      ultimate6Name: profileDraft.ultimate6Name.trim() || 'ひっさつわざ6',
+    }
+    try {
+      await updateImageProfile(selected.id, patch)
+      patchLocalCharacter(selected.id, patch)
+      setMessage('名前(なまえ)と必殺技(ひっさつわざ)を保存(ほぞん)しました！')
+      await onChanged()
+    } catch (error) {
+      setMessage((error as Error).message)
+    } finally {
+      setProfileSaving(false)
+    }
   }
 
   const startQuiz = () => {
@@ -852,6 +887,46 @@ export default function Training({ characters, onChanged }: Props) {
                 <XpBar xp={selected.xp} />
               </div>
             </motion.div>
+
+            <div className="mx-4 mt-4 rounded-[2rem] bg-black/42 p-3 shadow-2xl ring-1 ring-white/20 backdrop-blur-md">
+              <h3 className="mb-3 text-left text-xl font-black text-yellow-200">
+                名前(なまえ)を編集(へんしゅう)
+              </h3>
+              <div className="space-y-2">
+                <label className="block text-left">
+                  <span className="text-sm font-black text-cyan-100">名前(なまえ)</span>
+                  <input
+                    value={profileDraft.name}
+                    onChange={(event) => setProfileDraft((current) => ({ ...current, name: event.target.value }))}
+                    className="mt-1 min-h-12 w-full rounded-2xl bg-white px-3 text-base font-black text-zinc-950"
+                  />
+                </label>
+                <label className="block text-left">
+                  <span className="text-sm font-black text-cyan-100">5の必殺技(ひっさつわざ)</span>
+                  <input
+                    value={profileDraft.ultimate5Name}
+                    onChange={(event) => setProfileDraft((current) => ({ ...current, ultimate5Name: event.target.value }))}
+                    className="mt-1 min-h-12 w-full rounded-2xl bg-white px-3 text-base font-black text-zinc-950"
+                  />
+                </label>
+                <label className="block text-left">
+                  <span className="text-sm font-black text-cyan-100">6の必殺技(ひっさつわざ)</span>
+                  <input
+                    value={profileDraft.ultimate6Name}
+                    onChange={(event) => setProfileDraft((current) => ({ ...current, ultimate6Name: event.target.value }))}
+                    className="mt-1 min-h-12 w-full rounded-2xl bg-white px-3 text-base font-black text-zinc-950"
+                  />
+                </label>
+                <button
+                  type="button"
+                  onClick={() => void saveProfileDraft()}
+                  disabled={profileSaving}
+                  className="min-h-13 w-full rounded-2xl bg-cyan-300 text-base font-black text-purple-950 shadow-xl disabled:opacity-50"
+                >
+                  {profileSaving ? '保存(ほぞん)中(ちゅう)...' : '保存(ほぞん)する'}
+                </button>
+              </div>
+            </div>
 
             <div className="mt-4 px-4">
               <RadarChart character={selected} />

@@ -1,6 +1,28 @@
 let audioContext: AudioContext | null = null
 let bgm: HTMLAudioElement | null = null
-let bgmEnabled = false
+const BGM_PREF_KEY = 'kids_gallery_bgm_enabled_v2'
+let bgmEnabled = readBgmPreference()
+
+function readBgmPreference() {
+  try {
+    return localStorage.getItem(BGM_PREF_KEY) !== 'off'
+  } catch {
+    return true
+  }
+}
+
+function saveBgmPreference(enabled: boolean) {
+  bgmEnabled = enabled
+  try {
+    localStorage.setItem(BGM_PREF_KEY, enabled ? 'on' : 'off')
+  } catch {
+    // localStorageが使えない環境では、その場の状態だけで扱う。
+  }
+}
+
+function isPageVisible() {
+  return typeof document === 'undefined' || document.visibilityState !== 'hidden'
+}
 
 function getContext() {
   if (!audioContext) {
@@ -30,12 +52,12 @@ function tone(frequency: number, duration: number, type: OscillatorType, gain = 
 
 export function playBgm() {
   try {
+    if (!bgmEnabled || !isPageVisible()) return
     if (!bgm) {
       bgm = new Audio('/audio/lion-switch.mp3')
       bgm.loop = true
       bgm.volume = 0.28
     }
-    bgmEnabled = true
     void bgm.play()
   } catch {
     // 自動再生制限中は次のタップで再試行する。
@@ -44,6 +66,7 @@ export function playBgm() {
 
 export function primeBgmOnNextGesture() {
   const start = () => {
+    if (!bgmEnabled || !isPageVisible()) return
     playBgm()
     window.removeEventListener('pointerdown', start)
     window.removeEventListener('keydown', start)
@@ -53,15 +76,20 @@ export function primeBgmOnNextGesture() {
 }
 
 export function stopBgm() {
-  bgmEnabled = false
+  saveBgmPreference(false)
+  bgm?.pause()
+}
+
+export function pauseBgm() {
   bgm?.pause()
 }
 
 export function toggleBgm() {
-  if (bgmEnabled && bgm && !bgm.paused) {
+  if (bgmEnabled) {
     stopBgm()
     return false
   }
+  saveBgmPreference(true)
   playBgm()
   return true
 }
