@@ -7,6 +7,7 @@ export type AttackEffectData = {
   attribute: string
   variant: number
   symbol: string
+  imageUrl?: string
   label?: string
 }
 
@@ -85,7 +86,11 @@ export default function AttackFlyEffect({ effect }: { effect: AttackEffectData }
         <div
           className={`relative grid h-16 w-16 place-items-center rounded-2xl bg-gradient-to-br ${style.burst} text-4xl shadow-2xl ${style.glow} ring-4 ring-white/70 sm:h-20 sm:w-20 sm:text-5xl`}
         >
-          <span>{effect.symbol}</span>
+          {effect.imageUrl ? (
+            <img src={effect.imageUrl} alt="" className="h-full w-full rounded-2xl object-cover" />
+          ) : (
+            <span>{effect.symbol}</span>
+          )}
           {Array.from({ length: tokenCount }).map((_, index) => (
             <motion.span
               key={`${effect.id}-trail-${index}`}

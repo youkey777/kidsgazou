@@ -150,6 +150,7 @@ export default function DiceBattle({ left, right, onDone }: Props) {
       attribute: attacker.species,
       variant: die,
       symbol: String(die),
+      imageUrl: '/battle/dice-piece.png',
       label: `${attacker.species}・${attackName}`,
     })
     setDiceThrowEffect(null)

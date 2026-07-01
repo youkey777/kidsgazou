@@ -15,7 +15,8 @@
     "framer-motion": "^12.42.1",
     "idb": "^8.0.3",
     "react": "^19.2.7",
-    "react-dom": "^19.2.7"
+    "react-dom": "^19.2.7",
+    "tesseract.js": "^7.0.0"
   },
   "devDependencies": {
     "@types/canvas-confetti": "^1.9.0",

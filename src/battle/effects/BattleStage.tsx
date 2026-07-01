@@ -4,6 +4,7 @@ import { hpPercent, starsForLevel } from '../types'
 import AttackFlyEffect, { type AttackEffectData } from './AttackFlyEffect'
 import DamageNumber from './DamageNumber'
 import DiceThrowEffect, { type DiceThrowEffectData } from './DiceThrowEffect'
+import XpBar from './XpBar'
 
 type Props = {
   left: BattleCharacter
@@ -73,6 +74,7 @@ function FighterCard({
         <p className="truncate text-xs font-bold text-purple-700">
           Lv.{character.level} / {character.species}
         </p>
+        <XpBar xp={character.xp} compact />
         <div className="mt-2 h-3 overflow-hidden rounded-full bg-zinc-200">
           <motion.div
             className="h-full rounded-full bg-gradient-to-r from-lime-400 to-emerald-500"
@@ -104,6 +106,11 @@ export default function BattleStage({
     <div
       data-testid="battle-stage"
       className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-violet-700 via-fuchsia-600 to-indigo-900 p-2 shadow-2xl sm:p-3"
+      style={{
+        backgroundImage: 'linear-gradient(rgba(88,28,135,.35),rgba(49,46,129,.55)), url(/battle/rich-battle-bg.png)',
+        backgroundSize: 'cover',
+        backgroundPosition: 'center',
+      }}
     >
       <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_20%,rgba(255,255,255,0.35),transparent_34%)]" />
       {message && (

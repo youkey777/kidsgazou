@@ -30,6 +30,11 @@ const HAND_VARIANT: Record<RpsHand, number> = {
   scissors: 2,
   paper: 5,
 }
+const HAND_IMAGES: Record<RpsHand, string> = {
+  rock: '/battle/rps-rock.png',
+  scissors: '/battle/rps-scissors.png',
+  paper: '/battle/rps-paper.png',
+}
 
 const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms))
 
@@ -72,24 +77,24 @@ function HandSlot({ hand, cycling }: { hand: RpsHand; cycling: boolean }) {
     return (
       <motion.div
         key={hand}
-        className="grid h-16 place-items-center text-5xl"
+        className="grid h-20 place-items-center"
         initial={{ y: -18, opacity: 0, scale: 0.9 }}
         animate={{ y: 0, opacity: 1, scale: 1 }}
       >
-        {HAND_EMOJI[hand]}
+        <img src={HAND_IMAGES[hand]} alt="" className="h-20 w-20 rounded-2xl object-cover shadow-lg" />
       </motion.div>
     )
   }
 
   return (
-    <div className="mx-auto h-16 w-16 overflow-hidden rounded-2xl bg-white/70 shadow-inner">
+    <div className="mx-auto h-20 w-20 overflow-hidden rounded-2xl bg-white/70 shadow-inner">
       <motion.div
-        animate={{ y: [0, -192] }}
+        animate={{ y: [0, -240] }}
         transition={{ duration: 0.62, repeat: Infinity, ease: 'linear' }}
       >
         {reel.map((item, index) => (
-          <div key={`${item}-${index}`} className="grid h-16 place-items-center text-5xl">
-            {HAND_EMOJI[item]}
+          <div key={`${item}-${index}`} className="grid h-20 place-items-center">
+            <img src={HAND_IMAGES[item]} alt="" className="h-20 w-20 rounded-2xl object-cover" />
           </div>
         ))}
       </motion.div>
@@ -198,6 +203,7 @@ export default function RpsBattle({ left, right, onDone }: Props) {
       attribute: winner.species,
       variant: HAND_VARIANT[winningHand],
       symbol: HAND_EMOJI[winningHand],
+      imageUrl: HAND_IMAGES[winningHand],
       label: `${HAND_LABELS[winningHand]}アタック`,
     })
     playPunch()
@@ -256,7 +262,11 @@ export default function RpsBattle({ left, right, onDone }: Props) {
               initial={{ y: 8, scale: 0.8 }}
               animate={{ y: 0, scale: 1 }}
             >
-              {playerHand ? HAND_EMOJI[playerHand] : '？'}
+              {playerHand ? (
+                <img src={HAND_IMAGES[playerHand]} alt="" className="mx-auto h-20 w-20 rounded-2xl object-cover shadow-lg" />
+              ) : (
+                '？'
+              )}
             </motion.div>
             <p className="text-sm font-black text-cyan-950">
               {playerHand ? HAND_LABELS[playerHand] : 'えらぶ'}
@@ -279,7 +289,7 @@ export default function RpsBattle({ left, right, onDone }: Props) {
               onClick={() => void choose(hand)}
               className="min-h-14 rounded-2xl bg-purple-600 text-lg font-black text-white shadow-lg transition active:scale-95 disabled:opacity-50"
             >
-              <span className="mr-1">{HAND_EMOJI[hand]}</span>
+              <img src={HAND_IMAGES[hand]} alt="" className="mx-auto mb-1 h-9 w-9 rounded-xl object-cover" />
               {HAND_LABELS[hand]}
             </button>
           ))}

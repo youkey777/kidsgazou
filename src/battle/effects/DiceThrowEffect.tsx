@@ -6,24 +6,15 @@ export type DiceThrowEffectData = {
   face: number | null
 }
 
-const PIPS: Record<number, number[]> = {
-  1: [4],
-  2: [0, 8],
-  3: [0, 4, 8],
-  4: [0, 2, 6, 8],
-  5: [0, 2, 4, 6, 8],
-  6: [0, 2, 3, 5, 6, 8],
-}
-
 function DiceFace({ face }: { face: number | null }) {
   return (
-    <div className="grid h-20 w-20 grid-cols-3 grid-rows-3 gap-1.5 rounded-3xl bg-white p-4 shadow-[0_0_26px_rgba(255,255,255,.9)] ring-4 ring-yellow-200 sm:h-24 sm:w-24">
-      {Array.from({ length: 9 }).map((_, index) => (
-        <span
-          key={index}
-          className={`rounded-full ${face && PIPS[face].includes(index) ? 'bg-zinc-950' : 'bg-transparent'}`}
-        />
-      ))}
+    <div className="relative h-24 w-24 rounded-3xl shadow-[0_0_30px_rgba(255,255,255,.9)] ring-4 ring-yellow-200 sm:h-28 sm:w-28">
+      <img src="/battle/dice-piece.png" alt="" className="h-full w-full rounded-3xl object-cover" />
+      <div className="absolute inset-0 grid place-items-center rounded-3xl bg-black/12">
+        <span className="rounded-2xl bg-white/80 px-3 py-1 text-4xl font-black text-zinc-950 shadow">
+          {face ?? '？'}
+        </span>
+      </div>
     </div>
   )
 }

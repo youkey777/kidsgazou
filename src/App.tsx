@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import BattleHub from './battle/BattleHub'
+import XpBar from './battle/effects/XpBar'
 import StatsEditor from './battle/StatsEditor'
 import {
   addImages,
@@ -19,6 +20,7 @@ type Theme = {
   key: ChildKey
   name: string
   emoji: string
+  image: string
   gradient: string
   accent: string
   tabActive: string
@@ -33,6 +35,7 @@ const THEMES: Record<ChildKey, Theme> = {
     key: 'rui',
     name: 'ルイ',
     emoji: '🦖',
+    image: '/battle/rich-rui-bg.png',
     gradient: 'from-zinc-950 via-zinc-900 to-neutral-900',
     accent: 'text-amber-300',
     tabActive: 'bg-zinc-900 text-amber-300 shadow-lg shadow-zinc-900/40',
@@ -46,6 +49,7 @@ const THEMES: Record<ChildKey, Theme> = {
     key: 'mio',
     name: 'ミオ',
     emoji: '🌸',
+    image: '/battle/rich-mio-bg.png',
     gradient: 'from-pink-100 via-rose-100 to-pink-200',
     accent: 'text-pink-600',
     tabActive: 'bg-pink-500 text-white shadow-lg shadow-pink-400/40',
@@ -78,6 +82,7 @@ export default function App() {
 
   const theme = THEMES[activeChild]
   const isBattle = active === 'battle'
+  const pageBackground = isBattle ? '/battle/rich-battle-bg.png' : theme.image
 
   const pendingPreviews = useMemo(
     () => pending.map((file) => ({ file, url: URL.createObjectURL(file) })),
@@ -244,10 +249,17 @@ export default function App() {
 
   return (
     <div
-      className={`min-h-full bg-gradient-to-br ${
+      className={`relative min-h-full overflow-hidden bg-gradient-to-br ${
         isBattle ? 'from-violet-800 via-fuchsia-700 to-indigo-950' : theme.gradient
       } transition-colors duration-500`}
+      style={{
+        backgroundImage: `linear-gradient(rgba(0,0,0,.28),rgba(0,0,0,.48)), url(${pageBackground})`,
+        backgroundSize: 'cover',
+        backgroundPosition: 'center top',
+        backgroundAttachment: 'fixed',
+      }}
     >
+      <div className="pointer-events-none fixed inset-0 animate-[pulse_5s_ease-in-out_infinite] bg-[radial-gradient(circle_at_50%_20%,rgba(255,255,255,.24),transparent_32%)]" />
       <div className="safe-top" />
 
       <header className="px-4 pb-2 pt-4">
@@ -257,7 +269,7 @@ export default function App() {
               isBattle ? 'text-yellow-200' : activeChild === 'rui' ? 'text-amber-200' : 'text-pink-700'
             }`}
           >
-            {isBattle ? '⚔️ キャラクターバトル' : `${theme.emoji} ${theme.name}のギャラリー`}
+            {isBattle ? 'キャラクターバトル' : `${theme.name}のギャラリー`}
           </h1>
           <div className="flex shrink-0 gap-2">
             {!isBattle && images.length > 0 && (
@@ -309,7 +321,10 @@ export default function App() {
                   selected ? itemTheme.tabActive : itemTheme.tabIdle
                 }`}
               >
-                <span className="text-lg">{itemTheme.emoji}</span>
+                <span
+                  className="h-8 w-8 rounded-lg bg-cover bg-center shadow-inner ring-1 ring-white/60"
+                  style={{ backgroundImage: `url(${itemTheme.image})` }}
+                />
                 <span>{itemTheme.name}</span>
                 <span className={`rounded-full px-2 py-0.5 text-xs ${selected ? itemTheme.countChip : 'bg-white/60'}`}>
                   {counts[key]}
@@ -329,7 +344,10 @@ export default function App() {
                 : 'bg-white/70 text-purple-600'
             }`}
           >
-            <span className="text-lg">⚔️</span>
+            <span
+              className="h-8 w-8 rounded-lg bg-cover bg-center shadow-inner ring-1 ring-white/60"
+              style={{ backgroundImage: 'url(/battle/rich-battle-bg.png)' }}
+            />
             <span>バトル</span>
           </button>
         </div>
@@ -427,6 +445,7 @@ export default function App() {
                       <p className="truncate text-xs font-black text-white">
                         Lv.{image.level} / {image.species}
                       </p>
+                      <XpBar xp={image.xp} compact />
                     </div>
                     {editing && (
                       <>

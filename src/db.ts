@@ -1,4 +1,4 @@
-import { randomBattleStats, growWinnerStats, type StatKey } from './battle/character-rules'
+import { clampStat, randomBattleStats, growWinnerStats, type StatKey } from './battle/character-rules'
 import { supabase, BUCKET, isConfigured } from './lib/supabase'
 
 export type ChildKey = 'rui' | 'mio'
@@ -19,6 +19,7 @@ export interface ImageRecord {
   species: string
   ultimateName: string
   level: number
+  xp: number
   wins: number
   losses: number
   streak: number
@@ -28,7 +29,21 @@ export interface ImageRecord {
 export type ImageStatsUpdate = Partial<
   Pick<
     ImageRecord,
-    'hp' | 'atk' | 'def' | 'spd' | 'luck' | 'tech' | 'species' | 'ultimateName' | 'crystals'
+    | 'name'
+    | 'hp'
+    | 'atk'
+    | 'def'
+    | 'spd'
+    | 'luck'
+    | 'tech'
+    | 'species'
+    | 'ultimateName'
+    | 'level'
+    | 'xp'
+    | 'wins'
+    | 'losses'
+    | 'streak'
+    | 'crystals'
   >
 >
 
@@ -47,6 +62,7 @@ type ImageRow = {
   species?: string | null
   ultimate_name?: string | null
   level?: number | null
+  xp?: number | null
   wins?: number | null
   losses?: number | null
   streak?: number | null
@@ -57,7 +73,7 @@ const BASE_SELECT = 'id, child, path, name, created_at'
 const OLD_BATTLE_SELECT =
   'id, child, path, name, created_at, hp, atk, def, spd, species, ultimate_name, level, wins, losses, streak'
 const BATTLE_SELECT =
-  'id, child, path, name, created_at, hp, atk, def, spd, luck, tech, species, ultimate_name, level, wins, losses, streak, crystals'
+  'id, child, path, name, created_at, hp, atk, def, spd, luck, tech, species, ultimate_name, level, xp, wins, losses, streak, crystals'
 
 function uid() {
   return `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`
@@ -94,6 +110,7 @@ export function normalizeImageRow(row: ImageRow): ImageRecord {
     species: row.species ?? 'ふしぎ',
     ultimateName: row.ultimate_name ?? 'ひっさつわざ',
     level: row.level ?? 1,
+    xp: row.xp ?? 0,
     wins: row.wins ?? 0,
     losses: row.losses ?? 0,
     streak: row.streak ?? 0,
@@ -142,6 +159,7 @@ export async function addImages(
       species: stats.species,
       ultimate_name: stats.ultimateName,
       level: 1,
+      xp: 0,
       wins: 0,
       losses: 0,
       streak: 0,
@@ -201,23 +219,38 @@ export async function updateImageStats(
   stats: ImageStatsUpdate
 ): Promise<void> {
   const sb = ensure()
-  const payload = {
-    hp: stats.hp,
-    atk: stats.atk,
-    def: stats.def,
-    spd: stats.spd,
-    luck: stats.luck,
-    tech: stats.tech,
-    species: stats.species,
-    ultimate_name: stats.ultimateName,
-    crystals: stats.crystals,
-  }
+  const payload = Object.fromEntries(
+    Object.entries({
+      name: stats.name,
+      hp: stats.hp,
+      atk: stats.atk,
+      def: stats.def,
+      spd: stats.spd,
+      luck: stats.luck,
+      tech: stats.tech,
+      species: stats.species,
+      ultimate_name: stats.ultimateName,
+      level: stats.level,
+      xp: stats.xp,
+      wins: stats.wins,
+      losses: stats.losses,
+      streak: stats.streak,
+      crystals: stats.crystals,
+    }).filter(([, value]) => value !== undefined)
+  )
   const { error } = await sb.from('images').update(payload).eq('id', id)
   if (error) {
     throw new Error(
       `ステータス保存失敗: ${error.message}。SETUP.md の追加SQLを実行してください`
     )
   }
+}
+
+export async function updateImageProfile(
+  id: string,
+  stats: ImageStatsUpdate
+): Promise<void> {
+  await updateImageStats(id, stats)
 }
 
 export async function addCharacterCrystals(
@@ -257,14 +290,37 @@ export async function updateBattleResultStats(
   loser: ImageRecord
 ): Promise<void> {
   const sb = ensure()
-  const winnerLevel = Math.min(99, winner.level + 1)
-  const growth = growWinnerStats(winner)
+  const applyExp = (character: ImageRecord, amount: number) => {
+    const total = character.xp + amount
+    const levelUps = Math.min(99 - character.level, Math.floor(total / 100))
+    return {
+      level: character.level + levelUps,
+      xp: total % 100,
+      levelUps,
+    }
+  }
+  const winnerExp = applyExp(winner, 35)
+  const loserExp = applyExp(loser, 10)
+  let growth = {}
+  if (winnerExp.levelUps > 0) {
+    growth = growWinnerStats(winner)
+    for (let i = 1; i < winnerExp.levelUps; i++) {
+      growth = {
+        atk: clampStat((growth as Pick<ImageRecord, 'atk'>).atk * 1.04),
+        def: clampStat((growth as Pick<ImageRecord, 'def'>).def * 1.04),
+        spd: clampStat((growth as Pick<ImageRecord, 'spd'>).spd * 1.04),
+        luck: clampStat((growth as Pick<ImageRecord, 'luck'>).luck * 1.04),
+        tech: clampStat((growth as Pick<ImageRecord, 'tech'>).tech * 1.04),
+      }
+    }
+  }
   const winnerUpdate = sb
     .from('images')
     .update({
       wins: winner.wins + 1,
       streak: winner.streak + 1,
-      level: winnerLevel,
+      level: winnerExp.level,
+      xp: winnerExp.xp,
       ...growth,
     })
     .eq('id', winner.id)
@@ -274,6 +330,8 @@ export async function updateBattleResultStats(
     .update({
       losses: loser.losses + 1,
       streak: 0,
+      level: loserExp.level,
+      xp: loserExp.xp,
     })
     .eq('id', loser.id)
 

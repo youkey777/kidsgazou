@@ -124,6 +124,7 @@ create policy "anon insert" on battle_records for insert with check (true);
 alter table images add column if not exists luck int default 50;
 alter table images add column if not exists tech int default 50;
 alter table images add column if not exists crystals int default 0;
+alter table images add column if not exists xp int default 0;
 
 update images
 set
@@ -132,6 +133,7 @@ set
   spd = coalesce(spd, floor(random() * 99 + 1)::int),
   luck = coalesce(luck, floor(random() * 99 + 1)::int),
   tech = coalesce(tech, floor(random() * 99 + 1)::int),
+  xp = coalesce(xp, 0),
   species = coalesce(
     species,
     (array[
@@ -141,6 +143,26 @@ set
     ])[floor(random() * 15 + 1)::int]
   ),
   crystals = coalesce(crystals, 0);
+
+do $$
+begin
+  if not exists (
+    select 1 from pg_policies
+    where schemaname = 'public'
+      and tablename = 'images'
+      and policyname = 'anon update'
+  ) then
+    create policy "anon update" on images for update using (true) with check (true);
+  end if;
+end $$;
+```
+
+## 勝敗記録・経験値の追加SQL
+
+バトルの勝利数、連勝、レベル、経験値、クリスタル、能力変更が保存されない場合は、Supabase SQL Editor で以下を実行してください。
+
+```sql
+alter table images add column if not exists xp int default 0;
 
 do $$
 begin

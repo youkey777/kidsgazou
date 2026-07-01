@@ -1,9 +1,10 @@
 import { AnimatePresence, motion } from 'framer-motion'
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import {
   addCharacterCrystals,
   rerollCharacterAttribute,
   rerollCharacterStat,
+  updateImageProfile,
   type ImageRecord,
 } from '../db'
 import {
@@ -13,6 +14,7 @@ import {
   STAT_LABELS,
   type StatKey,
 } from './character-rules'
+import XpBar from './effects/XpBar'
 import { shortBattleName } from './types'
 
 type Props = {
@@ -30,6 +32,19 @@ type MathQuestion = {
 
 type TrainingView = 'select' | 'detail'
 type AnswerState = 'idle' | 'correct' | 'wrong'
+type BulkCandidate = {
+  id: string
+  url: string
+  currentName: string
+  name: string
+  species: string
+  atk: number
+  def: number
+  spd: number
+  luck: number
+  tech: number
+  status: 'waiting' | 'reading' | 'ready' | 'error'
+}
 
 const STAT_KEYS: StatKey[] = ['atk', 'def', 'spd', 'luck', 'tech']
 const ARENA_BG = '/battle/training-arena-bg.png'
@@ -59,6 +74,36 @@ function makeQuestion(): MathQuestion {
 
 function makeQuiz() {
   return Array.from({ length: 5 }, makeQuestion)
+}
+
+function cleanOcrName(text: string, fallback: string) {
+  const candidates = text
+    .split(/\r?\n/)
+    .map((line) =>
+      line
+        .replace(/[^\p{Script=Hiragana}\p{Script=Katakana}\p{Script=Han}a-zA-Z0-9ー・ぁ-んァ-ン一-龠]/gu, '')
+        .trim()
+    )
+    .filter((line) => line.length >= 2 && line.length <= 16)
+    .filter((line) => !/^(file|png|jpg|jpeg|Lv|HP|ATK|DEF|SPD)$/i.test(line))
+
+  return candidates.find((line) => /[ぁ-んァ-ン一-龠]/.test(line)) ?? candidates[0] ?? fallback
+}
+
+function makeRandomCandidate(character: ImageRecord): BulkCandidate {
+  return {
+    id: character.id,
+    url: character.url,
+    currentName: character.name,
+    name: character.name,
+    species: randomAttribute(),
+    atk: randomStat(),
+    def: randomStat(),
+    spd: randomStat(),
+    luck: randomStat(),
+    tech: randomStat(),
+    status: 'waiting',
+  }
 }
 
 function RadarChart({ character }: { character: ImageRecord }) {
@@ -164,6 +209,7 @@ function CharacterCard({
           Lv.{character.level} / {character.species}
         </p>
         <p className="text-xs font-black text-cyan-700">💎 {character.crystals}</p>
+        <XpBar xp={character.xp} compact />
       </div>
     </motion.button>
   )
@@ -320,12 +366,94 @@ function SlotOverlay({
   )
 }
 
+function BulkUpdateOverlay({
+  candidates,
+  busy,
+  onNameChange,
+  onClose,
+  onSave,
+}: {
+  candidates: BulkCandidate[]
+  busy: boolean
+  onNameChange: (id: string, name: string) => void
+  onClose: () => void
+  onSave: () => void
+}) {
+  return (
+    <motion.div
+      className="fixed inset-0 z-50 overflow-y-auto bg-purple-950/95 p-4 text-white"
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      exit={{ opacity: 0 }}
+    >
+      <div className="mx-auto max-w-md space-y-3 pb-10">
+        <div className="sticky top-0 z-10 rounded-3xl bg-black/65 p-4 shadow-2xl backdrop-blur">
+          <h3 className="text-xl font-black text-yellow-200">キャラ設定をまとめて更新</h3>
+          <p className="mt-1 text-sm font-bold text-white/80">
+            読み取った名前を確認して、違っていたら直してね。
+          </p>
+        </div>
+        {candidates.map((candidate) => (
+          <div key={candidate.id} className="rounded-3xl bg-white/12 p-3 shadow-xl ring-1 ring-white/20">
+            <div className="flex gap-3">
+              <img src={candidate.url} alt="" className="h-20 w-20 rounded-2xl bg-white object-cover" />
+              <div className="min-w-0 flex-1">
+                <p className="truncate text-xs font-bold text-white/60">現在: {candidate.currentName}</p>
+                <input
+                  value={candidate.name}
+                  onChange={(event) => onNameChange(candidate.id, event.target.value)}
+                  className="mt-1 min-h-11 w-full rounded-2xl bg-white px-3 text-base font-black text-zinc-950"
+                  disabled={busy}
+                />
+                <p className="mt-1 text-xs font-black text-cyan-200">
+                  {candidate.status === 'reading'
+                    ? '読み取り中...'
+                    : candidate.status === 'error'
+                      ? '読み取り失敗。手で直せます。'
+                      : '確認OK'}
+                </p>
+              </div>
+            </div>
+            <div className="mt-2 grid grid-cols-3 gap-1 text-center text-xs font-black">
+              <span className="rounded-full bg-yellow-300 px-2 py-1 text-zinc-900">{candidate.species}</span>
+              <span className="rounded-full bg-white/15 px-2 py-1">攻 {candidate.atk}</span>
+              <span className="rounded-full bg-white/15 px-2 py-1">防 {candidate.def}</span>
+              <span className="rounded-full bg-white/15 px-2 py-1">速 {candidate.spd}</span>
+              <span className="rounded-full bg-white/15 px-2 py-1">運 {candidate.luck}</span>
+              <span className="rounded-full bg-white/15 px-2 py-1">技 {candidate.tech}</span>
+            </div>
+          </div>
+        ))}
+        <div className="grid grid-cols-2 gap-2">
+          <button
+            type="button"
+            onClick={onClose}
+            disabled={busy}
+            className="min-h-13 rounded-2xl bg-white/20 font-black text-white disabled:opacity-50"
+          >
+            やめる
+          </button>
+          <button
+            type="button"
+            onClick={onSave}
+            disabled={busy || candidates.length === 0}
+            className="min-h-13 rounded-2xl bg-yellow-300 font-black text-zinc-950 shadow-xl disabled:opacity-50"
+          >
+            保存する
+          </button>
+        </div>
+      </div>
+    </motion.div>
+  )
+}
+
 export default function Training({ characters, onChanged }: Props) {
+  const [localCharacters, setLocalCharacters] = useState<ImageRecord[]>(characters)
   const [view, setView] = useState<TrainingView>('select')
   const [selectedId, setSelectedId] = useState(characters[0]?.id ?? '')
   const selected = useMemo(
-    () => characters.find((character) => character.id === selectedId) ?? characters[0] ?? null,
-    [characters, selectedId]
+    () => localCharacters.find((character) => character.id === selectedId) ?? localCharacters[0] ?? null,
+    [localCharacters, selectedId]
   )
   const [quiz, setQuiz] = useState<MathQuestion[]>([])
   const [index, setIndex] = useState(0)
@@ -335,9 +463,24 @@ export default function Training({ characters, onChanged }: Props) {
   const [message, setMessage] = useState('キャラを選んで育てよう！')
   const [slot, setSlot] = useState<{ label: string; value: number | string | null; rolling: boolean } | null>(null)
   const [consumeFlash, setConsumeFlash] = useState(0)
+  const [bulkCandidates, setBulkCandidates] = useState<BulkCandidate[] | null>(null)
+  const [bulkBusy, setBulkBusy] = useState(false)
 
   const currentQuestion = quiz[index]
   const inQuiz = quiz.length > 0 && index < quiz.length
+
+  useEffect(() => {
+    setLocalCharacters(characters)
+    if (!characters.some((character) => character.id === selectedId)) {
+      setSelectedId(characters[0]?.id ?? '')
+    }
+  }, [characters, selectedId])
+
+  const patchLocalCharacter = (id: string, patch: Partial<ImageRecord>) => {
+    setLocalCharacters((current) =>
+      current.map((character) => (character.id === id ? { ...character, ...patch } : character))
+    )
+  }
 
   const openCharacter = (character: ImageRecord) => {
     setSelectedId(character.id)
@@ -367,9 +510,11 @@ export default function Training({ characters, onChanged }: Props) {
     if (correct) {
       setEarned(nextEarned)
       setMessage('正解！クリスタルを1こゲット！')
+      patchLocalCharacter(selected.id, { crystals: selected.crystals + 1 })
       try {
         await addCharacterCrystals(selected, 1)
       } catch (error) {
+        patchLocalCharacter(selected.id, { crystals: selected.crystals })
         setMessage(`クリスタル保存に失敗しました: ${(error as Error).message}`)
       }
     } else {
@@ -403,6 +548,10 @@ export default function Training({ characters, onChanged }: Props) {
     setSlot({ label: `${STAT_LABELS[stat]}が決定！`, value: nextValue, rolling: false })
     try {
       await rerollCharacterStat(selected, stat, nextValue)
+      patchLocalCharacter(selected.id, {
+        [stat]: nextValue,
+        crystals: Math.max(0, selected.crystals - 1),
+      } as Partial<ImageRecord>)
       setMessage(`${STAT_LABELS[stat]}が ${nextValue} になった！`)
       await onChanged()
     } catch (error) {
@@ -426,6 +575,10 @@ export default function Training({ characters, onChanged }: Props) {
     setSlot({ label: '属性が決定！', value: nextAttribute, rolling: false })
     try {
       await rerollCharacterAttribute(selected, nextAttribute)
+      patchLocalCharacter(selected.id, {
+        species: nextAttribute,
+        crystals: Math.max(0, selected.crystals - 1),
+      })
       setMessage(`属性が「${nextAttribute}」になった！`)
       await onChanged()
     } catch (error) {
@@ -434,6 +587,87 @@ export default function Training({ characters, onChanged }: Props) {
     await sleep(900)
     setSlot(null)
     setBusy(false)
+  }
+
+  const startBulkUpdate = async () => {
+    if (bulkBusy || localCharacters.length === 0) return
+    setBulkBusy(true)
+    const initial = localCharacters.map(makeRandomCandidate)
+    setBulkCandidates(initial)
+
+    let recognize: ((url: string, languages: string) => Promise<{ data: { text: string } }>) | null = null
+    try {
+      recognize = (await import('tesseract.js')).recognize
+    } catch {
+      recognize = null
+    }
+
+    for (const character of localCharacters) {
+      setBulkCandidates((current) =>
+        (current ?? initial).map((item) =>
+          item.id === character.id ? { ...item, status: 'reading' } : item
+        )
+      )
+
+      try {
+        if (!recognize) throw new Error('OCR unavailable')
+        const result = await recognize(character.url, 'jpn+eng')
+        const name = cleanOcrName(result.data.text, character.name)
+        setBulkCandidates((current) =>
+          (current ?? initial).map((item) =>
+            item.id === character.id ? { ...item, name, status: 'ready' } : item
+          )
+        )
+      } catch {
+        setBulkCandidates((current) =>
+          (current ?? initial).map((item) =>
+            item.id === character.id ? { ...item, status: 'error' } : item
+          )
+        )
+      }
+    }
+    setBulkBusy(false)
+  }
+
+  const updateBulkName = (id: string, name: string) => {
+    setBulkCandidates((current) =>
+      current?.map((item) => (item.id === id ? { ...item, name } : item)) ?? null
+    )
+  }
+
+  const saveBulkUpdate = async () => {
+    if (!bulkCandidates || bulkBusy) return
+    setBulkBusy(true)
+    try {
+      for (const candidate of bulkCandidates) {
+        const name = candidate.name.trim() || candidate.currentName
+        await updateImageProfile(candidate.id, {
+          name,
+          species: candidate.species,
+          atk: candidate.atk,
+          def: candidate.def,
+          spd: candidate.spd,
+          luck: candidate.luck,
+          tech: candidate.tech,
+        })
+        patchLocalCharacter(candidate.id, {
+          name,
+          species: candidate.species,
+          atk: candidate.atk,
+          def: candidate.def,
+          spd: candidate.spd,
+          luck: candidate.luck,
+          tech: candidate.tech,
+        })
+      }
+      setBulkCandidates(null)
+      setMessage('キャラ設定をまとめて更新しました！')
+      await onChanged()
+    } catch (error) {
+      setMessage((error as Error).message)
+    } finally {
+      setBulkBusy(false)
+    }
   }
 
   if (!selected) {
@@ -458,9 +692,17 @@ export default function Training({ characters, onChanged }: Props) {
             <div className="rounded-3xl bg-white/90 p-4 shadow-xl">
               <h2 className="text-2xl font-black text-purple-900">育てるキャラ</h2>
               <p className="mt-1 text-sm font-bold text-zinc-700">キャラを押すと、くわしい画面に進むよ。</p>
+              <button
+                type="button"
+                onClick={() => void startBulkUpdate()}
+                disabled={bulkBusy || localCharacters.length === 0}
+                className="mt-3 min-h-12 w-full rounded-2xl bg-gradient-to-r from-cyan-300 to-yellow-300 px-3 text-sm font-black text-zinc-950 shadow-lg disabled:opacity-50"
+              >
+                キャラ設定をまとめて更新
+              </button>
             </div>
             <div className="grid grid-cols-2 gap-3">
-              {characters.map((character) => (
+              {localCharacters.map((character) => (
                 <CharacterCard
                   key={character.id}
                   character={character}
@@ -508,6 +750,9 @@ export default function Training({ characters, onChanged }: Props) {
               <p className="text-sm font-black text-yellow-200">
                 Lv.{selected.level} / {selected.species} / 💎 {selected.crystals}
               </p>
+              <div className="mx-auto max-w-56">
+                <XpBar xp={selected.xp} />
+              </div>
             </motion.div>
 
             <div className="mt-4 px-4">
@@ -563,6 +808,15 @@ export default function Training({ characters, onChanged }: Props) {
       </AnimatePresence>
 
       <AnimatePresence>
+        {bulkCandidates && (
+          <BulkUpdateOverlay
+            candidates={bulkCandidates}
+            busy={bulkBusy}
+            onNameChange={updateBulkName}
+            onClose={() => !bulkBusy && setBulkCandidates(null)}
+            onSave={() => void saveBulkUpdate()}
+          />
+        )}
         {inQuiz && currentQuestion && (
           <QuizOverlay
             question={currentQuestion}

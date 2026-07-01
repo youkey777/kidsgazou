@@ -7,6 +7,7 @@ import {
   STAT_LABELS,
   type StatKey,
 } from './character-rules'
+import XpBar from './effects/XpBar'
 import { clampStat, starsForLevel } from './types'
 
 type Props = {
@@ -124,6 +125,7 @@ export default function StatsEditor({ character, onClose, onSaved }: Props) {
             <p className="mt-1 text-sm font-black text-yellow-500">
               Lv.{character.level} {stars} / 💎 {character.crystals}
             </p>
+            <XpBar xp={character.xp} compact />
           </div>
           <button
             onClick={onClose}

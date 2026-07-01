@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { listBattleCharacters, listBattleRecords } from './battle-db'
 import { buildRankingData, type RankingData } from './rank-data'
 import type { ImageRecord } from '../db'
+import XpBar from './effects/XpBar'
 
 function RankCard({
   character,
@@ -18,6 +19,7 @@ function RankCard({
         <p className="text-xs font-bold text-purple-700">
           {character.species} / Lv.{character.level}
         </p>
+        <XpBar xp={character.xp} compact />
       </div>
       <span className="rounded-full bg-yellow-300 px-3 py-1 text-sm font-black text-zinc-900">
         {label}

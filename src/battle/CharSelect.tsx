@@ -1,4 +1,5 @@
 import type { ImageRecord } from '../db'
+import XpBar from './effects/XpBar'
 import { starsForLevel } from './types'
 
 type Props = {
@@ -39,6 +40,7 @@ export default function CharSelect({ title, characters, selectedId, onSelect }: 
                 <p className="truncate text-[11px] font-bold text-purple-700">
                   Lv.{character.level} {'★'.repeat(starsForLevel(character.level))}
                 </p>
+                <XpBar xp={character.xp} compact />
               </button>
             )
           })}
