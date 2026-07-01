@@ -141,6 +141,10 @@ export default function OnlineBattle({ characters, onDone, onExit }: Props) {
     room?.status === 'result' && room.lastWinnerSide && room.lastDie && room.lastDamage
       ? `${room.id}-${room.round}-${room.lastWinnerSide}-${room.lastDie}-${room.lastDamage}`
       : null
+  const revealKey =
+    room?.status === 'reveal' && room.hostHand && room.guestHand
+      ? `${room.id}-${room.round}-${room.updatedAt}-${room.hostHand}-${room.guestHand}-${room.lastWinnerSide ?? 'draw'}`
+      : null
   const rollingKey =
     room?.status === 'rolling' && room.lastWinnerSide && room.lastDie && room.lastDamage
       ? `${room.id}-${room.round}-${room.lastWinnerSide}-${room.lastDie}-${room.lastDamage}`
@@ -197,10 +201,10 @@ export default function OnlineBattle({ characters, onDone, onExit }: Props) {
   }, [guest, host, room, side])
 
   useEffect(() => {
-    if (!room || side !== 'host' || room.status !== 'reveal') return
-    const key = `${room.id}-${room.round}-${room.updatedAt}-${room.hostHand}-${room.guestHand}-${room.lastWinnerSide ?? 'draw'}`
-    if (revealAdvanceKeyRef.current === key) return
-    revealAdvanceKeyRef.current = key
+    if (!revealKey || side !== 'host') return
+    if (revealAdvanceKeyRef.current === revealKey) return
+    revealAdvanceKeyRef.current = revealKey
+    const currentWinnerSide = roomRef.current?.lastWinnerSide ?? null
     const timer = window.setTimeout(async () => {
       try {
         const currentRoom = roomRef.current
@@ -232,15 +236,15 @@ export default function OnlineBattle({ characters, onDone, onExit }: Props) {
       } catch (e) {
         setError((e as Error).message)
       }
-    }, room.lastWinnerSide ? 1180 : 760)
+    }, currentWinnerSide ? 1180 : 760)
     return () => window.clearTimeout(timer)
-  }, [guest, host, room, side])
+  }, [guest, host, revealKey, side])
 
   useEffect(() => {
-    if (!room || side !== 'host' || room.status !== 'rolling' || !room.lastWinnerSide || !room.lastDie || !room.lastDamage) return
-    const key = `${room.id}-${room.round}-${room.lastWinnerSide}-${room.lastDie}-${room.lastDamage}`
-    if (rollingAdvanceKeyRef.current === key) return
-    rollingAdvanceKeyRef.current = key
+    if (!rollingKey || side !== 'host') return
+    if (rollingAdvanceKeyRef.current === rollingKey) return
+    rollingAdvanceKeyRef.current = rollingKey
+    const currentDie = roomRef.current?.lastDie ?? 1
     const timer = window.setTimeout(async () => {
       try {
         const currentRoom = roomRef.current
@@ -258,9 +262,9 @@ export default function OnlineBattle({ characters, onDone, onExit }: Props) {
       } catch (e) {
         setError((e as Error).message)
       }
-    }, room.lastDie >= 4 ? 2500 : 1650)
+    }, currentDie >= 4 ? 2500 : 1650)
     return () => window.clearTimeout(timer)
-  }, [guest, host, room, side])
+  }, [guest, host, rollingKey, side])
 
   useEffect(() => {
     if (!rollingKey || !room || !host || !guest || !room.lastWinnerSide || !room.lastDie) return
