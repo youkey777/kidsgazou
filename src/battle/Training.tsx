@@ -7,6 +7,7 @@ import {
 } from '../db'
 import {
   ATTRIBUTES,
+  attributeMark,
   randomAttribute,
   randomStat,
   STAT_CHART_LABELS,
@@ -14,6 +15,13 @@ import {
   type StatKey,
 } from './character-rules'
 import XpBar from './effects/XpBar'
+import {
+  playCrystal,
+  playRouletteStart,
+  playRouletteStop,
+  playRouletteTick,
+  playSelect,
+} from './sounds'
 import { shortBattleName } from './types'
 
 type Props = {
@@ -53,14 +61,17 @@ const sleep = (ms: number) => new Promise((resolve) => window.setTimeout(resolve
 
 function makeQuestion(): MathQuestion {
   const op: '+' | '-' = Math.random() > 0.45 ? '+' : '-'
-  const a = Math.floor(Math.random() * 10)
-  const b = Math.floor(Math.random() * 10)
+  const twoDigit = () => Math.floor(Math.random() * 90) + 10
+  const oneDigit = () => Math.floor(Math.random() * 9) + 1
+  const useTwoByTwo = Math.random() < 0.45
+  const a = twoDigit()
+  const b = useTwoByTwo ? twoDigit() : oneDigit()
   const left = op === '-' ? Math.max(a, b) : a
   const right = op === '-' ? Math.min(a, b) : b
   const answer = op === '+' ? left + right : left - right
   const options = new Set<number>([answer])
   while (options.size < 3) {
-    options.add(Math.max(0, answer + Math.floor(Math.random() * 7) - 3))
+    options.add(Math.max(0, answer + Math.floor(Math.random() * 17) - 8))
   }
   return {
     left,
@@ -205,7 +216,7 @@ function CharacterCard({
       <div className="relative mt-2">
         <p className="truncate text-sm font-black text-zinc-950">{shortBattleName(character.name)}</p>
         <p className="text-xs font-black text-purple-700">
-          Lv.{character.level} / 属性(ぞくせい): {character.species}
+          Lv.{character.level} / 属性(ぞくせい): {attributeMark(character.species)} {character.species}
         </p>
         <p className="text-xs font-black text-cyan-700">💎 {character.crystals}こ</p>
         <XpBar xp={character.xp} compact />
@@ -342,18 +353,43 @@ function SlotOverlay({
         initial={{ y: 48, scale: 0.82 }}
         animate={{ y: 0, scale: 1 }}
       >
-        <p className="rounded-full bg-black/55 px-4 py-2 text-lg font-black text-yellow-200 shadow-xl">
+        <motion.p
+          className="rounded-full bg-black/65 px-4 py-2 text-lg font-black text-yellow-200 shadow-xl ring-1 ring-yellow-200/50"
+          animate={{ boxShadow: ['0 0 12px rgba(250,204,21,.35)', '0 0 34px rgba(250,204,21,.9)', '0 0 12px rgba(250,204,21,.35)'] }}
+          transition={{ duration: 1.1, repeat: Infinity }}
+        >
           {label}
-        </p>
-        <div className="relative mx-auto mt-8 h-40 max-w-[260px] overflow-hidden rounded-[2rem] border-4 border-yellow-200 bg-white/15 shadow-[0_0_40px_rgba(250,204,21,.75)] backdrop-blur">
+        </motion.p>
+        <div className="relative mx-auto mt-8 h-52 max-w-[300px] overflow-hidden rounded-[2.4rem] border-4 border-yellow-200 bg-gradient-to-br from-purple-950/85 via-fuchsia-800/55 to-cyan-800/45 shadow-[0_0_55px_rgba(250,204,21,.8)] backdrop-blur">
           <motion.div
-            className="absolute inset-x-0 top-1/2 -translate-y-1/2 text-center text-7xl font-black text-white drop-shadow-[0_0_20px_rgba(255,255,255,.9)]"
-            animate={rolling ? { y: [-84, 84, -84] } : { y: 0, scale: [1.2, 1, 1.08, 1] }}
+            className="absolute -inset-14 rounded-full bg-[conic-gradient(from_0deg,#fde047,#22d3ee,#f0abfc,#fb7185,#fde047)] opacity-55 blur-sm"
+            animate={{ rotate: rolling ? 360 : 720, scale: rolling ? [1, 1.08, 1] : [1.16, 1, 1.08] }}
+            transition={{ duration: rolling ? 1.1 : 0.75, repeat: rolling ? Infinity : 0, ease: 'linear' }}
+          />
+          <motion.div
+            className="absolute inset-5 rounded-[2rem] border border-white/35 bg-black/45 shadow-inner"
+            animate={{ scale: rolling ? [0.96, 1, 0.96] : 1 }}
+            transition={{ duration: 0.42, repeat: rolling ? Infinity : 0 }}
+          />
+          {Array.from({ length: 12 }).map((_, index) => (
+            <motion.span
+              key={index}
+              className="absolute h-2 w-2 rounded-full bg-yellow-200 shadow-[0_0_12px_rgba(250,204,21,.9)]"
+              style={{ left: `${12 + ((index * 31) % 76)}%`, top: `${10 + ((index * 47) % 78)}%` }}
+              animate={{ y: rolling ? [0, -18, 0] : [0, -32], opacity: rolling ? [0.45, 1, 0.45] : [1, 0] }}
+              transition={{ duration: 0.8 + index * 0.04, repeat: rolling ? Infinity : 0, delay: index * 0.03 }}
+            />
+          ))}
+          <motion.div
+            className={`absolute inset-x-0 top-1/2 -translate-y-1/2 text-center font-black text-white drop-shadow-[0_0_24px_rgba(255,255,255,.95)] ${
+              typeof value === 'string' ? 'text-4xl' : 'text-7xl'
+            }`}
+            animate={rolling ? { y: [-98, 98, -98], filter: ['blur(0px)', 'blur(2px)', 'blur(0px)'] } : { y: 0, scale: [1.3, 1, 1.08, 1], rotateX: [0, 18, 0] }}
             transition={rolling ? { duration: 0.28, repeat: Infinity, ease: 'linear' } : { duration: 0.65 }}
           >
-            {value ?? '？'}
+            {typeof value === 'string' && value !== '？' ? `${attributeMark(value)} ${value}` : (value ?? '？')}
           </motion.div>
-          <div className="absolute inset-x-0 top-1/2 h-1 -translate-y-1/2 bg-yellow-200/80 shadow-[0_0_18px_rgba(250,204,21,.9)]" />
+          <div className="absolute inset-x-4 top-1/2 h-1 -translate-y-1/2 rounded-full bg-yellow-200/90 shadow-[0_0_18px_rgba(250,204,21,.9)]" />
         </div>
         <motion.div
           className="mx-auto mt-6 h-3 w-48 rounded-full bg-gradient-to-r from-cyan-300 via-yellow-200 to-pink-300"
@@ -414,7 +450,7 @@ function BulkUpdateOverlay({
               </div>
             </div>
             <div className="mt-2 grid grid-cols-3 gap-1 text-center text-xs font-black">
-              <span className="rounded-full bg-yellow-300 px-2 py-1 text-zinc-900">属性(ぞくせい) {candidate.species}</span>
+              <span className="rounded-full bg-yellow-300 px-2 py-1 text-zinc-900">属性(ぞくせい) {attributeMark(candidate.species)} {candidate.species}</span>
               <span className="rounded-full bg-white/15 px-2 py-1">攻(こう) {candidate.atk}</span>
               <span className="rounded-full bg-white/15 px-2 py-1">防(ぼう) {candidate.def}</span>
               <span className="rounded-full bg-white/15 px-2 py-1">速(そく) {candidate.spd}</span>
@@ -484,6 +520,7 @@ export default function Training({ characters, onChanged }: Props) {
   }
 
   const openCharacter = (character: ImageRecord) => {
+    playSelect()
     setSelectedId(character.id)
     setQuiz([])
     setIndex(0)
@@ -497,6 +534,7 @@ export default function Training({ characters, onChanged }: Props) {
 
   const startQuiz = () => {
     if (!selected || busy) return
+    playSelect()
     setQuiz(makeQuiz())
     setIndex(0)
     setEarned(0)
@@ -514,6 +552,7 @@ export default function Training({ characters, onChanged }: Props) {
     let saveError: string | null = null
     setAnswerState(correct ? 'correct' : 'wrong')
     if (correct) {
+      playCrystal()
       setEarned(nextEarned)
       const nextCrystals = quizStartCrystals + nextEarned
       setMessage('正解(せいかい)！クリスタルを1こゲット！')
@@ -553,14 +592,17 @@ export default function Training({ characters, onChanged }: Props) {
   const runStatRoulette = async (stat: StatKey) => {
     if (!selected || selected.crystals <= 0 || busy) return
     setBusy(true)
+    playRouletteStart()
     const nextCrystals = Math.max(0, selected.crystals - 1)
     setConsumeFlash((value) => value + 1)
     setSlot({ label: `${STAT_LABELS[stat]}を変更(へんこう)中(ちゅう)`, value: null, rolling: true })
     for (let i = 0; i < 20; i++) {
       setSlot({ label: `${STAT_LABELS[stat]}を変更(へんこう)中(ちゅう)`, value: randomStat(), rolling: true })
+      playRouletteTick()
       await sleep(38 + i * 7)
     }
     const nextValue = randomStat()
+    playRouletteStop()
     setSlot({ label: `${STAT_LABELS[stat]}が決定(けってい)！`, value: nextValue, rolling: false })
     try {
       await updateImageProfile(selected.id, {
@@ -584,14 +626,17 @@ export default function Training({ characters, onChanged }: Props) {
   const runAttributeRoulette = async () => {
     if (!selected || selected.crystals <= 0 || busy) return
     setBusy(true)
+    playRouletteStart()
     const nextCrystals = Math.max(0, selected.crystals - 1)
     setConsumeFlash((value) => value + 1)
     setSlot({ label: '属性(ぞくせい)を変更(へんこう)中(ちゅう)', value: null, rolling: true })
     for (let i = 0; i < 16; i++) {
       setSlot({ label: '属性(ぞくせい)を変更(へんこう)中(ちゅう)', value: randomAttribute(), rolling: true })
+      playRouletteTick()
       await sleep(52 + i * 8)
     }
     const nextAttribute = randomAttribute()
+    playRouletteStop()
     setSlot({ label: '属性(ぞくせい)が決定(けってい)！', value: nextAttribute, rolling: false })
     try {
       await updateImageProfile(selected.id, {
@@ -775,7 +820,7 @@ export default function Training({ characters, onChanged }: Props) {
                   Lv.{selected.level}
                 </span>
                 <span className="rounded-full bg-yellow-300 px-3 py-1 text-sm font-black text-purple-950 shadow-[0_0_20px_rgba(250,204,21,.65)]">
-                  属性(ぞくせい): {selected.species}
+                  属性(ぞくせい): {attributeMark(selected.species)} {selected.species}
                 </span>
                 <span className="rounded-full bg-cyan-200 px-3 py-1 text-sm font-black text-purple-950 shadow-[0_0_20px_rgba(34,211,238,.55)]">
                   所持(しょじ) 💎 {selected.crystals}こ
@@ -834,7 +879,7 @@ export default function Training({ characters, onChanged }: Props) {
                 ))}
                 <StatRow
                   label="属性(ぞくせい)"
-                  value={selected.species}
+                  value={`${attributeMark(selected.species)} ${selected.species}`}
                   disabled={busy || selected.crystals <= 0}
                   onChange={() => void runAttributeRoulette()}
                 />

@@ -4,7 +4,7 @@ import { saveBattleResult } from './battle-db'
 import { calculateTeamDamage } from './character-rules'
 import BattleStage from './effects/BattleStage'
 import { fireBattleConfetti } from './effects/Confetti'
-import { playDamage, playPunch, playVictory } from './sounds'
+import { playDamage, playPunch, playVictory, playWhoosh } from './sounds'
 import { type DamageEvent, makeEventId, shortBattleName } from './types'
 
 type Props = {
@@ -54,6 +54,7 @@ export default function TeamBattle({ characters, onDone }: Props) {
         await sleep(800)
         const attacker = leftTurn ? currentLeft : currentRight
         const hit = calculateTeamDamage(attacker, leftTurn ? currentRight : currentLeft)
+        playWhoosh()
         playPunch()
         playDamage()
         setMessage(`${shortBattleName(attacker.name)}の攻撃！ ${hit}ダメージ`)

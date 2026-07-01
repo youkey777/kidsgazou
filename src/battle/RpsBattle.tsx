@@ -6,7 +6,7 @@ import { calculateRpsDamage } from './character-rules'
 import type { AttackEffectData } from './effects/AttackFlyEffect'
 import BattleStage from './effects/BattleStage'
 import { fireBattleConfetti } from './effects/Confetti'
-import { playDamage, playPunch, playVictory } from './sounds'
+import { playDamage, playPunch, playSelect, playVictory, playWhoosh } from './sounds'
 import {
   HAND_EMOJI,
   HAND_LABELS,
@@ -157,6 +157,7 @@ export default function RpsBattle({ left, right, onDone }: Props) {
   const choose = async (hand: RpsHand) => {
     if (finished || busyRef.current) return
     busyRef.current = true
+    playSelect()
     setCycling(false)
     setAttackEffect(null)
     setPlayerHand(hand)
@@ -206,6 +207,7 @@ export default function RpsBattle({ left, right, onDone }: Props) {
       imageUrl: HAND_IMAGES[winningHand],
       label: `${HAND_LABELS[winningHand]}アタック`,
     })
+    playWhoosh()
     playPunch()
     await sleep(560)
 

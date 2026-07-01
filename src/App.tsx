@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import BattleHub from './battle/BattleHub'
+import { attributeMark } from './battle/character-rules'
 import XpBar from './battle/effects/XpBar'
 import StatsEditor from './battle/StatsEditor'
 import {
@@ -30,7 +31,7 @@ type Theme = {
   countChip: string
 }
 
-const APP_VERSION = 'v2026.07.01-db-save-detect'
+const APP_VERSION = 'v2026.07.01-audio-3d-affinity'
 
 const THEMES: Record<ChildKey, Theme> = {
   rui: {
@@ -451,7 +452,7 @@ export default function App() {
                     />
                     <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/70 to-transparent p-2">
                       <p className="truncate text-xs font-black text-white">
-                        Lv.{image.level} / {image.species}
+                        Lv.{image.level} / {attributeMark(image.species)} {image.species}
                       </p>
                       <XpBar xp={image.xp} compact />
                     </div>

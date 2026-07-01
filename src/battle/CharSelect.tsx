@@ -1,4 +1,5 @@
 import type { ImageRecord } from '../db'
+import { attributeMark } from './character-rules'
 import XpBar from './effects/XpBar'
 import { starsForLevel } from './types'
 
@@ -39,6 +40,9 @@ export default function CharSelect({ title, characters, selectedId, onSelect }: 
                 </p>
                 <p className="truncate text-[11px] font-bold text-purple-700">
                   Lv.{character.level} {'★'.repeat(starsForLevel(character.level))}
+                </p>
+                <p className="truncate text-[11px] font-black text-yellow-700">
+                  {attributeMark(character.species)} {character.species}
                 </p>
                 <XpBar xp={character.xp} compact />
               </button>

@@ -3,7 +3,7 @@ export { clampStat } from './character-rules'
 
 export type BattleMode = 'dice' | 'rps' | 'turn' | 'tap' | 'team'
 export type PlayableBattleMode = 'dice' | 'rps' | 'team'
-export type BattleTab = 'battle' | 'training' | 'ranking'
+export type BattleTab = 'battle' | 'training' | 'attribute' | 'ranking'
 export type RpsHand = 'rock' | 'scissors' | 'paper'
 export type TurnAction = 'attack' | 'ultimate' | 'guard' | 'run'
 

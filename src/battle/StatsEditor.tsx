@@ -2,6 +2,7 @@ import { useMemo, useState } from 'react'
 import { updateImageStats, type ImageRecord } from '../db'
 import {
   ATTRIBUTES,
+  attributeMark,
   randomAttribute,
   randomStat,
   STAT_LABELS,
@@ -159,7 +160,7 @@ export default function StatsEditor({ character, onClose, onSaved }: Props) {
           ))}
 
           <label className="block">
-            <span className="text-sm font-black text-zinc-700">属性</span>
+            <span className="text-sm font-black text-zinc-700">属性(ぞくせい)</span>
             <select
               value={attribute}
               onChange={(event) => setAttribute(event.target.value)}
@@ -167,7 +168,7 @@ export default function StatsEditor({ character, onClose, onSaved }: Props) {
             >
               {ATTRIBUTES.map((item) => (
                 <option key={item} value={item}>
-                  {item}
+                  {attributeMark(item)} {item}
                 </option>
               ))}
             </select>

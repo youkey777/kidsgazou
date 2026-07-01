@@ -6,15 +6,55 @@ export type DiceThrowEffectData = {
   face: number | null
 }
 
-function DiceFace({ face }: { face: number | null }) {
+function Pips({ face }: { face: number }) {
+  const layouts: Record<number, string[]> = {
+    1: ['col-start-2 row-start-2'],
+    2: ['col-start-1 row-start-1', 'col-start-3 row-start-3'],
+    3: ['col-start-1 row-start-1', 'col-start-2 row-start-2', 'col-start-3 row-start-3'],
+    4: ['col-start-1 row-start-1', 'col-start-3 row-start-1', 'col-start-1 row-start-3', 'col-start-3 row-start-3'],
+    5: ['col-start-1 row-start-1', 'col-start-3 row-start-1', 'col-start-2 row-start-2', 'col-start-1 row-start-3', 'col-start-3 row-start-3'],
+    6: ['col-start-1 row-start-1', 'col-start-3 row-start-1', 'col-start-1 row-start-2', 'col-start-3 row-start-2', 'col-start-1 row-start-3', 'col-start-3 row-start-3'],
+  }
   return (
-    <div className="relative h-24 w-24 rounded-3xl shadow-[0_0_30px_rgba(255,255,255,.9)] ring-4 ring-yellow-200 sm:h-28 sm:w-28">
-      <img src="/battle/dice-piece.png" alt="" className="h-full w-full rounded-3xl object-cover" />
-      <div className="absolute inset-0 grid place-items-center rounded-3xl bg-black/12">
-        <span className="rounded-2xl bg-white/80 px-3 py-1 text-4xl font-black text-zinc-950 shadow">
-          {face ?? '？'}
-        </span>
-      </div>
+    <div className="grid h-full w-full grid-cols-3 grid-rows-3 gap-1 p-4">
+      {layouts[face].map((position, index) => (
+        <span
+          key={`${face}-${index}`}
+          className={`${position} rounded-full bg-zinc-950 shadow-[inset_0_2px_3px_rgba(255,255,255,.25)]`}
+        />
+      ))}
+    </div>
+  )
+}
+
+function CubeFace({
+  face,
+  transform,
+}: {
+  face: number
+  transform: string
+}) {
+  return (
+    <div
+      className="absolute inset-0 rounded-[1.4rem] border-2 border-yellow-100 bg-gradient-to-br from-white via-yellow-50 to-amber-200 shadow-inner"
+      style={{ transform }}
+    >
+      <Pips face={face} />
+    </div>
+  )
+}
+
+function DiceCube({ face }: { face: number | null }) {
+  const shown = face ?? 1
+  return (
+    <div className="relative h-24 w-24 sm:h-28 sm:w-28" style={{ transformStyle: 'preserve-3d' }}>
+      <CubeFace face={shown} transform="translateZ(48px)" />
+      <CubeFace face={6} transform="rotateY(180deg) translateZ(48px)" />
+      <CubeFace face={3} transform="rotateY(90deg) translateZ(48px)" />
+      <CubeFace face={4} transform="rotateY(-90deg) translateZ(48px)" />
+      <CubeFace face={5} transform="rotateX(90deg) translateZ(48px)" />
+      <CubeFace face={2} transform="rotateX(-90deg) translateZ(48px)" />
+      <div className="absolute -inset-2 rounded-[1.8rem] bg-yellow-200/20 blur-xl" />
     </div>
   )
 }
@@ -25,7 +65,7 @@ export default function DiceThrowEffect({ effect }: { effect: DiceThrowEffectDat
   const settleX = effect.side === 'left' ? '-17vw' : '17vw'
 
   return (
-    <motion.div className="pointer-events-none absolute inset-0 z-30 grid place-items-center">
+    <motion.div className="pointer-events-none absolute inset-0 z-30 grid place-items-center" style={{ perspective: 720 }}>
       <motion.div
         key={effect.id}
         initial={{ x: startX, y: 180, rotateX: 0, rotateY: 0, rotateZ: 0, scale: 0.7 }}
@@ -35,17 +75,23 @@ export default function DiceThrowEffect({ effect }: { effect: DiceThrowEffectDat
           rotateX: [0, 280, 540, 720, 900],
           rotateY: [0, direction * 240, direction * 520, direction * 780, direction * 960],
           rotateZ: [0, direction * -80, direction * 180, direction * 420, direction * 540],
-          scale: [0.72, 1.1, 0.9, 1.05, 1],
+          scale: [0.72, 1.12, 0.9, 1.08, 1],
         }}
         transition={{ duration: 1.08, ease: 'easeInOut' }}
         style={{ transformStyle: 'preserve-3d' }}
       >
         <motion.div
-          animate={{ y: [0, -8, 0, -4, 0] }}
-          transition={{ duration: 0.42, repeat: Infinity }}
+          animate={{ y: [0, -10, 0, -5, 0] }}
+          transition={{ duration: 0.5, repeat: Infinity }}
+          style={{ transformStyle: 'preserve-3d' }}
         >
-          <DiceFace face={effect.face} />
+          <DiceCube face={effect.face} />
         </motion.div>
+        <motion.div
+          className="mx-auto mt-8 h-4 w-24 rounded-full bg-black/45 blur-md"
+          animate={{ scaleX: [0.5, 1.25, 0.7, 1.05, 0.9], opacity: [0.25, 0.45, 0.35, 0.5, 0.4] }}
+          transition={{ duration: 1.08, ease: 'easeInOut' }}
+        />
       </motion.div>
     </motion.div>
   )

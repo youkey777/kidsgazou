@@ -1,12 +1,14 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import type { ImageRecord } from '../db'
 import { listBattleCharacters } from './battle-db'
+import AttributeGuide from './AttributeGuide'
 import CharSelect from './CharSelect'
 import DiceBattle from './DiceBattle'
 import Ranking from './Ranking'
 import RpsBattle from './RpsBattle'
 import TeamBattle from './TeamBattle'
 import Training from './Training'
+import { isBgmEnabled, playBgm, playSelect, toggleBgm } from './sounds'
 import { MODE_LABELS, type BattleTab, type PlayableBattleMode } from './types'
 
 const MODES: PlayableBattleMode[] = ['dice', 'rps', 'team']
@@ -20,6 +22,7 @@ export default function BattleHub() {
   const [startedKey, setStartedKey] = useState<string | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const [bgmOn, setBgmOn] = useState(isBgmEnabled())
 
   const refresh = useCallback(async () => {
     try {
@@ -49,6 +52,9 @@ export default function BattleHub() {
   )
 
   const start = () => {
+    playSelect()
+    playBgm()
+    setBgmOn(true)
     if (mode === 'team') {
       setStartedKey(`team-${Date.now()}`)
       return
@@ -71,22 +77,39 @@ export default function BattleHub() {
     <main className="px-3 pb-10 sm:px-4">
       <div className="mx-auto max-w-md">
         <div className="sticky top-0 z-20 -mx-3 bg-gradient-to-br from-violet-800 via-fuchsia-700 to-indigo-900 px-3 pb-3 pt-2 sm:-mx-4 sm:px-4">
-          <div className="grid grid-cols-3 gap-2 rounded-2xl bg-white/15 p-1.5">
-            {(['battle', 'training', 'ranking'] as BattleTab[]).map((item) => (
+          <div className="grid grid-cols-4 gap-1.5 rounded-2xl bg-white/15 p-1.5">
+            {(['battle', 'training', 'attribute', 'ranking'] as BattleTab[]).map((item) => (
               <button
                 key={item}
                 onClick={() => {
+                  playSelect()
                   setTab(item)
                   setStartedKey(null)
                 }}
-                className={`min-h-12 rounded-xl text-base font-black ${
+                className={`min-h-12 rounded-xl text-xs font-black sm:text-sm ${
                   tab === item ? 'bg-white text-purple-800' : 'text-white'
                 }`}
               >
-                {item === 'battle' ? 'バトル' : item === 'training' ? '育てる' : 'ランキング'}
+                {item === 'battle'
+                  ? 'バトル'
+                  : item === 'training'
+                    ? '育てる'
+                    : item === 'attribute'
+                      ? '属性'
+                      : 'ランキング'}
               </button>
             ))}
           </div>
+          <button
+            type="button"
+            onClick={() => {
+              playSelect()
+              setBgmOn(toggleBgm())
+            }}
+            className="mt-2 min-h-10 w-full rounded-2xl bg-black/30 px-3 text-sm font-black text-yellow-100 ring-1 ring-white/20"
+          >
+            音楽(おんがく): {bgmOn ? 'ON' : 'OFF'} / ライオンのスイッチ
+          </button>
         </div>
 
         {error && (
@@ -98,6 +121,10 @@ export default function BattleHub() {
         {tab === 'ranking' ? (
           <div className="mt-4">
             <Ranking />
+          </div>
+        ) : tab === 'attribute' ? (
+          <div className="mt-4">
+            <AttributeGuide />
           </div>
         ) : tab === 'training' ? (
           <div className="mt-4">
@@ -113,7 +140,10 @@ export default function BattleHub() {
                     {MODES.map((item) => (
                       <button
                         key={item}
-                        onClick={() => setMode(item)}
+                        onClick={() => {
+                          playSelect()
+                          setMode(item)
+                        }}
                         className={`min-h-14 rounded-2xl px-2 text-sm font-black shadow ${
                           mode === item ? 'bg-yellow-300 text-zinc-900' : 'bg-purple-600 text-white'
                         }`}
@@ -134,13 +164,19 @@ export default function BattleHub() {
                       title="1Pキャラ"
                       characters={characters}
                       selectedId={leftId}
-                      onSelect={(character) => setLeftId(character.id)}
+                      onSelect={(character) => {
+                        playSelect()
+                        setLeftId(character.id)
+                      }}
                     />
                     <CharSelect
                       title="CPUキャラ"
                       characters={characters.filter((character) => character.id !== leftId)}
                       selectedId={rightId}
-                      onSelect={(character) => setRightId(character.id)}
+                      onSelect={(character) => {
+                        playSelect()
+                        setRightId(character.id)
+                      }}
                     />
                   </>
                 ) : (

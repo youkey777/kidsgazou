@@ -7,7 +7,7 @@ import type { AttackEffectData } from './effects/AttackFlyEffect'
 import BattleStage from './effects/BattleStage'
 import { fireBattleConfetti } from './effects/Confetti'
 import type { DiceThrowEffectData } from './effects/DiceThrowEffect'
-import { playDamage, playPunch, playUltimate, playVictory } from './sounds'
+import { playDamage, playDiceLand, playDiceRoll, playPunch, playUltimate, playVictory, playWhoosh } from './sounds'
 import { type BattleResult, type DamageEvent, makeEventId, shortBattleName } from './types'
 
 type Props = {
@@ -124,6 +124,7 @@ export default function DiceBattle({ left, right, onDone }: Props) {
 
     setRollingSide(side)
     setMessage(`${attackerName} がサイコロをふるよ！`)
+    playDiceRoll()
     for (let i = 0; i < 10; i++) {
       const preview = rollDie()
       if (side === 'left') setLeftDie(preview)
@@ -136,8 +137,9 @@ export default function DiceBattle({ left, right, onDone }: Props) {
     if (side === 'left') setLeftDie(die)
     else setRightDie(die)
     setDiceThrowEffect({ id: throwId, side, face: die })
+    playDiceLand()
     setRollingSide(null)
-    setMessage(`${attackerName} は ${die} を出した！`)
+    setMessage(`${attackerName} は ${die} を出した！ 出目(でめ)が大(おお)きいほど強(つよ)い！`)
     await sleep(420)
 
     const attackName = die === 6 ? attacker.ultimateName : DICE_ATTACKS[die - 1]
@@ -150,11 +152,11 @@ export default function DiceBattle({ left, right, onDone }: Props) {
       attribute: attacker.species,
       variant: die,
       symbol: String(die),
-      imageUrl: '/battle/dice-piece.png',
       label: `${attacker.species}・${attackName}`,
     })
     setDiceThrowEffect(null)
     setMessage(`${attackName}！ サイコロが飛（と）んでいく！`)
+    playWhoosh()
     if (die === 6) playUltimate()
     else playPunch()
     await sleep(640)

@@ -128,11 +128,11 @@ alter table images add column if not exists xp int default 0;
 
 update images
 set
-  atk = coalesce(atk, floor(random() * 99 + 1)::int),
-  def = coalesce(def, floor(random() * 99 + 1)::int),
-  spd = coalesce(spd, floor(random() * 99 + 1)::int),
-  luck = coalesce(luck, floor(random() * 99 + 1)::int),
-  tech = coalesce(tech, floor(random() * 99 + 1)::int),
+  atk = coalesce(atk, floor(random() * 50 + 1)::int),
+  def = coalesce(def, floor(random() * 50 + 1)::int),
+  spd = coalesce(spd, floor(random() * 50 + 1)::int),
+  luck = coalesce(luck, floor(random() * 50 + 1)::int),
+  tech = coalesce(tech, floor(random() * 50 + 1)::int),
   xp = coalesce(xp, 0),
   species = coalesce(
     species,
@@ -203,17 +203,17 @@ end $$;
 
 update images
 set
-  atk = floor(random() * 99 + 1)::int,
-  def = floor(random() * 99 + 1)::int,
-  spd = floor(random() * 99 + 1)::int,
-  luck = floor(random() * 99 + 1)::int,
-  tech = floor(random() * 99 + 1)::int,
+  atk = floor(random() * 50 + 1)::int,
+  def = floor(random() * 50 + 1)::int,
+  spd = floor(random() * 50 + 1)::int,
+  luck = floor(random() * 50 + 1)::int,
+  tech = floor(random() * 50 + 1)::int,
   species = (array[
     'ほのお', 'みず', 'かぜ', 'つち', 'ひかり',
     'やみ', 'でんき', 'こおり', 'くさ', 'はがね',
     'まほう', 'ドラゴン', 'ロボ', 'スター', 'ふしぎ'
   ])[floor(random() * 15 + 1)::int],
-  crystals = greatest(coalesce(crystals, 0), 3),
+  crystals = coalesce(crystals, 0),
   xp = coalesce(xp, 0);
 
 update images
@@ -236,4 +236,13 @@ where id in (
   'mr0pa92q-axyh3w0',
   'mr0pa7o3-pkaaxx0'
 );
+```
+
+## クリスタル補正SQL
+
+前回の修復SQLで全キャラにクリスタルが3個ついてしまった場合だけ、Supabase SQL Editor で以下を実行してください。
+
+```sql
+update images
+set crystals = 0;
 ```

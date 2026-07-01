@@ -1,4 +1,5 @@
 import { AnimatePresence, motion } from 'framer-motion'
+import { attributeMark } from '../character-rules'
 import type { BattleCharacter, DamageEvent } from '../types'
 import { hpPercent, starsForLevel } from '../types'
 import AttackFlyEffect, { type AttackEffectData } from './AttackFlyEffect'
@@ -72,7 +73,7 @@ function FighterCard({
           <span className="shrink-0 text-xs font-black text-yellow-500">{stars}</span>
         </div>
         <p className="truncate text-xs font-bold text-purple-700">
-          Lv.{character.level} / {character.species}
+          Lv.{character.level} / {attributeMark(character.species)} {character.species}
         </p>
         <XpBar xp={character.xp} compact />
         <div className="mt-2 h-3 overflow-hidden rounded-full bg-zinc-200">
