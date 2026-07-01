@@ -281,6 +281,29 @@ export function playAttributeUltimate(attribute: string, rank: 4 | 5 | 6) {
   }
 }
 
+export function playDynamiteSet() {
+  tone(120, 0.08, 'square', 0.065)
+  setTimeout(() => tone(210, 0.07, 'triangle', 0.05), 80)
+  setTimeout(() => noiseBurst(0.12, 0.035, 900), 145)
+}
+
+export function playDynamiteFuse() {
+  ;[1320, 1480, 1180, 1620, 1240].forEach((frequency, index) => {
+    setTimeout(() => {
+      tone(frequency, 0.035, 'square', 0.025)
+      noiseBurst(0.04, 0.012, 2600)
+    }, index * 95)
+  })
+}
+
+export function playDynamiteExplosion() {
+  noiseBurst(0.34, 0.1, 620)
+  tone(58, 0.42, 'sawtooth', 0.12)
+  setTimeout(() => tone(96, 0.28, 'square', 0.08), 95)
+  setTimeout(() => noiseBurst(0.22, 0.065, 1100), 170)
+  setTimeout(() => sweep(220, 72, 0.36, 'sawtooth', 0.075), 250)
+}
+
 export function playRouletteStart() {
   tone(300, 0.08, 'triangle', 0.05)
   setTimeout(() => tone(620, 0.1, 'triangle', 0.045), 80)

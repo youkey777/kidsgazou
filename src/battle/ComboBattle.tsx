@@ -4,7 +4,7 @@ import type { ImageRecord } from '../db'
 import { saveBattleResult } from './battle-db'
 import { calculateDiceDamage, effectiveUltimateName } from './character-rules'
 import type { AttackEffectData } from './effects/AttackFlyEffect'
-import BattleStage from './effects/BattleStage'
+import BattleStage, { type DynamiteExplosion, type DynamiteMarker } from './effects/BattleStage'
 import CinematicAttackOverlay, { type CinematicAttack } from './effects/CinematicAttackOverlay'
 import { fireBattleConfetti } from './effects/Confetti'
 import type { DiceThrowEffectData } from './effects/DiceThrowEffect'
@@ -15,6 +15,9 @@ import {
   playAttributeWhoosh,
   playDiceLand,
   playDiceRoll,
+  playDynamiteExplosion,
+  playDynamiteFuse,
+  playDynamiteSet,
   playSelect,
   playUltimate,
   playVictory,
@@ -37,6 +40,9 @@ type Props = {
 
 type Side = 'left' | 'right'
 type RoundResult = 'win' | 'lose' | 'draw' | null
+type PlantedDynamite = DynamiteMarker & {
+  explodeRound: number
+}
 
 const HANDS: RpsHand[] = ['rock', 'scissors', 'paper']
 const HAND_IMAGES: Record<RpsHand, string> = {
@@ -63,6 +69,26 @@ function randomHand() {
 
 function isBlueberryHashinini(character: ImageRecord) {
   return character.id === 'mr0pa7o3-pkaaxx0' || character.name.includes('ブルーベリーハシニーニ')
+}
+
+function isCaptainFrog(character: ImageRecord) {
+  return (
+    character.id === 'mr0pa92q-axyh3w0' ||
+    character.name.includes('キャプテンフロッグ') ||
+    character.name.includes('キャプテンフロック')
+  )
+}
+
+function rollDynamiteCount() {
+  const roll = Math.random() * 110
+  if (roll < 50) return 1
+  if (roll < 80) return 2
+  if (roll < 100) return 3
+  return 4
+}
+
+function rollDynamiteDamage() {
+  return 50 + Math.floor(Math.random() * 11)
 }
 
 function judge(leftHand: RpsHand, rightHand: RpsHand) {
@@ -159,9 +185,18 @@ export default function ComboBattle({ left, right, onDone, onExit }: Props) {
   const [diceThrowEffect, setDiceThrowEffect] = useState<DiceThrowEffectData | null>(null)
   const [cinematic, setCinematic] = useState<CinematicAttack | null>(null)
   const [specialTitle, setSpecialTitle] = useState<string | null>(null)
+  const [plantedDynamites, setPlantedDynamites] = useState<PlantedDynamite[]>([])
+  const dynamitesRef = useRef<PlantedDynamite[]>([])
+  const [dynamiteExplosion, setDynamiteExplosion] = useState<DynamiteExplosion | null>(null)
   const [saveMessage, setSaveMessage] = useState<string | null>(null)
   const [victory, setVictory] = useState<{ winner: ImageRecord; outcome: 'win' | 'lose' } | null>(null)
   const cpuPreviewRef = useRef(cpuPreview)
+
+  const updateDynamites = (next: PlantedDynamite[] | ((current: PlantedDynamite[]) => PlantedDynamite[])) => {
+    const resolved = typeof next === 'function' ? next(dynamitesRef.current) : next
+    dynamitesRef.current = resolved
+    setPlantedDynamites(resolved)
+  }
 
   useEffect(() => {
     if (!cycling || doneRef.current) return
@@ -200,6 +235,7 @@ export default function ComboBattle({ left, right, onDone, onExit }: Props) {
     setConfusedSide(undefined)
     setHitSide(undefined)
     setSpecialTitle(null)
+    setDynamiteExplosion(null)
     setRound(nextRound)
     setMessage('次(つぎ)の手(て)を選(えら)んでね')
     const nextPreview = randomHand()
@@ -207,6 +243,72 @@ export default function ComboBattle({ left, right, onDone, onExit }: Props) {
     setCpuPreview(nextPreview)
     setCycling(true)
     busyRef.current = false
+  }
+
+  const applyDamageToSide = (
+    target: Side,
+    amount: number,
+    scale: 'normal' | 'counter' | 'ultimate' = 'normal'
+  ) => {
+    let nextLeftHp = leftHpRef.current
+    let nextRightHp = rightHpRef.current
+    if (target === 'left') {
+      nextLeftHp = Math.max(0, nextLeftHp - amount)
+      leftHpRef.current = nextLeftHp
+      setLeftHp(nextLeftHp)
+    } else {
+      nextRightHp = Math.max(0, nextRightHp - amount)
+      rightHpRef.current = nextRightHp
+      setRightHp(nextRightHp)
+    }
+    setHitSide(target)
+    window.setTimeout(() => setHitSide(undefined), scale === 'ultimate' ? 900 : 620)
+    setEvents((prev) => [...prev, { id: makeEventId(), target, amount, scale }])
+    return { nextLeftHp, nextRightHp }
+  }
+
+  const placeCaptainDynamites = async (winnerSide: Side, winner: ImageRecord, currentRound: number) => {
+    if (!isCaptainFrog(winner) || Math.random() >= 0.5) return
+    const target: Side = winnerSide === 'left' ? 'right' : 'left'
+    const count = rollDynamiteCount()
+    const newDynamites = Array.from({ length: count }, (_, index) => ({
+      id: makeEventId(),
+      target,
+      explodeRound: currentRound + (index + 1) * 2,
+    }))
+
+    setSpecialTitle('ダイナマイト')
+    setMessage(`${shortBattleName(winner.name)} のダイナマイト！`)
+    playDynamiteSet()
+    await sleep(720)
+    setSpecialTitle(null)
+    updateDynamites((current) => [...current, ...newDynamites])
+    setMessage(`ダイナマイトを ${count}こ しかけた！`)
+    await sleep(860)
+  }
+
+  const explodeDueDynamites = async (currentRound: number) => {
+    const due = dynamitesRef.current
+      .filter((item) => item.explodeRound <= currentRound)
+      .sort((a, b) => a.explodeRound - b.explodeRound)
+
+    for (const dynamite of due) {
+      if (doneRef.current) return null
+      setMessage('ダイナマイトのどうかせんに火(ひ)がついた！')
+      playDynamiteFuse()
+      await sleep(640)
+      setDynamiteExplosion({ id: `${dynamite.id}-boom`, target: dynamite.target })
+      setMessage('ダイナマイトがばくはつ！')
+      playDynamiteExplosion()
+      await sleep(420)
+      const damage = rollDynamiteDamage()
+      const result = applyDamageToSide(dynamite.target, damage, 'ultimate')
+      updateDynamites((current) => current.filter((item) => item.id !== dynamite.id))
+      await sleep(1500)
+      setDynamiteExplosion(null)
+      if (result.nextLeftHp <= 0 || result.nextRightHp <= 0) return result
+    }
+    return { nextLeftHp: leftHpRef.current, nextRightHp: rightHpRef.current }
   }
 
   const tryDurianCounter = async (
@@ -293,6 +395,13 @@ export default function ComboBattle({ left, right, onDone, onExit }: Props) {
       await finish(nextLeftHp, nextRightHp)
       return true
     }
+
+    const explosionResult = await explodeDueDynamites(round)
+    if (!explosionResult) return true
+    if (explosionResult.nextLeftHp <= 0 || explosionResult.nextRightHp <= 0) {
+      await finish(explosionResult.nextLeftHp, explosionResult.nextRightHp)
+      return true
+    }
     await resetForNext(round + 1, 520)
     return true
   }
@@ -317,6 +426,8 @@ export default function ComboBattle({ left, right, onDone, onExit }: Props) {
     const attackName = ultimateName(winner, die)
     const countered = await tryDurianCounter(winnerSide, winner, loser)
     if (countered) return
+
+    await placeCaptainDynamites(winnerSide, winner, round)
 
     if (die >= 4) {
       const cinematicData = {
@@ -369,6 +480,14 @@ export default function ComboBattle({ left, right, onDone, onExit }: Props) {
 
     if (nextLeftHp <= 0 || nextRightHp <= 0) {
       await finish(nextLeftHp, nextRightHp)
+      busyRef.current = false
+      return
+    }
+
+    const explosionResult = await explodeDueDynamites(round)
+    if (!explosionResult) return
+    if (explosionResult.nextLeftHp <= 0 || explosionResult.nextRightHp <= 0) {
+      await finish(explosionResult.nextLeftHp, explosionResult.nextRightHp)
       busyRef.current = false
       return
     }
@@ -431,6 +550,8 @@ export default function ComboBattle({ left, right, onDone, onExit }: Props) {
         specialTitle={specialTitle}
         attackEffect={attackEffect}
         diceThrowEffect={diceThrowEffect}
+        dynamites={plantedDynamites}
+        dynamiteExplosion={dynamiteExplosion}
       />
 
       <section className="rounded-3xl bg-white/92 p-3 shadow-lg">

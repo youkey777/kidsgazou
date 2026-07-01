@@ -7,6 +7,16 @@ import DamageBurstOverlay from './DamageBurstOverlay'
 import DamageNumber from './DamageNumber'
 import DiceThrowEffect, { type DiceThrowEffectData } from './DiceThrowEffect'
 
+export type DynamiteMarker = {
+  id: string
+  target: 'left' | 'right'
+}
+
+export type DynamiteExplosion = {
+  id: string
+  target: 'left' | 'right'
+}
+
 type Props = {
   left: BattleCharacter
   right: BattleCharacter
@@ -23,6 +33,8 @@ type Props = {
   specialTitle?: string | null
   attackEffect?: AttackEffectData | null
   diceThrowEffect?: DiceThrowEffectData | null
+  dynamites?: DynamiteMarker[]
+  dynamiteExplosion?: DynamiteExplosion | null
 }
 
 function shortName(name: string) {
@@ -39,6 +51,7 @@ function FighterCard({
   hit,
   ko,
   glowing,
+  dynamiteCount,
 }: {
   character: BattleCharacter
   hp: number
@@ -49,6 +62,7 @@ function FighterCard({
   hit: boolean
   ko: boolean
   glowing: boolean
+  dynamiteCount: number
 }) {
   const stars = '★'.repeat(starsForLevel(character.level))
 
@@ -76,6 +90,32 @@ function FighterCard({
       transition={{ duration: ko ? 0.75 : hit ? 0.56 : dodging ? 0.62 : 0.22 }}
     >
       {glowing && <div className="absolute -inset-3 -z-10 rounded-3xl bg-yellow-300/45 blur-xl" />}
+      <AnimatePresence>
+        {dynamiteCount > 0 && (
+          <motion.div
+            className={`pointer-events-none absolute ${side === 'left' ? '-right-3' : '-left-3'} top-16 z-40 flex flex-col items-center gap-1 rounded-2xl bg-black/60 px-1.5 py-2 shadow-[0_0_24px_rgba(248,113,113,.75)] ring-2 ring-red-300/80`}
+            initial={{ scale: 0.2, y: 16, opacity: 0 }}
+            animate={{ scale: 1, y: 0, opacity: 1 }}
+            exit={{ scale: 0.2, y: 16, opacity: 0 }}
+          >
+            {Array.from({ length: Math.min(4, dynamiteCount) }).map((_, index) => (
+              <motion.img
+                key={`${character.id}-dynamite-${index}`}
+                src="/battle/dynamite-3d.png"
+                alt=""
+                className="h-9 w-9 object-contain drop-shadow-[0_6px_10px_rgba(0,0,0,.55)]"
+                animate={{ rotate: [-3, 3, -3], scale: [1, 1.08, 1] }}
+                transition={{ duration: 0.72 + index * 0.08, repeat: Infinity }}
+              />
+            ))}
+            {dynamiteCount > 4 && (
+              <span className="rounded-full bg-red-600 px-1.5 text-xs font-black text-white">
+                x{dynamiteCount}
+              </span>
+            )}
+          </motion.div>
+        )}
+      </AnimatePresence>
       <AnimatePresence>
         {hit && (
           <>
@@ -168,7 +208,12 @@ export default function BattleStage({
   specialTitle,
   attackEffect,
   diceThrowEffect,
+  dynamites = [],
+  dynamiteExplosion,
 }: Props) {
+  const leftDynamites = dynamites.filter((item) => item.target === 'left').length
+  const rightDynamites = dynamites.filter((item) => item.target === 'right').length
+
   return (
     <div
       data-testid="battle-stage"
@@ -201,6 +246,7 @@ export default function BattleStage({
           hit={hitSide === 'left'}
           ko={koSide === 'left'}
           glowing={glowingSide === 'left'}
+          dynamiteCount={leftDynamites}
         />
         <div className="rounded-full bg-black/55 px-2 py-2 text-center text-sm font-black text-yellow-300 shadow-lg sm:text-xl">
           VS
@@ -215,6 +261,7 @@ export default function BattleStage({
           hit={hitSide === 'right'}
           ko={koSide === 'right'}
           glowing={glowingSide === 'right'}
+          dynamiteCount={rightDynamites}
         />
       </div>
       <motion.div
@@ -256,6 +303,53 @@ export default function BattleStage({
         )}
         {diceThrowEffect && <DiceThrowEffect key={diceThrowEffect.id} effect={diceThrowEffect} />}
         {attackEffect && <AttackFlyEffect key={attackEffect.id} effect={attackEffect} />}
+        {dynamiteExplosion && (
+          <motion.div
+            key={dynamiteExplosion.id}
+            className="pointer-events-none fixed inset-0 z-[82] flex items-center justify-center overflow-hidden bg-black/68 px-4"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.14 }}
+          >
+            <motion.div
+              className="absolute inset-0 bg-[radial-gradient(circle_at_center,rgba(255,255,255,.95),rgba(251,146,60,.5)_28%,rgba(127,29,29,.55)_56%,transparent_78%)]"
+              initial={{ scale: 0.25, opacity: 0 }}
+              animate={{ scale: [0.25, 1.15, 1.8], opacity: [0, 1, 0] }}
+              transition={{ duration: 1.25, ease: 'easeOut' }}
+            />
+            <motion.div
+              className="absolute top-[14dvh] rounded-full border-4 border-yellow-200 bg-red-700 px-7 py-3 text-[clamp(2.2rem,11vw,5.2rem)] font-black leading-none text-yellow-100 shadow-[0_0_48px_rgba(250,204,21,.9),0_10px_0_rgba(0,0,0,.45)] ring-4 ring-white/50"
+              initial={{ scale: 0.4, rotate: -7, y: 20 }}
+              animate={{ scale: [0.4, 1.16, 1], rotate: [-7, 3, 0], y: [20, -6, 0] }}
+              transition={{ duration: 0.42, ease: 'backOut' }}
+            >
+              ダイナマイト
+            </motion.div>
+            <motion.img
+              src="/battle/dynamite-explosion.png"
+              alt=""
+              className="relative z-10 h-[min(84vw,560px)] w-[min(84vw,560px)] object-contain drop-shadow-[0_0_34px_rgba(253,186,116,.95)]"
+              initial={{ scale: 0.08, rotate: -18, opacity: 0 }}
+              animate={{ scale: [0.08, 1.05, 1.22, 1.04], rotate: [-18, 8, -3, 0], opacity: [0, 1, 1, 0.94] }}
+              transition={{ duration: 1.25, ease: 'easeOut' }}
+            />
+            {Array.from({ length: 12 }).map((_, index) => (
+              <motion.span
+                key={`spark-${dynamiteExplosion.id}-${index}`}
+                className="absolute left-1/2 top-1/2 h-3 w-10 rounded-full bg-yellow-200 shadow-[0_0_16px_rgba(250,204,21,.9)]"
+                initial={{ x: 0, y: 0, rotate: index * 30, opacity: 0 }}
+                animate={{
+                  x: Math.cos((index / 12) * Math.PI * 2) * 220,
+                  y: Math.sin((index / 12) * Math.PI * 2) * 220,
+                  opacity: [0, 1, 0],
+                  scale: [0.5, 1.4, 0.2],
+                }}
+                transition={{ duration: 1.05, delay: 0.12, ease: 'easeOut' }}
+              />
+            ))}
+          </motion.div>
+        )}
         {damageEvents
           .filter((event) => event.scale !== 'ultimate')
           .map((event) => (
