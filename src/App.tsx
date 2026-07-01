@@ -2,7 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import BattleHub from './battle/BattleHub'
 import { attributeMark } from './battle/character-rules'
 import XpBar from './battle/effects/XpBar'
-import { isBgmEnabled, pauseBgm, playBgm, primeBgmOnNextGesture, toggleBgm } from './battle/sounds'
+import { isBgmEnabled, pauseBgm, primeBgmOnNextGesture, syncBgmWithAppVisibility, toggleBgm } from './battle/sounds'
 import StatsEditor from './battle/StatsEditor'
 import {
   addImages,
@@ -97,15 +97,13 @@ export default function App() {
     const pause = () => pauseBgm()
     const resume = () => {
       setBgmOn(isBgmEnabled())
-      if (unlocked && document.visibilityState !== 'hidden' && isBgmEnabled()) {
-        playBgm()
-      }
+      syncBgmWithAppVisibility()
     }
     const onVisibility = () => {
       if (document.visibilityState === 'hidden') pause()
       else resume()
     }
-    if (unlocked) primeBgmOnNextGesture()
+    primeBgmOnNextGesture()
     resume()
     document.addEventListener('visibilitychange', onVisibility)
     window.addEventListener('pagehide', pause)
@@ -119,7 +117,7 @@ export default function App() {
       window.removeEventListener('pageshow', resume)
       window.removeEventListener('focus', resume)
     }
-  }, [unlocked])
+  }, [])
 
   useEffect(() => {
     return () => pendingPreviews.forEach((preview) => URL.revokeObjectURL(preview.url))

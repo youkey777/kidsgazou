@@ -2,6 +2,7 @@ let audioContext: AudioContext | null = null
 let bgm: HTMLAudioElement | null = null
 const BGM_PREF_KEY = 'kids_gallery_bgm_enabled_v2'
 let bgmEnabled = readBgmPreference()
+let bgmGesturePrimed = false
 
 function readBgmPreference() {
   try {
@@ -16,12 +17,45 @@ function saveBgmPreference(enabled: boolean) {
   try {
     localStorage.setItem(BGM_PREF_KEY, enabled ? 'on' : 'off')
   } catch {
-    // localStorageが使えない環境では、その場の状態だけで扱う。
+    // localStorage is optional in some browser modes.
   }
 }
 
 function isPageVisible() {
   return typeof document === 'undefined' || document.visibilityState !== 'hidden'
+}
+
+function setMediaSessionState(state: 'playing' | 'paused') {
+  try {
+    if ('mediaSession' in navigator) {
+      navigator.mediaSession.playbackState = state
+    }
+  } catch {
+    // Media Session API is optional.
+  }
+}
+
+function ensureBgm() {
+  if (!bgm) {
+    bgm = new Audio('/audio/lion-switch.mp3')
+    bgm.loop = true
+    bgm.volume = 0.28
+    bgm.preload = 'auto'
+    bgm.addEventListener('pause', () => setMediaSessionState('paused'))
+    bgm.addEventListener('play', () => setMediaSessionState('playing'))
+    try {
+      if ('mediaSession' in navigator && 'MediaMetadata' in window) {
+        navigator.mediaSession.metadata = new MediaMetadata({
+          title: 'ルイとミオ',
+          artist: 'Kids Gallery',
+          album: 'Character Battle',
+        })
+      }
+    } catch {
+      // Media metadata is best-effort only.
+    }
+  }
+  return bgm
 }
 
 function getContext() {
@@ -46,42 +80,61 @@ function tone(frequency: number, duration: number, type: OscillatorType, gain = 
     osc.start()
     osc.stop(ctx.currentTime + duration)
   } catch {
-    // ブラウザの自動再生制限中は無音で進める。
+    // Sound effects are optional when the browser blocks audio.
   }
 }
 
 export function playBgm() {
   try {
     if (!bgmEnabled || !isPageVisible()) return
-    if (!bgm) {
-      bgm = new Audio('/audio/lion-switch.mp3')
-      bgm.loop = true
-      bgm.volume = 0.28
+    const music = ensureBgm()
+    if (audioContext?.state === 'suspended') void audioContext.resume()
+    const promise = music.play()
+    if (promise) {
+      void promise.catch(() => {
+        setMediaSessionState('paused')
+        primeBgmOnNextGesture()
+      })
     }
-    void bgm.play()
   } catch {
-    // 自動再生制限中は次のタップで再試行する。
+    primeBgmOnNextGesture()
   }
 }
 
 export function primeBgmOnNextGesture() {
+  if (bgmGesturePrimed || typeof window === 'undefined') return
+  bgmGesturePrimed = true
   const start = () => {
+    bgmGesturePrimed = false
+    window.removeEventListener('pointerdown', start)
+    window.removeEventListener('touchstart', start)
+    window.removeEventListener('keydown', start)
     if (!bgmEnabled || !isPageVisible()) return
     playBgm()
-    window.removeEventListener('pointerdown', start)
-    window.removeEventListener('keydown', start)
   }
   window.addEventListener('pointerdown', start, { once: true })
+  window.addEventListener('touchstart', start, { once: true })
   window.addEventListener('keydown', start, { once: true })
 }
 
 export function stopBgm() {
   saveBgmPreference(false)
   bgm?.pause()
+  setMediaSessionState('paused')
 }
 
 export function pauseBgm() {
   bgm?.pause()
+  setMediaSessionState('paused')
+  if (audioContext?.state === 'running') void audioContext.suspend()
+}
+
+export function syncBgmWithAppVisibility() {
+  if (!bgmEnabled || !isPageVisible()) {
+    pauseBgm()
+    return
+  }
+  playBgm()
 }
 
 export function toggleBgm() {

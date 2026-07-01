@@ -147,17 +147,23 @@ export default function ComboBattle({ left, right, onDone, onExit }: Props) {
   const [cycling, setCycling] = useState(true)
   const [roundResult, setRoundResult] = useState<RoundResult>(null)
   const [activeSide, setActiveSide] = useState<Side | undefined>()
+  const [dodgeSide, setDodgeSide] = useState<Side | undefined>()
+  const [confusedSide, setConfusedSide] = useState<Side | undefined>()
   const [koSide, setKoSide] = useState<Side | undefined>()
   const [attackEffect, setAttackEffect] = useState<AttackEffectData | null>(null)
   const [diceThrowEffect, setDiceThrowEffect] = useState<DiceThrowEffectData | null>(null)
   const [cinematic, setCinematic] = useState<CinematicAttack | null>(null)
+  const [specialTitle, setSpecialTitle] = useState<string | null>(null)
   const [saveMessage, setSaveMessage] = useState<string | null>(null)
   const [victory, setVictory] = useState<{ winner: ImageRecord; outcome: 'win' | 'lose' } | null>(null)
+  const cpuPreviewRef = useRef(cpuPreview)
 
   useEffect(() => {
     if (!cycling || doneRef.current) return
     const timer = window.setInterval(() => {
-      setCpuPreview(randomHand())
+      const next = randomHand()
+      cpuPreviewRef.current = next
+      setCpuPreview(next)
     }, 112)
     return () => window.clearInterval(timer)
   }, [cycling])
@@ -185,9 +191,14 @@ export default function ComboBattle({ left, right, onDone, onExit }: Props) {
     setAttackEffect(null)
     setDiceThrowEffect(null)
     setCinematic(null)
+    setDodgeSide(undefined)
+    setConfusedSide(undefined)
+    setSpecialTitle(null)
     setRound(nextRound)
     setMessage('次(つぎ)の手(て)を選(えら)んでね')
-    setCpuPreview(randomHand())
+    const nextPreview = randomHand()
+    cpuPreviewRef.current = nextPreview
+    setCpuPreview(nextPreview)
     setCycling(true)
     busyRef.current = false
   }
@@ -214,11 +225,16 @@ export default function ComboBattle({ left, right, onDone, onExit }: Props) {
       setEvents((prev) => [...prev, { id: makeEventId(), target, amount }])
     }
 
-    setMessage('ブルーベリーハシニーニがよけた！')
-    setActiveSide(defenderSide)
+    setMessage('ブルーベリーハシニーニが後(うし)ろに下(さ)がってよけた！')
+    setActiveSide(undefined)
+    setDodgeSide(defenderSide)
     playWhoosh()
-    await sleep(520)
+    await sleep(620)
+    setDodgeSide(undefined)
 
+    setSpecialTitle('ドリアン投げ')
+    setMessage('ドリアン投(な)げ！')
+    await sleep(420)
     setAttackEffect({
       id: makeEventId(),
       side: defenderSide,
@@ -228,13 +244,13 @@ export default function ComboBattle({ left, right, onDone, onExit }: Props) {
       imageUrl: '/battle/durian-3d.png',
       label: 'ドリアン投げ',
     })
-    setMessage('ドリアン投げ！')
     playPunch()
     await sleep(760)
 
     playDamage()
     applyDamage(attackerSide, 10)
-    setEvents((prev) => [...prev, { id: makeEventId(), target: attackerSide, amount: 0, label: 'ぐるぐる' }])
+    setConfusedSide(attackerSide)
+    setSpecialTitle(null)
     setMessage('10ダメージ！相手(あいて)が混乱(こんらん)！')
     await sleep(1050)
     setAttackEffect(null)
@@ -263,6 +279,7 @@ export default function ComboBattle({ left, right, onDone, onExit }: Props) {
     await sleep(1100)
     setAttackEffect(null)
     setActiveSide(undefined)
+    setConfusedSide(undefined)
 
     if (nextLeftHp <= 0 || nextRightHp <= 0) {
       await finish(nextLeftHp, nextRightHp)
@@ -357,15 +374,15 @@ export default function ComboBattle({ left, right, onDone, onExit }: Props) {
     setAttackEffect(null)
     setDiceThrowEffect(null)
     setCinematic(null)
+    const cpu = cpuPreviewRef.current
     setCycling(false)
     setPlayerHand(hand)
-    setMessage('じゃんけん...')
-    await sleep(430)
-
-    const cpu = randomHand()
-    const result = judge(hand, cpu)
     setCpuHand(cpu)
     setCpuPreview(cpu)
+    setMessage('じゃんけん、ぽん！')
+    await sleep(220)
+
+    const result = judge(hand, cpu)
     setRoundResult(result > 0 ? 'win' : result < 0 ? 'lose' : 'draw')
     setMessage(
       result === 0
@@ -398,8 +415,11 @@ export default function ComboBattle({ left, right, onDone, onExit }: Props) {
         rightHp={rightHp}
         damageEvents={events}
         activeSide={activeSide}
+        dodgeSide={dodgeSide}
+        confusedSide={confusedSide}
         koSide={koSide}
         message={message}
+        specialTitle={specialTitle}
         attackEffect={attackEffect}
         diceThrowEffect={diceThrowEffect}
       />

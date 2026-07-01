@@ -1,1 +1,1 @@
-export const APP_VERSION = 'v2026.07.01-ultimate4-durian'
+export const APP_VERSION = '2026-07-01 16:39'

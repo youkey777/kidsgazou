@@ -13,9 +13,12 @@ type Props = {
   rightHp: number
   damageEvents: DamageEvent[]
   activeSide?: 'left' | 'right'
+  dodgeSide?: 'left' | 'right'
+  confusedSide?: 'left' | 'right'
   koSide?: 'left' | 'right'
   glowingSide?: 'left' | 'right'
   message?: string
+  specialTitle?: string | null
   attackEffect?: AttackEffectData | null
   diceThrowEffect?: DiceThrowEffectData | null
 }
@@ -29,6 +32,8 @@ function FighterCard({
   hp,
   side,
   active,
+  dodging,
+  confused,
   ko,
   glowing,
 }: {
@@ -36,6 +41,8 @@ function FighterCard({
   hp: number
   side: 'left' | 'right'
   active: boolean
+  dodging: boolean
+  confused: boolean
   ko: boolean
   glowing: boolean
 }) {
@@ -49,15 +56,40 @@ function FighterCard({
       animate={
         ko
           ? { x: side === 'left' ? -260 : 260, rotate: side === 'left' ? -45 : 45, opacity: 0 }
+          : dodging
+            ? { x: side === 'left' ? [-8, -58, -36] : [8, 58, 36], y: [0, -12, 0], rotate: side === 'left' ? [-2, -10, -4] : [2, 10, 4], scale: [1, 0.9, 0.94] }
           : active
             ? { x: [0, side === 'left' ? 10 : -10, 0], scale: [1, 1.035, 1] }
             : { x: 0, scale: 1, rotate: 0, opacity: 1 }
       }
-      transition={{ duration: ko ? 0.75 : 0.22 }}
+      transition={{ duration: ko ? 0.75 : dodging ? 0.62 : 0.22 }}
     >
       {glowing && (
         <div className="absolute -inset-3 -z-10 rounded-3xl bg-yellow-300/70 blur-xl" />
       )}
+      <AnimatePresence>
+        {confused && (
+          <motion.div
+            className="pointer-events-none absolute -right-2 -top-4 z-20 grid h-16 w-16 place-items-center rounded-full bg-yellow-200/95 text-3xl font-black text-purple-800 shadow-2xl ring-4 ring-white"
+            initial={{ scale: 0.2, rotate: -45, opacity: 0 }}
+            animate={{ scale: [0.2, 1.18, 1], rotate: [0, 18, -18, 0], opacity: 1 }}
+            exit={{ scale: 0.3, opacity: 0 }}
+            transition={{ duration: 0.5 }}
+          >
+            <motion.span
+              animate={{ rotate: [0, 360], scale: [1, 1.18, 1] }}
+              transition={{ duration: 0.85, repeat: Infinity, ease: 'linear' }}
+            >
+              ❓
+            </motion.span>
+            <motion.span
+              className="absolute h-12 w-12 rounded-full border-4 border-dashed border-purple-500"
+              animate={{ rotate: [0, -360] }}
+              transition={{ duration: 0.9, repeat: Infinity, ease: 'linear' }}
+            />
+          </motion.div>
+        )}
+      </AnimatePresence>
       <img
         src={character.url}
         alt={character.name}
@@ -95,9 +127,12 @@ export default function BattleStage({
   rightHp,
   damageEvents,
   activeSide,
+  dodgeSide,
+  confusedSide,
   koSide,
   glowingSide,
   message,
+  specialTitle,
   attackEffect,
   diceThrowEffect,
 }: Props) {
@@ -128,6 +163,8 @@ export default function BattleStage({
           hp={leftHp}
           side="left"
           active={activeSide === 'left'}
+          dodging={dodgeSide === 'left'}
+          confused={confusedSide === 'left'}
           ko={koSide === 'left'}
           glowing={glowingSide === 'left'}
         />
@@ -139,11 +176,25 @@ export default function BattleStage({
           hp={rightHp}
           side="right"
           active={activeSide === 'right'}
+          dodging={dodgeSide === 'right'}
+          confused={confusedSide === 'right'}
           ko={koSide === 'right'}
           glowing={glowingSide === 'right'}
         />
       </div>
       <AnimatePresence>
+        {specialTitle && (
+          <motion.div
+            key={specialTitle}
+            className="pointer-events-none absolute inset-x-3 top-[43%] z-30 rounded-[1.6rem] bg-black/72 px-4 py-3 text-center text-3xl font-black text-yellow-100 shadow-[0_0_24px_rgba(250,204,21,.45)] ring-2 ring-yellow-200/60 sm:inset-x-12 sm:text-5xl"
+            initial={{ y: 20, scale: 0.72, opacity: 0 }}
+            animate={{ y: 0, scale: [0.72, 1.08, 1], opacity: 1 }}
+            exit={{ y: -18, scale: 0.88, opacity: 0 }}
+            transition={{ duration: 0.36, ease: 'backOut' }}
+          >
+            {specialTitle}
+          </motion.div>
+        )}
         {diceThrowEffect && <DiceThrowEffect key={diceThrowEffect.id} effect={diceThrowEffect} />}
         {attackEffect && <AttackFlyEffect key={attackEffect.id} effect={attackEffect} />}
         {damageEvents.map((event) => (
