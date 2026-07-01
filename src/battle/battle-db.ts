@@ -84,6 +84,12 @@ export async function saveBattleResult(
 ): Promise<string | null> {
   if (!isConfigured || !supabase) return null
 
+  try {
+    await updateBattleResultStats(result.winner, result.loser)
+  } catch (e) {
+    return (e as Error).message
+  }
+
   const recordId = uid()
   const { error } = await supabase.from('battle_records').insert({
     id: recordId,
@@ -94,13 +100,7 @@ export async function saveBattleResult(
   })
 
   if (error) {
-    return `バトル記録(きろく)の保存(ほぞん)に失敗(しっぱい)しました。SETUP.md の追加SQL(ついかえすきゅーえる)を実行(じっこう)してください: ${error.message}`
-  }
-
-  try {
-    await updateBattleResultStats(result.winner, result.loser)
-  } catch (e) {
-    return (e as Error).message
+    return `経験値(けいけんち)は保存(ほぞん)しました。バトル記録(きろく)だけ保存(ほぞん)に失敗(しっぱい)しました。SETUP.md の追加SQL(ついかえすきゅーえる)を確認(かくにん)してください: ${error.message}`
   }
 
   return null

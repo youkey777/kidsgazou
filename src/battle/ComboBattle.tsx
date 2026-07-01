@@ -2,7 +2,19 @@ import { motion } from 'framer-motion'
 import { useEffect, useRef, useState } from 'react'
 import type { ImageRecord } from '../db'
 import { saveBattleResult } from './battle-db'
-import { calculateDiceDamage, effectiveUltimateName } from './character-rules'
+import { calculateDiceDamage } from './character-rules'
+import {
+  RPS_HANDS as HANDS,
+  RPS_HAND_IMAGES as HAND_IMAGES,
+  judgeRps,
+  randomRpsHand,
+  rollBattleDie,
+  rollDynamiteCount,
+  rollDynamiteDamage,
+  shouldDurianCounter,
+  shouldPlantDynamite,
+  ultimateName,
+} from './battle-logic'
 import type { AttackEffectData } from './effects/AttackFlyEffect'
 import BattleStage, { type DynamiteExplosion, type DynamiteMarker } from './effects/BattleStage'
 import CinematicAttackOverlay, { type CinematicAttack } from './effects/CinematicAttackOverlay'
@@ -58,69 +70,7 @@ type PlantedDynamite = DynamiteMarker & {
   explodeRound: number
 }
 
-const HANDS: RpsHand[] = ['rock', 'scissors', 'paper']
-const HAND_IMAGES: Record<RpsHand, string> = {
-  rock: '/battle/rps-rock.png',
-  scissors: '/battle/rps-scissors.png',
-  paper: '/battle/rps-paper.png',
-}
-
 const sleep = (ms: number) => new Promise((resolve) => window.setTimeout(resolve, ms))
-
-function rollDie() {
-  const roll = Math.random()
-  if (roll < 0.22) return 1
-  if (roll < 0.44) return 2
-  if (roll < 0.64) return 3
-  if (roll < 0.8) return 4
-  if (roll < 0.93) return 5
-  return 6
-}
-
-function randomHand() {
-  return HANDS[Math.floor(Math.random() * HANDS.length)]
-}
-
-function isBlueberryHashinini(character: ImageRecord) {
-  return character.id === 'mr0pa7o3-pkaaxx0' || character.name.includes('ブルーベリーハシニーニ')
-}
-
-function isCaptainFrog(character: ImageRecord) {
-  return (
-    character.id === 'mr0pa92q-axyh3w0' ||
-    character.name.includes('キャプテンフロッグ') ||
-    character.name.includes('キャプテンフロック')
-  )
-}
-
-function rollDynamiteCount() {
-  const roll = Math.random() * 110
-  if (roll < 50) return 1
-  if (roll < 80) return 2
-  if (roll < 100) return 3
-  return 4
-}
-
-function rollDynamiteDamage() {
-  return 50 + Math.floor(Math.random() * 11)
-}
-
-function judge(leftHand: RpsHand, rightHand: RpsHand) {
-  if (leftHand === rightHand) return 0
-  if (
-    (leftHand === 'rock' && rightHand === 'scissors') ||
-    (leftHand === 'scissors' && rightHand === 'paper') ||
-    (leftHand === 'paper' && rightHand === 'rock')
-  ) {
-    return 1
-  }
-  return -1
-}
-
-function ultimateName(character: ImageRecord, die: number) {
-  if (die === 4 || die === 5 || die === 6) return effectiveUltimateName(character, die)
-  return 'エナジーアタック'
-}
 
 function ResultBadge({ result }: { result: RoundResult }) {
   const text = result === 'win' ? '勝(か)ち！' : result === 'lose' ? '負(ま)け...' : result === 'draw' ? 'あいこ！' : '勝負(しょうぶ)'
@@ -218,7 +168,7 @@ export default function ComboBattle({ left, right, onDone, onExit, saveResult = 
   useEffect(() => {
     if (!cycling || doneRef.current) return
     const timer = window.setInterval(() => {
-      const next = randomHand()
+      const next = randomRpsHand()
       cpuPreviewRef.current = next
       setCpuPreview(next)
       const now = Date.now()
@@ -264,7 +214,7 @@ export default function ComboBattle({ left, right, onDone, onExit, saveResult = 
     setDynamiteExplosion(null)
     setRound(nextRound)
     setMessage('次(つぎ)の手(て)を選(えら)んでね')
-    const nextPreview = randomHand()
+    const nextPreview = randomRpsHand()
     cpuPreviewRef.current = nextPreview
     setCpuPreview(nextPreview)
     setCycling(true)
@@ -294,7 +244,7 @@ export default function ComboBattle({ left, right, onDone, onExit, saveResult = 
   }
 
   const placeCaptainDynamites = async (winnerSide: Side, winner: ImageRecord, currentRound: number) => {
-    if (!isCaptainFrog(winner) || Math.random() >= 0.5) return
+    if (!shouldPlantDynamite(winner)) return
     const target: Side = winnerSide === 'left' ? 'right' : 'left'
     const count = rollDynamiteCount()
     const newDynamites = Array.from({ length: count }, (_, index) => ({
@@ -343,7 +293,7 @@ export default function ComboBattle({ left, right, onDone, onExit, saveResult = 
     attacker: ImageRecord,
     defender: ImageRecord
   ) => {
-    if (!isBlueberryHashinini(defender) || Math.random() >= 0.5) return false
+    if (!shouldDurianCounter(defender)) return false
     const defenderSide: Side = attackerSide === 'left' ? 'right' : 'left'
     let nextLeftHp = leftHpRef.current
     let nextRightHp = rightHpRef.current
@@ -442,11 +392,11 @@ export default function ComboBattle({ left, right, onDone, onExit, saveResult = 
     setDiceThrowEffect({ id: throwId, side: winnerSide, face: null })
     playDiceRoll()
     for (let i = 0; i < 10; i++) {
-      setDiceThrowEffect({ id: throwId, side: winnerSide, face: rollDie() })
+      setDiceThrowEffect({ id: throwId, side: winnerSide, face: rollBattleDie() })
       await sleep(48 + i * 5)
     }
 
-    const die = rollDie()
+    const die = rollBattleDie()
     setDiceThrowEffect({ id: throwId, side: winnerSide, face: die })
     playDiceLand()
     setMessage(`出目(でめ)は ${die}！`)
@@ -543,7 +493,7 @@ export default function ComboBattle({ left, right, onDone, onExit, saveResult = 
     setMessage('じゃんけん、ぽん！')
     await sleep(220)
 
-    const result = judge(hand, cpu)
+    const result = judgeRps(hand, cpu)
     setRoundResult(result > 0 ? 'win' : result < 0 ? 'lose' : 'draw')
     playRpsReveal(result > 0 ? 'win' : result < 0 ? 'lose' : 'draw')
     setMessage(

@@ -188,6 +188,8 @@ export async function updateOnlineBattle(room: BattleRoom, patch: Partial<Battle
   const sb = ensure()
   const payload = {
     status: patch.status,
+    host_character_id: patch.hostCharacterId,
+    guest_character_id: patch.guestCharacterId,
     host_hp: patch.hostHp,
     guest_hp: patch.guestHp,
     round: patch.round,

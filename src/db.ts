@@ -352,6 +352,7 @@ export async function updateBattleResultStats(
       ...growth,
     })
     .eq('id', winner.id)
+    .select('id, wins, level, xp')
 
   const loserUpdate = sb
     .from('images')
@@ -362,10 +363,15 @@ export async function updateBattleResultStats(
       xp: loserExp.xp,
     })
     .eq('id', loser.id)
+    .select('id, losses, level, xp')
 
   const [winnerResult, loserResult] = await Promise.all([winnerUpdate, loserUpdate])
   if (winnerResult.error || loserResult.error) {
-    throw new Error('バトル結果(けっか)の保存(ほぞん)に失敗(しっぱい)しました。追加SQL(ついかえすきゅーえる)の実行(じっこう)を確認(かくにん)してください')
+    const message = winnerResult.error?.message || loserResult.error?.message || ''
+    throw new Error(`バトル結果(けっか)の保存(ほぞん)に失敗(しっぱい)しました。経験値(けいけんち)SQL(えすきゅーえる)とUPDATEポリシーを確認(かくにん)してください: ${message}`)
+  }
+  if (!winnerResult.data?.length || !loserResult.data?.length) {
+    throw new Error('バトル結果(けっか)の保存(ほぞん)に失敗(しっぱい)しました。Supabase の UPDATE ポリシーが未設定(みせってい)です。')
   }
 }
 
