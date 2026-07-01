@@ -237,7 +237,9 @@ export default function ComboBattle({ left, right, onDone, onExit }: Props) {
 
     setSpecialTitle('ドリアン投げ')
     setMessage('ドリアン投(な)げ！')
-    await sleep(760)
+    await sleep(680)
+    setSpecialTitle(null)
+    await sleep(120)
     setAttackEffect({
       id: makeEventId(),
       side: defenderSide,
@@ -248,12 +250,11 @@ export default function ComboBattle({ left, right, onDone, onExit }: Props) {
       label: 'ドリアン投げ',
     })
     playPunch()
-    await sleep(760)
+    await sleep(1380)
 
     playDamage()
     applyDamage(attackerSide, 10, 'counter')
     setConfusedSide(attackerSide)
-    setSpecialTitle(null)
     setMessage('10ダメージ！相手(あいて)が混乱(こんらん)！')
     await sleep(1050)
     setAttackEffect(null)
@@ -274,7 +275,7 @@ export default function ComboBattle({ left, right, onDone, onExit }: Props) {
     setMessage('さらに通常攻撃(つうじょうこうげき)！')
     playWhoosh()
     playPunch()
-    await sleep(720)
+    await sleep(1300)
     const followDamage = calculateDiceDamage(defender, attacker, 2)
     playDamage()
     applyDamage(attackerSide, followDamage)
@@ -338,7 +339,7 @@ export default function ComboBattle({ left, right, onDone, onExit }: Props) {
     setMessage(die >= 4 ? `${attackName}！` : `${shortBattleName(winner.name)} の攻撃(こうげき)！`)
     playWhoosh()
     if (die < 4) playPunch()
-    await sleep(die >= 4 ? 980 : 760)
+    await sleep(die >= 4 ? 980 : 1280)
 
     const damage = die === 6 ? (target === 'right' ? rightHpRef.current : leftHpRef.current) : calculateDiceDamage(winner, loser, die)
     playDamage()

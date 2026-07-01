@@ -1,5 +1,5 @@
 import { AnimatePresence, motion } from 'framer-motion'
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import {
   updateImageProfile,
   type ImageStatsUpdate,
@@ -515,6 +515,8 @@ export default function Training({ characters, onChanged }: Props) {
   const [quiz, setQuiz] = useState<MathQuestion[]>([])
   const [index, setIndex] = useState(0)
   const [earned, setEarned] = useState(0)
+  const quizBaseCrystalsRef = useRef(0)
+  const crystalFloorRef = useRef<Record<string, number>>({})
   const [quizSaveError, setQuizSaveError] = useState<string | null>(null)
   const [answerState, setAnswerState] = useState<AnswerState>('idle')
   const [busy, setBusy] = useState(false)
@@ -535,7 +537,14 @@ export default function Training({ characters, onChanged }: Props) {
   const inQuiz = quiz.length > 0 && index < quiz.length
 
   useEffect(() => {
-    setLocalCharacters(characters)
+    setLocalCharacters(
+      characters.map((character) => {
+        const crystalFloor = crystalFloorRef.current[character.id]
+        return crystalFloor !== undefined && character.crystals < crystalFloor
+          ? { ...character, crystals: crystalFloor }
+          : character
+      })
+    )
     if (!characters.some((character) => character.id === selectedId)) {
       setSelectedId(characters[0]?.id ?? '')
     }
@@ -593,6 +602,7 @@ export default function Training({ characters, onChanged }: Props) {
   const startQuiz = () => {
     if (!selected || busy) return
     playSelect()
+    quizBaseCrystalsRef.current = selected.crystals
     setQuiz(makeQuiz())
     setIndex(0)
     setEarned(0)
@@ -638,7 +648,21 @@ export default function Training({ characters, onChanged }: Props) {
         setMessage(`保存(ほぞん)できていません。Supabase SQL を先(さき)に実行(じっこう)してください: ${finalSaveError}`)
       } else {
         setMessage(`育成(いくせい)おわり！クリスタル ${nextEarned}こゲット！`)
-        await onChanged()
+        const finalCrystals = quizBaseCrystalsRef.current + nextEarned
+        try {
+          if (nextEarned > 0) {
+            await updateImageProfile(selected.id, { crystals: finalCrystals })
+            crystalFloorRef.current[selected.id] = finalCrystals
+            patchLocalCharacter(selected.id, { crystals: finalCrystals })
+          }
+          await onChanged()
+          if (nextEarned > 0) patchLocalCharacter(selected.id, { crystals: finalCrystals })
+        } catch (error) {
+          const saveError = (error as Error).message
+          setQuizSaveError(saveError)
+          patchLocalCharacter(selected.id, { crystals: quizBaseCrystalsRef.current })
+          setMessage(`繧ｯ繝ｪ繧ｹ繧ｿ繝ｫ菫晏ｭ・縺ｻ縺槭ｓ)縺ｫ螟ｱ謨・縺励∪縺励◆: ${saveError}`)
+        }
       }
     } else {
       setIndex(nextIndex)
@@ -666,6 +690,7 @@ export default function Training({ characters, onChanged }: Props) {
         [stat]: nextValue,
         crystals: nextCrystals,
       } as ImageStatsUpdate)
+      crystalFloorRef.current[selected.id] = nextCrystals
       patchLocalCharacter(selected.id, {
         [stat]: nextValue,
         crystals: nextCrystals,
@@ -700,6 +725,7 @@ export default function Training({ characters, onChanged }: Props) {
         species: nextAttribute,
         crystals: nextCrystals,
       })
+      crystalFloorRef.current[selected.id] = nextCrystals
       patchLocalCharacter(selected.id, {
         species: nextAttribute,
         crystals: nextCrystals,
