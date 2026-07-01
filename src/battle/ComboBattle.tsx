@@ -13,15 +13,20 @@ import {
   playAttributeHit,
   playAttributeUltimate,
   playAttributeWhoosh,
+  playDamage,
   playDiceLand,
   playDiceRoll,
   playDynamiteExplosion,
   playDynamiteFuse,
   playDynamiteSet,
+  playRpsReveal,
   playSelect,
+  playSlotStop,
+  playSlotTick,
   playUltimate,
   playVictory,
   playWhoosh,
+  unlockAudio,
 } from './sounds'
 import {
   HAND_LABELS,
@@ -191,6 +196,7 @@ export default function ComboBattle({ left, right, onDone, onExit }: Props) {
   const [saveMessage, setSaveMessage] = useState<string | null>(null)
   const [victory, setVictory] = useState<{ winner: ImageRecord; outcome: 'win' | 'lose' } | null>(null)
   const cpuPreviewRef = useRef(cpuPreview)
+  const slotTickRef = useRef(0)
 
   const updateDynamites = (next: PlantedDynamite[] | ((current: PlantedDynamite[]) => PlantedDynamite[])) => {
     const resolved = typeof next === 'function' ? next(dynamitesRef.current) : next
@@ -204,6 +210,11 @@ export default function ComboBattle({ left, right, onDone, onExit }: Props) {
       const next = randomHand()
       cpuPreviewRef.current = next
       setCpuPreview(next)
+      const now = Date.now()
+      if (now - slotTickRef.current > 180) {
+        slotTickRef.current = now
+        playSlotTick()
+      }
     }, 112)
     return () => window.clearInterval(timer)
   }, [cycling])
@@ -303,6 +314,7 @@ export default function ComboBattle({ left, right, onDone, onExit }: Props) {
       await sleep(420)
       const damage = rollDynamiteDamage()
       const result = applyDamageToSide(dynamite.target, damage, 'ultimate')
+      playDamage()
       updateDynamites((current) => current.filter((item) => item.id !== dynamite.id))
       await sleep(1500)
       setDynamiteExplosion(null)
@@ -360,6 +372,7 @@ export default function ComboBattle({ left, right, onDone, onExit }: Props) {
     await sleep(1840)
 
     playAttributeHit('durian')
+    playDamage()
     applyDamage(attackerSide, 10, 'counter')
     setConfusedSide(attackerSide)
     setMessage('10ダメージ！相手(あいて)が混乱(こんらん)！')
@@ -384,6 +397,7 @@ export default function ComboBattle({ left, right, onDone, onExit }: Props) {
     await sleep(1620)
     const followDamage = calculateDiceDamage(defender, attacker, 2)
     playAttributeHit(defender.species)
+    playDamage()
     applyDamage(attackerSide, followDamage)
     setMessage(`${followDamage}ダメージ！`)
     await sleep(1100)
@@ -440,6 +454,8 @@ export default function ComboBattle({ left, right, onDone, onExit }: Props) {
       playAttributeUltimate(winner.species, die as 4 | 5 | 6)
       playUltimate()
       await sleep(die === 4 ? 1700 : die === 5 ? 2200 : 2800)
+      setCinematic(null)
+      await sleep(180)
     }
 
     setActiveSide(winnerSide)
@@ -458,6 +474,7 @@ export default function ComboBattle({ left, right, onDone, onExit }: Props) {
 
     const damage = die === 6 ? (target === 'right' ? rightHpRef.current : leftHpRef.current) : calculateDiceDamage(winner, loser, die)
     playAttributeHit(winner.species)
+    playDamage()
     setHitSide(target)
     window.setTimeout(() => setHitSide(undefined), die >= 4 ? 820 : 560)
     let nextLeftHp = leftHpRef.current
@@ -497,12 +514,14 @@ export default function ComboBattle({ left, right, onDone, onExit }: Props) {
   const choose = async (hand: RpsHand) => {
     if (busyRef.current || doneRef.current) return
     busyRef.current = true
+    unlockAudio()
     playSelect()
     setAttackEffect(null)
     setDiceThrowEffect(null)
     setCinematic(null)
     const cpu = cpuPreviewRef.current
     setCycling(false)
+    playSlotStop()
     setPlayerHand(hand)
     setCpuHand(cpu)
     setCpuPreview(cpu)
@@ -511,6 +530,7 @@ export default function ComboBattle({ left, right, onDone, onExit }: Props) {
 
     const result = judge(hand, cpu)
     setRoundResult(result > 0 ? 'win' : result < 0 ? 'lose' : 'draw')
+    playRpsReveal(result > 0 ? 'win' : result < 0 ? 'lose' : 'draw')
     setMessage(
       result === 0
         ? `${HAND_LABELS[hand]} と ${HAND_LABELS[cpu]}。あいこ！`

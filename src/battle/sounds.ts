@@ -1,8 +1,12 @@
 let audioContext: AudioContext | null = null
 let bgm: HTMLAudioElement | null = null
 const BGM_PREF_KEY = 'kids_gallery_bgm_enabled_v2'
+const BGM_VOLUME = 0.22
+const BGM_DUCK_VOLUME = 0.07
+const SFX_GAIN_BOOST = 1.85
 let bgmEnabled = readBgmPreference()
 let bgmGesturePrimed = false
+let duckToken = 0
 
 function readBgmPreference() {
   try {
@@ -39,7 +43,7 @@ function ensureBgm() {
   if (!bgm) {
     bgm = new Audio('/audio/lion-switch.mp3')
     bgm.loop = true
-    bgm.volume = 0.28
+    bgm.volume = BGM_VOLUME
     bgm.preload = 'auto'
     bgm.addEventListener('pause', () => setMediaSessionState('paused'))
     bgm.addEventListener('play', () => setMediaSessionState('playing'))
@@ -65,15 +69,29 @@ function getContext() {
   return audioContext
 }
 
+function duckBgm(duration = 520) {
+  if (!bgm || bgm.paused) return
+  const token = ++duckToken
+  bgm.volume = BGM_DUCK_VOLUME
+  window.setTimeout(() => {
+    if (token === duckToken && bgm) bgm.volume = BGM_VOLUME
+  }, duration)
+}
+
+function boosted(gain: number) {
+  return Math.min(0.22, gain * SFX_GAIN_BOOST)
+}
+
 function tone(frequency: number, duration: number, type: OscillatorType, gain = 0.08) {
   try {
+    duckBgm(Math.max(320, duration * 1000 + 180))
     const ctx = getContext()
     if (ctx.state === 'suspended') void ctx.resume()
     const osc = ctx.createOscillator()
     const volume = ctx.createGain()
     osc.type = type
     osc.frequency.value = frequency
-    volume.gain.setValueAtTime(gain, ctx.currentTime)
+    volume.gain.setValueAtTime(boosted(gain), ctx.currentTime)
     volume.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + duration)
     osc.connect(volume)
     volume.connect(ctx.destination)
@@ -86,6 +104,7 @@ function tone(frequency: number, duration: number, type: OscillatorType, gain = 
 
 function sweep(startFrequency: number, endFrequency: number, duration: number, type: OscillatorType, gain = 0.06) {
   try {
+    duckBgm(Math.max(360, duration * 1000 + 220))
     const ctx = getContext()
     if (ctx.state === 'suspended') void ctx.resume()
     const osc = ctx.createOscillator()
@@ -93,7 +112,7 @@ function sweep(startFrequency: number, endFrequency: number, duration: number, t
     osc.type = type
     osc.frequency.setValueAtTime(startFrequency, ctx.currentTime)
     osc.frequency.exponentialRampToValueAtTime(Math.max(1, endFrequency), ctx.currentTime + duration)
-    volume.gain.setValueAtTime(gain, ctx.currentTime)
+    volume.gain.setValueAtTime(boosted(gain), ctx.currentTime)
     volume.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + duration)
     osc.connect(volume)
     volume.connect(ctx.destination)
@@ -106,6 +125,7 @@ function sweep(startFrequency: number, endFrequency: number, duration: number, t
 
 function noiseBurst(duration: number, gain = 0.045, filterFrequency = 900) {
   try {
+    duckBgm(Math.max(360, duration * 1000 + 220))
     const ctx = getContext()
     if (ctx.state === 'suspended') void ctx.resume()
     const bufferSize = Math.max(1, Math.floor(ctx.sampleRate * duration))
@@ -118,7 +138,7 @@ function noiseBurst(duration: number, gain = 0.045, filterFrequency = 900) {
     filter.type = 'bandpass'
     filter.frequency.value = filterFrequency
     filter.Q.value = 1.2
-    volume.gain.setValueAtTime(gain, ctx.currentTime)
+    volume.gain.setValueAtTime(boosted(gain), ctx.currentTime)
     volume.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + duration)
     source.buffer = buffer
     source.connect(filter)
@@ -135,6 +155,7 @@ export function playBgm() {
   try {
     if (!bgmEnabled || !isPageVisible()) return
     const music = ensureBgm()
+    music.volume = BGM_VOLUME
     if (audioContext?.state === 'suspended') void audioContext.resume()
     const promise = music.play()
     if (promise) {
@@ -157,6 +178,7 @@ export function primeBgmOnNextGesture() {
     window.removeEventListener('touchstart', start)
     window.removeEventListener('keydown', start)
     if (!bgmEnabled || !isPageVisible()) return
+    if (audioContext?.state === 'suspended') void audioContext.resume()
     playBgm()
   }
   window.addEventListener('pointerdown', start, { once: true })
@@ -198,25 +220,63 @@ export function isBgmEnabled() {
   return bgmEnabled
 }
 
+export function unlockAudio() {
+  try {
+    const ctx = getContext()
+    if (ctx.state === 'suspended') void ctx.resume()
+    if (bgmEnabled && isPageVisible()) playBgm()
+  } catch {
+    primeBgmOnNextGesture()
+  }
+}
+
 export function playSelect() {
-  tone(520, 0.05, 'triangle', 0.045)
-  setTimeout(() => tone(720, 0.06, 'triangle', 0.04), 45)
+  unlockAudio()
+  tone(520, 0.06, 'triangle', 0.06)
+  setTimeout(() => tone(720, 0.07, 'triangle', 0.055), 45)
+}
+
+export function playSlotTick() {
+  tone(960 + Math.random() * 180, 0.026, 'square', 0.026)
+}
+
+export function playSlotStop() {
+  tone(420, 0.08, 'square', 0.075)
+  setTimeout(() => tone(780, 0.12, 'triangle', 0.07), 72)
+}
+
+export function playRpsReveal(result: 'win' | 'lose' | 'draw') {
+  if (result === 'win') {
+    ;[660, 880, 1180].forEach((frequency, index) => {
+      setTimeout(() => tone(frequency, 0.08, 'triangle', 0.075), index * 62)
+    })
+    return
+  }
+  if (result === 'draw') {
+    ;[360, 360].forEach((frequency, index) => {
+      setTimeout(() => tone(frequency, 0.07, 'square', 0.06), index * 90)
+    })
+    return
+  }
+  tone(220, 0.12, 'sawtooth', 0.075)
+  setTimeout(() => tone(140, 0.14, 'sawtooth', 0.06), 88)
 }
 
 export function playDiceRoll() {
-  ;[180, 220, 260, 310].forEach((frequency, index) => {
-    setTimeout(() => tone(frequency, 0.045, 'square', 0.035), index * 55)
+  ;[170, 210, 260, 320, 240, 360].forEach((frequency, index) => {
+    setTimeout(() => tone(frequency, 0.052, 'square', 0.06), index * 48)
   })
 }
 
 export function playDiceLand() {
-  tone(90, 0.09, 'sawtooth', 0.08)
-  setTimeout(() => tone(160, 0.08, 'triangle', 0.055), 80)
+  tone(78, 0.12, 'sawtooth', 0.12)
+  setTimeout(() => tone(155, 0.1, 'triangle', 0.08), 80)
+  setTimeout(() => noiseBurst(0.1, 0.04, 720), 110)
 }
 
 export function playWhoosh() {
-  tone(420, 0.08, 'sawtooth', 0.04)
-  setTimeout(() => tone(240, 0.1, 'sawtooth', 0.035), 70)
+  sweep(260, 920, 0.18, 'sawtooth', 0.065)
+  setTimeout(() => tone(240, 0.12, 'sawtooth', 0.055), 90)
 }
 
 function attributeSeed(attribute: string) {
@@ -240,9 +300,9 @@ function attributeProfile(attribute: string) {
 
 export function playAttributeWhoosh(attribute: string) {
   const profile = attributeProfile(attribute)
-  sweep(profile.base, profile.high, 0.22, profile.type, 0.045)
-  setTimeout(() => tone(profile.high * 0.75, 0.08, profile.type, 0.034), 95)
-  if (profile.style === 'fire' || profile.style === 'dark') noiseBurst(0.18, 0.025, profile.noise)
+  sweep(profile.base, profile.high, 0.28, profile.type, 0.074)
+  setTimeout(() => tone(profile.high * 0.75, 0.1, profile.type, 0.06), 95)
+  if (profile.style === 'fire' || profile.style === 'dark') noiseBurst(0.22, 0.045, profile.noise)
   if (profile.style === 'ice') {
     ;[profile.high, profile.high * 1.22, profile.high * 1.48].forEach((frequency, index) => {
       setTimeout(() => tone(frequency, 0.05, 'triangle', 0.026), index * 42)
@@ -257,34 +317,34 @@ export function playAttributeWhoosh(attribute: string) {
 
 export function playAttributeHit(attribute: string) {
   const profile = attributeProfile(attribute)
-  tone(Math.max(55, profile.base * 0.55), 0.16, 'sawtooth', 0.085)
-  noiseBurst(0.12, 0.05, profile.noise)
-  setTimeout(() => tone(profile.high, 0.09, profile.type, 0.055), 58)
-  setTimeout(() => sweep(profile.high * 0.85, profile.base * 0.6, 0.16, profile.type, 0.04), 120)
+  tone(Math.max(55, profile.base * 0.55), 0.18, 'sawtooth', 0.13)
+  noiseBurst(0.16, 0.08, profile.noise)
+  setTimeout(() => tone(profile.high, 0.1, profile.type, 0.08), 58)
+  setTimeout(() => sweep(profile.high * 0.85, profile.base * 0.6, 0.2, profile.type, 0.07), 120)
 }
 
 export function playAttributeCharge(attribute: string) {
   const profile = attributeProfile(attribute)
-  sweep(profile.base * 0.65, profile.high * 0.9, 0.5, profile.type, 0.035)
-  setTimeout(() => tone(profile.high, 0.12, profile.type, 0.04), 360)
+  sweep(profile.base * 0.65, profile.high * 0.9, 0.58, profile.type, 0.06)
+  setTimeout(() => tone(profile.high, 0.14, profile.type, 0.075), 360)
 }
 
 export function playAttributeUltimate(attribute: string, rank: 4 | 5 | 6) {
   const profile = attributeProfile(attribute)
   playAttributeCharge(attribute)
-  setTimeout(() => noiseBurst(0.18 + rank * 0.02, 0.035 + rank * 0.006, profile.noise), 210)
-  setTimeout(() => sweep(profile.high * 0.65, profile.high * (1.2 + rank * 0.1), 0.34, profile.type, 0.052), 420)
-  setTimeout(() => tone(Math.max(60, profile.base * 0.42), 0.25, 'sawtooth', 0.08), 720)
+  setTimeout(() => noiseBurst(0.2 + rank * 0.035, 0.06 + rank * 0.01, profile.noise), 210)
+  setTimeout(() => sweep(profile.high * 0.65, profile.high * (1.2 + rank * 0.1), 0.42, profile.type, 0.09), 420)
+  setTimeout(() => tone(Math.max(60, profile.base * 0.42), 0.32, 'sawtooth', 0.13), 720)
   if (rank === 6) {
-    setTimeout(() => noiseBurst(0.26, 0.075, profile.noise * 1.2), 920)
-    setTimeout(() => tone(72, 0.38, 'sawtooth', 0.09), 1020)
+    setTimeout(() => noiseBurst(0.32, 0.11, profile.noise * 1.2), 920)
+    setTimeout(() => tone(72, 0.42, 'sawtooth', 0.13), 1020)
   }
 }
 
 export function playDynamiteSet() {
-  tone(120, 0.08, 'square', 0.065)
-  setTimeout(() => tone(210, 0.07, 'triangle', 0.05), 80)
-  setTimeout(() => noiseBurst(0.12, 0.035, 900), 145)
+  tone(120, 0.09, 'square', 0.1)
+  setTimeout(() => tone(210, 0.08, 'triangle', 0.075), 80)
+  setTimeout(() => noiseBurst(0.14, 0.06, 900), 145)
 }
 
 export function playDynamiteFuse() {
@@ -297,11 +357,11 @@ export function playDynamiteFuse() {
 }
 
 export function playDynamiteExplosion() {
-  noiseBurst(0.34, 0.1, 620)
-  tone(58, 0.42, 'sawtooth', 0.12)
-  setTimeout(() => tone(96, 0.28, 'square', 0.08), 95)
-  setTimeout(() => noiseBurst(0.22, 0.065, 1100), 170)
-  setTimeout(() => sweep(220, 72, 0.36, 'sawtooth', 0.075), 250)
+  noiseBurst(0.38, 0.14, 620)
+  tone(58, 0.46, 'sawtooth', 0.16)
+  setTimeout(() => tone(96, 0.3, 'square', 0.12), 95)
+  setTimeout(() => noiseBurst(0.24, 0.1, 1100), 170)
+  setTimeout(() => sweep(220, 72, 0.4, 'sawtooth', 0.11), 250)
 }
 
 export function playRouletteStart() {

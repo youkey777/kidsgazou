@@ -217,14 +217,14 @@ export default function BattleStage({
   return (
     <div
       data-testid="battle-stage"
-      className="relative min-h-[560px] overflow-hidden rounded-[2rem] bg-gradient-to-br from-slate-100 via-white to-indigo-100 p-2 shadow-2xl sm:min-h-[680px] sm:p-3"
+      className="relative min-h-[500px] overflow-hidden rounded-[2rem] bg-slate-950 p-2 shadow-2xl sm:min-h-[620px] sm:p-3"
       style={{
-        backgroundImage: 'linear-gradient(rgba(255,255,255,.72),rgba(15,23,42,.32)), url(/battle/rich-battle-bg.png)',
+        backgroundImage: 'linear-gradient(rgba(2,6,23,.62),rgba(2,6,23,.78)), url(/battle/rich-battle-bg.png)',
         backgroundSize: 'cover',
         backgroundPosition: 'center',
       }}
     >
-      <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_20%,rgba(255,255,255,0.62),transparent_40%)]" />
+      <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_26%,rgba(255,255,255,0.16),transparent_38%)]" />
       <motion.div
         key={message || 'empty-message'}
         className={`hidden ${
@@ -235,39 +235,41 @@ export default function BattleStage({
       >
         <span className="max-h-[3.2rem] overflow-hidden">{message || '　'}</span>
       </motion.div>
-      <div className="relative z-10 grid min-w-0 grid-cols-[minmax(0,1fr)_42px_minmax(0,1fr)] items-center gap-2">
-        <FighterCard
-          character={left}
-          hp={leftHp}
-          side="left"
-          active={activeSide === 'left'}
-          dodging={dodgeSide === 'left'}
-          confused={confusedSide === 'left'}
-          hit={hitSide === 'left'}
-          ko={koSide === 'left'}
-          glowing={glowingSide === 'left'}
-          dynamiteCount={leftDynamites}
-        />
-        <div className="rounded-full bg-black/55 px-2 py-2 text-center text-sm font-black text-yellow-300 shadow-lg sm:text-xl">
-          VS
+      <div className="relative z-10 mt-4 rounded-[1.8rem] border border-white/18 bg-black/46 p-2 shadow-[inset_0_0_34px_rgba(255,255,255,.08),0_16px_38px_rgba(0,0,0,.35)] backdrop-blur-[2px] sm:mt-5 sm:p-3">
+        <div className="grid min-w-0 grid-cols-[minmax(0,1fr)_42px_minmax(0,1fr)] items-center gap-2">
+          <FighterCard
+            character={left}
+            hp={leftHp}
+            side="left"
+            active={activeSide === 'left'}
+            dodging={dodgeSide === 'left'}
+            confused={confusedSide === 'left'}
+            hit={hitSide === 'left'}
+            ko={koSide === 'left'}
+            glowing={glowingSide === 'left'}
+            dynamiteCount={leftDynamites}
+          />
+          <div className="rounded-full bg-zinc-950 px-2 py-2 text-center text-sm font-black text-yellow-300 shadow-[0_0_18px_rgba(250,204,21,.32)] ring-2 ring-yellow-200/30 sm:text-xl">
+            VS
+          </div>
+          <FighterCard
+            character={right}
+            hp={rightHp}
+            side="right"
+            active={activeSide === 'right'}
+            dodging={dodgeSide === 'right'}
+            confused={confusedSide === 'right'}
+            hit={hitSide === 'right'}
+            ko={koSide === 'right'}
+            glowing={glowingSide === 'right'}
+            dynamiteCount={rightDynamites}
+          />
         </div>
-        <FighterCard
-          character={right}
-          hp={rightHp}
-          side="right"
-          active={activeSide === 'right'}
-          dodging={dodgeSide === 'right'}
-          confused={confusedSide === 'right'}
-          hit={hitSide === 'right'}
-          ko={koSide === 'right'}
-          glowing={glowingSide === 'right'}
-          dynamiteCount={rightDynamites}
-        />
       </div>
       <motion.div
         key={`below-${message || 'empty-message'}`}
-        className={`relative z-20 mt-3 flex min-h-[5.2rem] items-center justify-center rounded-2xl px-3 py-2 text-center text-base font-black leading-snug shadow-lg sm:text-lg ${
-          message ? 'bg-white/94 text-zinc-950 ring-2 ring-zinc-900/15' : 'bg-zinc-900/20 text-transparent'
+        className={`relative z-20 mt-3 flex min-h-[4.4rem] items-center justify-center rounded-2xl px-3 py-2 text-center text-base font-black leading-snug shadow-[0_12px_24px_rgba(0,0,0,.32)] sm:text-lg ${
+          message ? 'bg-white text-zinc-950 ring-2 ring-yellow-200/55' : 'bg-zinc-950/80 text-transparent ring-2 ring-white/15'
         }`}
         initial={{ scale: 0.98, opacity: 0.75 }}
         animate={{ scale: 1, opacity: 1 }}
