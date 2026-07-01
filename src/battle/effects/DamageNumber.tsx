@@ -7,7 +7,7 @@ type Props = {
 
 export default function DamageNumber({ event }: Props) {
   const isCounter = event.scale === 'counter'
-  const left = event.target === 'left' ? '30%' : '70%'
+  const left = event.target === 'left' ? '30%' : '62%'
   return (
     <motion.div
       className={`pointer-events-none absolute top-[31%] z-50 -translate-x-1/2 whitespace-nowrap rounded-[1.4rem] px-3 py-1 text-center text-[clamp(3.6rem,18vw,6.8rem)] font-black leading-none drop-shadow-[0_9px_0_rgba(0,0,0,0.64)] sm:text-8xl ${

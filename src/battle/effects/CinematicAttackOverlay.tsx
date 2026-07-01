@@ -8,10 +8,30 @@ export type CinematicAttack = {
   die: 4 | 5 | 6
 }
 
-const BG_BY_DIE: Record<4 | 5 | 6, string> = {
-  4: '/battle/ultimate4-cg.png',
-  5: '/battle/ultimate5-cg.png',
-  6: '/battle/ultimate6-cg.png',
+const ATTRIBUTE_ASSET: Record<string, string> = {
+  ほのお: 'fire',
+  みず: 'water',
+  かぜ: 'wind',
+  つち: 'earth',
+  ひかり: 'light',
+  やみ: 'dark',
+  でんき: 'electric',
+  こおり: 'ice',
+  くさ: 'grass',
+  はがね: 'steel',
+  まほう: 'magic',
+  ドラゴン: 'dragon',
+  ロボ: 'robot',
+  スター: 'star',
+  ふしぎ: 'mystery',
+}
+
+function backgroundFor(attribute: string, die: 4 | 5 | 6) {
+  return `/battle/ultimate-backgrounds/${ATTRIBUTE_ASSET[attribute] ?? ATTRIBUTE_ASSET.ふしぎ}-${die}.jpg`
+}
+
+function attackAssetFor(attribute: string) {
+  return `/battle/attribute-attacks/${ATTRIBUTE_ASSET[attribute] ?? ATTRIBUTE_ASSET.ふしぎ}.png`
 }
 
 const ATTRIBUTE_WASH: Record<string, string> = {
@@ -74,7 +94,7 @@ export default function CinematicAttackOverlay({
         >
           <motion.div
             className="absolute inset-0 bg-cover bg-center"
-            style={{ backgroundImage: `url(${BG_BY_DIE[attack.die]})` }}
+            style={{ backgroundImage: `url(${backgroundFor(attack.attribute, attack.die)})` }}
             initial={{ scale: attack.die === 6 ? 1.14 : 1.06, opacity: 0.12 }}
             animate={{
               scale: attack.die === 6 ? [1.14, 1.02, 1.08] : [1.06, 1.01, 1.03],
@@ -112,6 +132,26 @@ export default function CinematicAttackOverlay({
               </motion.span>
             ))
           )}
+          <motion.img
+            src={attackAssetFor(attack.attribute)}
+            alt=""
+            className="absolute left-1/2 top-1/2 z-[2] h-[min(58vw,330px)] w-[min(58vw,330px)] -translate-x-1/2 -translate-y-1/2 object-contain drop-shadow-[0_0_34px_rgba(255,255,255,.7)]"
+            initial={{ scale: 0.18, opacity: 0, y: 80, rotate: attack.die === 6 ? -14 : 0 }}
+            animate={{
+              scale: attack.die === 6 ? [0.18, 1.28, 1.02, 1.5] : [0.18, 1.08, 0.92],
+              opacity: [0, 1, 1, 0],
+              y: attack.die === 6 ? [80, -12, 0, -38] : [70, -4, -20],
+              rotate: attack.die === 6 ? [-14, 8, -4, 10] : [0, 4, -4],
+              filter: ['brightness(1)', 'brightness(1.6)', 'brightness(1.1)', 'brightness(2)'],
+            }}
+            transition={{ duration: attack.die === 4 ? 0.8 : attack.die === 5 ? 1.0 : 1.22, ease: 'easeOut' }}
+          />
+          <motion.div
+            className="absolute inset-0 z-[3] bg-white"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: attack.die === 6 ? [0, 0.85, 0, 0.95, 0] : [0, 0.55, 0] }}
+            transition={{ duration: attack.die === 6 ? 1.1 : 0.72, delay: 0.18 }}
+          />
           <div
             className="absolute inset-0 flex items-center justify-center"
             style={{
@@ -150,7 +190,7 @@ export default function CinematicAttackOverlay({
             className="absolute inset-0"
             initial={{ opacity: 0 }}
             animate={{ opacity: [0, 0, 1, 0] }}
-            transition={{ duration: 1.25, times: [0, 0.74, 0.84, 1] }}
+            transition={{ duration: 1.0, times: [0, 0.74, 0.84, 1] }}
           >
             <div className="h-full w-full bg-white" />
           </motion.div>

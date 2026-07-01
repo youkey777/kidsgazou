@@ -142,7 +142,6 @@ export default function ComboBattle({ left, right, onDone, onExit }: Props) {
   const busyRef = useRef(false)
   const doneRef = useRef(false)
   const [round, setRound] = useState(1)
-  const [hitCount, setHitCount] = useState(0)
   const [events, setEvents] = useState<DamageEvent[]>([])
   const [message, setMessage] = useState('手(て)を選(えら)んで、じゃんけんしよう')
   const [playerHand, setPlayerHand] = useState<RpsHand | null>(null)
@@ -212,7 +211,7 @@ export default function ComboBattle({ left, right, onDone, onExit }: Props) {
     attacker: ImageRecord,
     defender: ImageRecord
   ) => {
-    if (!isBlueberryHashinini(defender) || Math.random() >= 0.33) return false
+    if (!isBlueberryHashinini(defender) || Math.random() >= 0.5) return false
     const defenderSide: Side = attackerSide === 'left' ? 'right' : 'left'
     let nextLeftHp = leftHpRef.current
     let nextRightHp = rightHpRef.current
@@ -361,9 +360,7 @@ export default function ComboBattle({ left, right, onDone, onExit }: Props) {
     setAttackEffect(null)
     setCinematic(null)
 
-    const nextHitCount = hitCount + 1
-    setHitCount(nextHitCount)
-    if (nextLeftHp <= 0 || nextRightHp <= 0 || nextHitCount >= 6) {
+    if (nextLeftHp <= 0 || nextRightHp <= 0) {
       await finish(nextLeftHp, nextRightHp)
       busyRef.current = false
       return

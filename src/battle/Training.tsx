@@ -61,11 +61,11 @@ const sleep = (ms: number) => new Promise((resolve) => window.setTimeout(resolve
 
 function makeQuestion(): MathQuestion {
   const op: '+' | '-' = Math.random() > 0.45 ? '+' : '-'
-  const twoDigit = () => Math.floor(Math.random() * 90) + 10
+  const twoDigit = () => Math.floor(Math.random() * 10) + 10
   const oneDigit = () => Math.floor(Math.random() * 9) + 1
-  const useTwoByTwo = Math.random() < 0.45
-  const a = twoDigit()
-  const b = useTwoByTwo ? twoDigit() : oneDigit()
+  const twoDigitFirst = Math.random() < 0.62
+  const a = twoDigitFirst ? twoDigit() : oneDigit()
+  const b = twoDigitFirst ? oneDigit() : twoDigit()
   const left = op === '-' ? Math.max(a, b) : a
   const right = op === '-' ? Math.min(a, b) : b
   const answer = op === '+' ? left + right : left - right
@@ -515,7 +515,6 @@ export default function Training({ characters, onChanged }: Props) {
   const [quiz, setQuiz] = useState<MathQuestion[]>([])
   const [index, setIndex] = useState(0)
   const [earned, setEarned] = useState(0)
-  const [quizStartCrystals, setQuizStartCrystals] = useState(0)
   const [quizSaveError, setQuizSaveError] = useState<string | null>(null)
   const [answerState, setAnswerState] = useState<AnswerState>('idle')
   const [busy, setBusy] = useState(false)
@@ -564,7 +563,6 @@ export default function Training({ characters, onChanged }: Props) {
     setQuiz([])
     setIndex(0)
     setEarned(0)
-    setQuizStartCrystals(character.crystals)
     setQuizSaveError(null)
     setAnswerState('idle')
     setMessage(`${shortBattleName(character.name)}を育(そだ)てよう！`)
@@ -598,7 +596,6 @@ export default function Training({ characters, onChanged }: Props) {
     setQuiz(makeQuiz())
     setIndex(0)
     setEarned(0)
-    setQuizStartCrystals(selected.crystals)
     setQuizSaveError(null)
     setAnswerState('idle')
     setMessage(`${shortBattleName(selected.name)}を育(そだ)てるよ！`)
@@ -609,12 +606,13 @@ export default function Training({ characters, onChanged }: Props) {
     setBusy(true)
     const correct = value === currentQuestion.answer
     const nextEarned = earned + (correct ? 1 : 0)
+    const currentCrystals = localCharacters.find((character) => character.id === selected.id)?.crystals ?? selected.crystals
     let saveError: string | null = null
     setAnswerState(correct ? 'correct' : 'wrong')
     if (correct) {
       playCrystal()
       setEarned(nextEarned)
-      const nextCrystals = quizStartCrystals + nextEarned
+      const nextCrystals = currentCrystals + 1
       setMessage('正解(せいかい)！クリスタルを1こゲット！')
       patchLocalCharacter(selected.id, { crystals: nextCrystals })
       try {
@@ -622,7 +620,7 @@ export default function Training({ characters, onChanged }: Props) {
       } catch (error) {
         saveError = (error as Error).message
         setQuizSaveError(saveError)
-        patchLocalCharacter(selected.id, { crystals: quizStartCrystals + earned })
+        patchLocalCharacter(selected.id, { crystals: currentCrystals })
         setMessage(`クリスタル保存(ほぞん)に失敗(しっぱい)しました: ${saveError}`)
       }
     } else {
@@ -639,7 +637,6 @@ export default function Training({ characters, onChanged }: Props) {
       if (finalSaveError) {
         setMessage(`保存(ほぞん)できていません。Supabase SQL を先(さき)に実行(じっこう)してください: ${finalSaveError}`)
       } else {
-        setQuizStartCrystals(quizStartCrystals + nextEarned)
         setMessage(`育成(いくせい)おわり！クリスタル ${nextEarned}こゲット！`)
         await onChanged()
       }

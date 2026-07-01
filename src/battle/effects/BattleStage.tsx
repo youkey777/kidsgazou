@@ -145,7 +145,7 @@ export default function BattleStage({
       <motion.div
         key={message || 'empty-message'}
         className={`relative z-20 mb-2 flex min-h-[4.4rem] items-center justify-center rounded-2xl px-3 py-2 text-center text-base font-black leading-snug shadow-lg sm:text-lg ${
-          message ? 'bg-zinc-950/78 text-white ring-1 ring-white/20' : 'bg-zinc-900/20 text-transparent'
+          message ? 'bg-white/92 text-zinc-950 ring-2 ring-zinc-900/15' : 'bg-zinc-900/20 text-transparent'
         }`}
         initial={{ scale: 0.98, opacity: 0.75 }}
         animate={{ scale: 1, opacity: 1 }}
@@ -188,12 +188,12 @@ export default function BattleStage({
             transition={{ duration: 0.15 }}
           >
             <motion.div
-              className="max-w-[94vw] rounded-[2rem] bg-black/82 px-6 py-5 text-center text-[clamp(2.4rem,13vw,6.5rem)] font-black leading-tight text-yellow-100 shadow-[0_0_36px_rgba(250,204,21,.7)] ring-4 ring-yellow-200/80"
+              className="grid aspect-square w-[min(82vw,420px)] place-items-center rounded-full bg-gradient-to-br from-yellow-200 via-orange-300 to-red-500 px-6 text-center text-[clamp(2.2rem,12vw,5.8rem)] font-black leading-tight text-zinc-950 shadow-[0_0_44px_rgba(250,204,21,.85)] ring-8 ring-white"
               initial={{ scale: 0.18, rotate: -7, y: 40 }}
               animate={{ scale: [0.18, 1.2, 1], rotate: [-7, 3, 0], y: [40, -6, 0] }}
               transition={{ duration: 0.42, ease: 'backOut' }}
             >
-              {specialTitle}
+              <span className="rounded-[1.2rem] bg-white/82 px-3 py-2 shadow-xl">{specialTitle}</span>
             </motion.div>
           </motion.div>
         )}
