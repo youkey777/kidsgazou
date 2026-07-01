@@ -30,6 +30,8 @@ type Theme = {
   countChip: string
 }
 
+const APP_VERSION = 'v2026.07.01-ocr-xp'
+
 const THEMES: Record<ChildKey, Theme> = {
   rui: {
     key: 'rui',
@@ -271,7 +273,10 @@ export default function App() {
           >
             {isBattle ? 'キャラクターバトル' : `${theme.name}のギャラリー`}
           </h1>
-          <div className="flex shrink-0 gap-2">
+          <div className="flex shrink-0 items-center gap-2">
+            <span className="rounded-full bg-black/45 px-2 py-1 text-[10px] font-black text-white/85 shadow ring-1 ring-white/20">
+              {APP_VERSION}
+            </span>
             {!isBattle && images.length > 0 && (
               <button
                 onClick={() => setEditing((value) => !value)}
