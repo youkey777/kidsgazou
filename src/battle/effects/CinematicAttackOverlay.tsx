@@ -15,21 +15,39 @@ const BG_BY_DIE: Record<4 | 5 | 6, string> = {
 }
 
 const ATTRIBUTE_WASH: Record<string, string> = {
-  ほのお: 'radial-gradient(circle at 50% 55%, rgba(251,146,60,.22), transparent 42%)',
-  みず: 'radial-gradient(circle at 50% 55%, rgba(56,189,248,.2), transparent 42%)',
-  かぜ: 'radial-gradient(circle at 50% 55%, rgba(134,239,172,.18), transparent 42%)',
-  つち: 'radial-gradient(circle at 50% 55%, rgba(251,191,36,.16), transparent 42%)',
-  ひかり: 'radial-gradient(circle at 50% 55%, rgba(254,240,138,.24), transparent 42%)',
-  やみ: 'radial-gradient(circle at 50% 55%, rgba(168,85,247,.2), transparent 42%)',
-  でんき: 'radial-gradient(circle at 50% 55%, rgba(250,204,21,.24), transparent 42%)',
-  こおり: 'radial-gradient(circle at 50% 55%, rgba(165,243,252,.24), transparent 42%)',
-  くさ: 'radial-gradient(circle at 50% 55%, rgba(74,222,128,.2), transparent 42%)',
-  はがね: 'radial-gradient(circle at 50% 55%, rgba(203,213,225,.2), transparent 42%)',
-  まほう: 'radial-gradient(circle at 50% 55%, rgba(240,171,252,.24), transparent 42%)',
-  ドラゴン: 'radial-gradient(circle at 50% 55%, rgba(248,113,113,.22), transparent 42%)',
-  ロボ: 'radial-gradient(circle at 50% 55%, rgba(34,211,238,.2), transparent 42%)',
-  スター: 'radial-gradient(circle at 50% 55%, rgba(253,224,71,.24), transparent 42%)',
-  ふしぎ: 'radial-gradient(circle at 50% 55%, rgba(196,181,253,.22), transparent 42%)',
+  ほのお: 'radial-gradient(circle at 50% 55%, rgba(251,146,60,.16), transparent 42%)',
+  みず: 'radial-gradient(circle at 50% 55%, rgba(56,189,248,.14), transparent 42%)',
+  かぜ: 'radial-gradient(circle at 50% 55%, rgba(134,239,172,.13), transparent 42%)',
+  つち: 'radial-gradient(circle at 50% 55%, rgba(251,191,36,.12), transparent 42%)',
+  ひかり: 'radial-gradient(circle at 50% 55%, rgba(254,240,138,.18), transparent 42%)',
+  やみ: 'radial-gradient(circle at 50% 55%, rgba(168,85,247,.16), transparent 42%)',
+  でんき: 'radial-gradient(circle at 50% 55%, rgba(250,204,21,.18), transparent 42%)',
+  こおり: 'radial-gradient(circle at 50% 55%, rgba(165,243,252,.18), transparent 42%)',
+  くさ: 'radial-gradient(circle at 50% 55%, rgba(74,222,128,.14), transparent 42%)',
+  はがね: 'radial-gradient(circle at 50% 55%, rgba(203,213,225,.16), transparent 42%)',
+  まほう: 'radial-gradient(circle at 50% 55%, rgba(240,171,252,.18), transparent 42%)',
+  ドラゴン: 'radial-gradient(circle at 50% 55%, rgba(248,113,113,.17), transparent 42%)',
+  ロボ: 'radial-gradient(circle at 50% 55%, rgba(34,211,238,.16), transparent 42%)',
+  スター: 'radial-gradient(circle at 50% 55%, rgba(253,224,71,.18), transparent 42%)',
+  ふしぎ: 'radial-gradient(circle at 50% 55%, rgba(196,181,253,.16), transparent 42%)',
+}
+
+const ATTRIBUTE_PARTICLES: Record<string, string[]> = {
+  ほのお: ['🔥', '💥', '✦'],
+  みず: ['💧', '🌊', '✦'],
+  かぜ: ['🌪️', '💨', '✦'],
+  つち: ['🪨', '◆', '✦'],
+  ひかり: ['✨', '☀️', '✦'],
+  やみ: ['●', '🌑', '✦'],
+  でんき: ['⚡', '✦', '◆'],
+  こおり: ['❄️', '◆', '✦'],
+  くさ: ['🌿', '🍃', '✦'],
+  はがね: ['⚙️', '◆', '✦'],
+  まほう: ['🔮', '✦', '◇'],
+  ドラゴン: ['🔥', '🐉', '✦'],
+  ロボ: ['⚙️', '⚡', '✦'],
+  スター: ['⭐', '🌟', '✦'],
+  ふしぎ: ['🌀', '◇', '✦'],
 }
 
 function rankLabel(die: 4 | 5 | 6) {
@@ -57,21 +75,43 @@ export default function CinematicAttackOverlay({
           <motion.div
             className="absolute inset-0 bg-cover bg-center"
             style={{ backgroundImage: `url(${BG_BY_DIE[attack.die]})` }}
-            initial={{ scale: attack.die === 6 ? 1.2 : 1.1, opacity: 0.16 }}
+            initial={{ scale: attack.die === 6 ? 1.14 : 1.06, opacity: 0.12 }}
             animate={{
-              scale: attack.die === 6 ? [1.2, 1.02, 1.12] : [1.1, 1.01, 1.04],
-              opacity: [0.16, 0.6, 0.5],
+              scale: attack.die === 6 ? [1.14, 1.02, 1.08] : [1.06, 1.01, 1.03],
+              opacity: [0.12, 0.48, 0.4],
             }}
-            transition={{ duration: attack.die === 4 ? 0.9 : 1.18, ease: 'easeOut' }}
+            transition={{ duration: attack.die === 4 ? 0.58 : attack.die === 5 ? 0.82 : 1.05, ease: 'easeOut' }}
           />
           <motion.div
             className="absolute inset-0"
             style={{
-              backgroundImage: `${ATTRIBUTE_WASH[attack.attribute] ?? ATTRIBUTE_WASH.ふしぎ}, linear-gradient(rgba(0,0,0,.52),rgba(0,0,0,.46))`,
+              backgroundImage: `${ATTRIBUTE_WASH[attack.attribute] ?? ATTRIBUTE_WASH.ふしぎ}, linear-gradient(rgba(0,0,0,.62),rgba(0,0,0,.56))`,
             }}
-            animate={{ opacity: [0.58, 0.72, 0.62] }}
-            transition={{ duration: 0.42, repeat: 3 }}
+            animate={{ opacity: [0.6, 0.76, 0.66] }}
+            transition={{ duration: 0.28, repeat: 2 }}
           />
+          {(ATTRIBUTE_PARTICLES[attack.attribute] ?? ATTRIBUTE_PARTICLES.ふしぎ).flatMap((item, groupIndex) =>
+            Array.from({ length: attack.die + 2 }, (_, index) => (
+              <motion.span
+                key={`${item}-${groupIndex}-${index}`}
+                className="absolute z-[1] text-[clamp(1.4rem,7vw,4rem)] drop-shadow-[0_0_12px_rgba(255,255,255,.55)]"
+                style={{
+                  left: `${12 + ((index * 23 + groupIndex * 17) % 78)}%`,
+                  top: `${16 + ((index * 19 + groupIndex * 13) % 68)}%`,
+                }}
+                initial={{ opacity: 0, scale: 0.35, y: 34, rotate: -40 }}
+                animate={{
+                  opacity: [0, 0.95, 0],
+                  scale: [0.35, attack.die === 6 ? 1.5 : 1.1, 0.7],
+                  y: [34, -48 - index * 4],
+                  rotate: [-40, 35 + index * 18],
+                }}
+                transition={{ duration: attack.die === 4 ? 0.8 : attack.die === 5 ? 1.0 : 1.22, delay: index * 0.035 }}
+              >
+                {item}
+              </motion.span>
+            ))
+          )}
           <div
             className="absolute inset-0 flex items-center justify-center"
             style={{
@@ -106,12 +146,6 @@ export default function CinematicAttackOverlay({
               </p>
             </motion.div>
           </div>
-          <motion.div
-            className="absolute inset-x-0 top-1/2 h-2 bg-white"
-            initial={{ scaleX: 0, opacity: 0 }}
-            animate={{ scaleX: [0, 1, 0], opacity: [0, 0.9, 0] }}
-            transition={{ duration: 0.72, delay: 0.62 }}
-          />
           <motion.div
             className="absolute inset-0"
             initial={{ opacity: 0 }}

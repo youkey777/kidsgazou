@@ -2,7 +2,7 @@ import { motion } from 'framer-motion'
 import { useEffect, useRef, useState } from 'react'
 import type { ImageRecord } from '../db'
 import { saveBattleResult } from './battle-db'
-import { calculateDiceDamage } from './character-rules'
+import { calculateDiceDamage, effectiveUltimateName } from './character-rules'
 import type { AttackEffectData } from './effects/AttackFlyEffect'
 import BattleStage from './effects/BattleStage'
 import CinematicAttackOverlay, { type CinematicAttack } from './effects/CinematicAttackOverlay'
@@ -47,7 +47,13 @@ const HAND_IMAGES: Record<RpsHand, string> = {
 const sleep = (ms: number) => new Promise((resolve) => window.setTimeout(resolve, ms))
 
 function rollDie() {
-  return Math.floor(Math.random() * 6) + 1
+  const roll = Math.random()
+  if (roll < 0.22) return 1
+  if (roll < 0.44) return 2
+  if (roll < 0.64) return 3
+  if (roll < 0.8) return 4
+  if (roll < 0.93) return 5
+  return 6
 }
 
 function randomHand() {
@@ -71,9 +77,7 @@ function judge(leftHand: RpsHand, rightHand: RpsHand) {
 }
 
 function ultimateName(character: ImageRecord, die: number) {
-  if (die === 4) return character.ultimate4Name || character.ultimateName || 'ひっさつわざ4'
-  if (die === 5) return character.ultimate5Name || character.ultimateName || 'ひっさつわざ5'
-  if (die === 6) return character.ultimate6Name || character.ultimateName || 'ひっさつわざ6'
+  if (die === 4 || die === 5 || die === 6) return effectiveUltimateName(character, die)
   return 'エナジーアタック'
 }
 
@@ -212,7 +216,7 @@ export default function ComboBattle({ left, right, onDone, onExit }: Props) {
     const defenderSide: Side = attackerSide === 'left' ? 'right' : 'left'
     let nextLeftHp = leftHpRef.current
     let nextRightHp = rightHpRef.current
-    const applyDamage = (target: Side, amount: number) => {
+    const applyDamage = (target: Side, amount: number, scale: 'normal' | 'counter' | 'ultimate' = 'normal') => {
       if (target === 'left') {
         nextLeftHp = Math.max(0, nextLeftHp - amount)
         leftHpRef.current = nextLeftHp
@@ -222,7 +226,7 @@ export default function ComboBattle({ left, right, onDone, onExit }: Props) {
         rightHpRef.current = nextRightHp
         setRightHp(nextRightHp)
       }
-      setEvents((prev) => [...prev, { id: makeEventId(), target, amount }])
+      setEvents((prev) => [...prev, { id: makeEventId(), target, amount, scale }])
     }
 
     setMessage('ブルーベリーハシニーニが後(うし)ろに下(さ)がってよけた！')
@@ -234,7 +238,7 @@ export default function ComboBattle({ left, right, onDone, onExit }: Props) {
 
     setSpecialTitle('ドリアン投げ')
     setMessage('ドリアン投(な)げ！')
-    await sleep(420)
+    await sleep(760)
     setAttackEffect({
       id: makeEventId(),
       side: defenderSide,
@@ -248,7 +252,7 @@ export default function ComboBattle({ left, right, onDone, onExit }: Props) {
     await sleep(760)
 
     playDamage()
-    applyDamage(attackerSide, 10)
+    applyDamage(attackerSide, 10, 'counter')
     setConfusedSide(attackerSide)
     setSpecialTitle(null)
     setMessage('10ダメージ！相手(あいて)が混乱(こんらん)！')
@@ -319,7 +323,7 @@ export default function ComboBattle({ left, right, onDone, onExit }: Props) {
       }
       setCinematic(cinematicData)
       playUltimate()
-      await sleep(die === 4 ? 950 : die === 5 ? 1180 : 1450)
+      await sleep(die === 4 ? 450 : die === 5 ? 700 : 950)
     }
 
     setActiveSide(winnerSide)
@@ -350,7 +354,7 @@ export default function ComboBattle({ left, right, onDone, onExit }: Props) {
       leftHpRef.current = nextLeftHp
       setLeftHp(nextLeftHp)
     }
-    setEvents((prev) => [...prev, { id: makeEventId(), target, amount: damage }])
+    setEvents((prev) => [...prev, { id: makeEventId(), target, amount: damage, scale: die >= 4 ? 'ultimate' : 'normal' }])
     setMessage(die === 6 ? `一撃必殺(いちげきひっさつ)！ ${damage}ダメージ！` : `${damage}ダメージ！`)
     await sleep(die >= 4 ? 1800 : 1150)
     setActiveSide(undefined)

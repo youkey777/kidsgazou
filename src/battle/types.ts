@@ -29,6 +29,7 @@ export type DamageEvent = {
   target: 'left' | 'right'
   amount: number
   label?: string
+  scale?: 'normal' | 'counter' | 'ultimate'
 }
 
 export type FighterState = {

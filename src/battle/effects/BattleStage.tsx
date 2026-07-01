@@ -3,6 +3,7 @@ import { attributeMark } from '../character-rules'
 import type { BattleCharacter, DamageEvent } from '../types'
 import { hpPercent, starsForLevel } from '../types'
 import AttackFlyEffect, { type AttackEffectData } from './AttackFlyEffect'
+import DamageBurstOverlay from './DamageBurstOverlay'
 import DamageNumber from './DamageNumber'
 import DiceThrowEffect, { type DiceThrowEffectData } from './DiceThrowEffect'
 
@@ -64,28 +65,22 @@ function FighterCard({
       }
       transition={{ duration: ko ? 0.75 : dodging ? 0.62 : 0.22 }}
     >
-      {glowing && (
-        <div className="absolute -inset-3 -z-10 rounded-3xl bg-yellow-300/70 blur-xl" />
-      )}
+      {glowing && <div className="absolute -inset-3 -z-10 rounded-3xl bg-yellow-300/45 blur-xl" />}
       <AnimatePresence>
         {confused && (
           <motion.div
-            className="pointer-events-none absolute -right-2 -top-4 z-20 grid h-16 w-16 place-items-center rounded-full bg-yellow-200/95 text-3xl font-black text-purple-800 shadow-2xl ring-4 ring-white"
+            className="pointer-events-none absolute -right-5 -top-7 z-20 h-24 w-24"
             initial={{ scale: 0.2, rotate: -45, opacity: 0 }}
-            animate={{ scale: [0.2, 1.18, 1], rotate: [0, 18, -18, 0], opacity: 1 }}
+            animate={{ scale: [0.2, 1.12, 1], rotate: [0, 12, -8, 0], opacity: 1 }}
             exit={{ scale: 0.3, opacity: 0 }}
             transition={{ duration: 0.5 }}
           >
-            <motion.span
-              animate={{ rotate: [0, 360], scale: [1, 1.18, 1] }}
-              transition={{ duration: 0.85, repeat: Infinity, ease: 'linear' }}
-            >
-              ❓
-            </motion.span>
-            <motion.span
-              className="absolute h-12 w-12 rounded-full border-4 border-dashed border-purple-500"
-              animate={{ rotate: [0, -360] }}
-              transition={{ duration: 0.9, repeat: Infinity, ease: 'linear' }}
+            <motion.img
+              src="/battle/attribute-attacks/confusion.png"
+              alt=""
+              className="h-full w-full object-contain drop-shadow-[0_8px_18px_rgba(88,28,135,.7)]"
+              animate={{ rotate: [0, 360], scale: [1, 1.12, 1] }}
+              transition={{ duration: 1.0, repeat: Infinity, ease: 'linear' }}
             />
           </motion.div>
         )}
@@ -139,18 +134,18 @@ export default function BattleStage({
   return (
     <div
       data-testid="battle-stage"
-      className="relative min-h-[560px] overflow-hidden rounded-[2rem] bg-gradient-to-br from-violet-200 via-slate-100 to-indigo-200 p-2 shadow-2xl sm:min-h-[680px] sm:p-3"
+      className="relative min-h-[560px] overflow-hidden rounded-[2rem] bg-gradient-to-br from-slate-100 via-white to-indigo-100 p-2 shadow-2xl sm:min-h-[680px] sm:p-3"
       style={{
-        backgroundImage: 'linear-gradient(rgba(255,255,255,.44),rgba(15,23,42,.22)), url(/battle/rich-battle-bg.png)',
+        backgroundImage: 'linear-gradient(rgba(255,255,255,.72),rgba(15,23,42,.32)), url(/battle/rich-battle-bg.png)',
         backgroundSize: 'cover',
         backgroundPosition: 'center',
       }}
     >
-      <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_20%,rgba(255,255,255,0.46),transparent_38%)]" />
+      <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_20%,rgba(255,255,255,0.62),transparent_40%)]" />
       <motion.div
         key={message || 'empty-message'}
         className={`relative z-20 mb-2 flex min-h-[4.4rem] items-center justify-center rounded-2xl px-3 py-2 text-center text-base font-black leading-snug shadow-lg sm:text-lg ${
-          message ? 'bg-black/52 text-yellow-100' : 'bg-black/18 text-transparent'
+          message ? 'bg-zinc-950/78 text-white ring-1 ring-white/20' : 'bg-zinc-900/20 text-transparent'
         }`}
         initial={{ scale: 0.98, opacity: 0.75 }}
         animate={{ scale: 1, opacity: 1 }}
@@ -186,20 +181,34 @@ export default function BattleStage({
         {specialTitle && (
           <motion.div
             key={specialTitle}
-            className="pointer-events-none absolute inset-x-3 top-[43%] z-30 rounded-[1.6rem] bg-black/72 px-4 py-3 text-center text-3xl font-black text-yellow-100 shadow-[0_0_24px_rgba(250,204,21,.45)] ring-2 ring-yellow-200/60 sm:inset-x-12 sm:text-5xl"
-            initial={{ y: 20, scale: 0.72, opacity: 0 }}
-            animate={{ y: 0, scale: [0.72, 1.08, 1], opacity: 1 }}
-            exit={{ y: -18, scale: 0.88, opacity: 0 }}
-            transition={{ duration: 0.36, ease: 'backOut' }}
+            className="pointer-events-none fixed inset-0 z-[76] grid h-[100dvh] w-[100dvw] place-items-center bg-black/42 px-4"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.15 }}
           >
-            {specialTitle}
+            <motion.div
+              className="max-w-[94vw] rounded-[2rem] bg-black/82 px-6 py-5 text-center text-[clamp(2.4rem,13vw,6.5rem)] font-black leading-tight text-yellow-100 shadow-[0_0_36px_rgba(250,204,21,.7)] ring-4 ring-yellow-200/80"
+              initial={{ scale: 0.18, rotate: -7, y: 40 }}
+              animate={{ scale: [0.18, 1.2, 1], rotate: [-7, 3, 0], y: [40, -6, 0] }}
+              transition={{ duration: 0.42, ease: 'backOut' }}
+            >
+              {specialTitle}
+            </motion.div>
           </motion.div>
         )}
         {diceThrowEffect && <DiceThrowEffect key={diceThrowEffect.id} effect={diceThrowEffect} />}
         {attackEffect && <AttackFlyEffect key={attackEffect.id} effect={attackEffect} />}
-        {damageEvents.map((event) => (
-          <DamageNumber key={event.id} event={event} />
-        ))}
+        {damageEvents
+          .filter((event) => event.scale !== 'ultimate')
+          .map((event) => (
+            <DamageNumber key={event.id} event={event} />
+          ))}
+        {damageEvents
+          .filter((event) => event.scale === 'ultimate')
+          .map((event) => (
+            <DamageBurstOverlay key={event.id} event={event} />
+          ))}
       </AnimatePresence>
     </div>
   )

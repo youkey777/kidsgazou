@@ -159,6 +159,41 @@ export function randomBattleStats() {
   }
 }
 
+const ULTIMATE_NAME_SETS: Record<string, [string, string, string]> = {
+  ほのお: ['フレアバースト', 'メテオブレイズ', '太陽(たいよう)の一撃(いちげき)'],
+  みず: ['アクアスプラッシュ', 'オーシャンキャノン', '大海流(だいかいりゅう)ブレイク'],
+  かぜ: ['ウインドカッター', 'ストームダイブ', '天空(てんくう)ハリケーン'],
+  つち: ['ロッククラッシュ', 'アースハンマー', '大地(だいち)のメガインパクト'],
+  ひかり: ['ライトアロー', 'シャインブレード', '聖光(せいこう)スターライト'],
+  やみ: ['シャドウクロー', 'ナイトメアゲート', '暗黒(あんこく)ブラックホール'],
+  でんき: ['スパークショット', 'サンダーボルト', '雷神(らいじん)フルチャージ'],
+  こおり: ['アイスニードル', 'ブリザードカノン', '絶対零度(ぜったいれいど)ブレイク'],
+  くさ: ['リーフスラッシュ', 'ジャングルバインド', '森(もり)のグランドバースト'],
+  はがね: ['メタルパンチ', 'ギアスマッシュ', '鋼鉄(こうてつ)メガドリル'],
+  まほう: ['マジックボール', 'クリスタルスペル', '奇跡(きせき)のミラクルノヴァ'],
+  ドラゴン: ['ドラゴンクロー', 'ドラゴンフレア', '竜王(りゅうおう)ファイナルブレス'],
+  ロボ: ['レーザーショット', 'ロケットドライブ', '超合体(ちょうがったい)メカバースト'],
+  スター: ['スターシュート', 'コメットストライク', '銀河(ぎんが)スーパーノヴァ'],
+  ふしぎ: ['ミステリーボール', 'ワンダースパイラル', '不思議(ふしぎ)ギャラクシー'],
+}
+
+function isDefaultUltimateName(name: string | undefined, die: 4 | 5 | 6) {
+  const trimmed = (name ?? '').trim()
+  return !trimmed || trimmed === `ひっさつわざ${die}` || trimmed === 'ひっさつわざ'
+}
+
+export function effectiveUltimateName(character: ImageRecord, die: 4 | 5 | 6) {
+  const current =
+    die === 4
+      ? character.ultimate4Name
+      : die === 5
+        ? character.ultimate5Name
+        : character.ultimate6Name
+  if (!isDefaultUltimateName(current, die)) return current
+  const set = ULTIMATE_NAME_SETS[character.species] ?? ULTIMATE_NAME_SETS.ふしぎ
+  return set[die - 4]
+}
+
 export function growWinnerStats(character: ImageRecord) {
   const grow = (value: number) => clampStat(value * (1.03 + Math.random() * 0.02))
   return {
