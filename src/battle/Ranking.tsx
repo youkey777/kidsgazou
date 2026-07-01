@@ -52,7 +52,7 @@ export default function Ranking() {
   if (loading || !data) {
     return (
       <div className="rounded-3xl bg-white/85 p-6 text-center font-black text-purple-800">
-        ランキングをよみこみ中...
+        ランキングをよみこみ中(ちゅう)...
       </div>
     )
   }
@@ -60,40 +60,40 @@ export default function Ranking() {
   return (
     <div className="space-y-4">
       <section className="rounded-3xl bg-purple-100 p-3 shadow-lg">
-        <h3 className="mb-2 text-lg font-black text-purple-900">通算勝利（つうさんしょうり）Top10</h3>
+        <h3 className="mb-2 text-lg font-black text-purple-900">通算勝利(つうさんしょうり) Top10</h3>
         <div className="space-y-2">
           {data.totalWins.map((character) => (
-            <RankCard key={character.id} character={character} label={`${character.wins}勝`} />
+            <RankCard key={character.id} character={character} label={`${character.wins}勝(しょう)`} />
           ))}
         </div>
       </section>
 
       <section className="rounded-3xl bg-pink-100 p-3 shadow-lg">
-        <h3 className="mb-2 text-lg font-black text-pink-900">連勝中（れんしょうちゅう）Top5</h3>
+        <h3 className="mb-2 text-lg font-black text-pink-900">連勝中(れんしょうちゅう) Top5</h3>
         <div className="space-y-2">
           {data.streaks.map((character) => (
             <RankCard
               key={character.id}
               character={character}
-              label={`${character.streak}連勝`}
+              label={`${character.streak}連勝(れんしょう)`}
             />
           ))}
         </div>
       </section>
 
       <section className="rounded-3xl bg-yellow-100 p-3 shadow-lg">
-        <h3 className="mb-2 text-lg font-black text-yellow-900">今日（きょう）のMVP</h3>
+        <h3 className="mb-2 text-lg font-black text-yellow-900">今日(きょう)のMVP</h3>
         {data.todayMvp ? (
           <RankCard character={data.todayMvp} label="MVP" />
         ) : (
           <p className="rounded-2xl bg-white p-4 text-sm font-bold text-zinc-700">
-            今日はまだバトル記録がないよ。
+            今日(きょう)はまだバトル記録(きろく)がないよ。
           </p>
         )}
       </section>
 
       <section className="rounded-3xl bg-cyan-100 p-3 shadow-lg">
-        <h3 className="mb-2 text-lg font-black text-cyan-900">属性別（ぞくせいべつ）最強</h3>
+        <h3 className="mb-2 text-lg font-black text-cyan-900">属性別(ぞくせいべつ) 最強(さいきょう)</h3>
         <div className="space-y-2">
           {data.speciesChampions.map((character) => (
             <RankCard
@@ -106,10 +106,10 @@ export default function Ranking() {
       </section>
 
       <section className="rounded-3xl bg-zinc-900 p-3 shadow-lg">
-        <h3 className="mb-2 text-lg font-black text-white">チーム戦 直近10件</h3>
+        <h3 className="mb-2 text-lg font-black text-white">チーム戦(せん) 直近(ちょっきん)10件(けん)</h3>
         {data.recentTeamRecords.length === 0 ? (
           <p className="rounded-2xl bg-white/10 p-4 text-sm font-bold text-white">
-            まだチーム戦の記録がないよ。
+            まだチーム戦(せん)の記録(きろく)がないよ。
           </p>
         ) : (
           <div className="space-y-2">
@@ -118,7 +118,7 @@ export default function Ranking() {
                 key={record.id}
                 className="rounded-2xl bg-white/10 p-3 text-sm font-black text-white"
               >
-                {record.winnerTeam === 'rui' ? '🦖 ルイチーム' : '🌸 ミオチーム'} 勝利
+                {record.winnerTeam === 'rui' ? '🦖 ルイチーム' : '🌸 ミオチーム'} 勝利(しょうり)
                 <span className="ml-2 text-xs text-white/70">
                   {new Date(record.createdAt).toLocaleString('ja-JP')}
                 </span>

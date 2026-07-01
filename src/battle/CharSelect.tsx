@@ -20,7 +20,7 @@ export default function CharSelect({ title, characters, selectedId, onSelect }: 
       <h3 className="mb-2 text-base font-black text-zinc-900">{title}</h3>
       {characters.length === 0 ? (
         <p className="rounded-2xl bg-purple-100 p-4 text-sm font-bold text-purple-800">
-          まだキャラがいないよ。ルイかミオのタブで画像を追加してね。
+          まだキャラがいないよ。ルイかミオのタブで画像(がぞう)を追加(ついか)してね。
         </p>
       ) : (
         <div className="-mx-1 flex snap-x snap-mandatory gap-3 overflow-x-auto px-1 pb-2">

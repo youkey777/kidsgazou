@@ -64,13 +64,13 @@ export type AttributeAffinity = {
 }
 
 export const AFFINITY_LEVELS: Record<AttributeAffinityRank, AttributeAffinity> = {
-  3: { rank: 3, label: 'かなり強(つよ)い', shortLabel: 'かなり強', multiplier: 1.34 },
-  2: { rank: 2, label: 'やや強(つよ)い', shortLabel: 'やや強', multiplier: 1.2 },
-  1: { rank: 1, label: 'ちょっと強(つよ)い', shortLabel: 'ちょい強', multiplier: 1.1 },
+  3: { rank: 3, label: 'かなり強(つよ)い', shortLabel: 'かなり強(つよ)い', multiplier: 1.34 },
+  2: { rank: 2, label: 'やや強(つよ)い', shortLabel: 'やや強(つよ)い', multiplier: 1.2 },
+  1: { rank: 1, label: 'ちょっと強(つよ)い', shortLabel: 'ちょい強(つよ)い', multiplier: 1.1 },
   0: { rank: 0, label: 'ふつう', shortLabel: 'ふつう', multiplier: 1 },
-  [-1]: { rank: -1, label: 'ちょっと弱(よわ)い', shortLabel: 'ちょい弱', multiplier: 0.92 },
-  [-2]: { rank: -2, label: 'やや弱(よわ)い', shortLabel: 'やや弱', multiplier: 0.82 },
-  [-3]: { rank: -3, label: 'かなり弱(よわ)い', shortLabel: 'かなり弱', multiplier: 0.72 },
+  [-1]: { rank: -1, label: 'ちょっと弱(よわ)い', shortLabel: 'ちょい弱(よわ)い', multiplier: 0.92 },
+  [-2]: { rank: -2, label: 'やや弱(よわ)い', shortLabel: 'やや弱(よわ)い', multiplier: 0.82 },
+  [-3]: { rank: -3, label: 'かなり弱(よわ)い', shortLabel: 'かなり弱(よわ)い', multiplier: 0.72 },
 }
 
 const AFFINITY_BY_DISTANCE: AttributeAffinityRank[] = [

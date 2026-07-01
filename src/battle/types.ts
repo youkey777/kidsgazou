@@ -1,8 +1,8 @@
 import type { ChildKey, ImageRecord } from '../db'
 export { clampStat } from './character-rules'
 
-export type BattleMode = 'combo' | 'dice' | 'rps' | 'turn' | 'tap' | 'team'
-export type PlayableBattleMode = 'combo' | 'team'
+export type BattleMode = 'combo' | 'dice' | 'rps' | 'turn' | 'tap' | 'team' | 'online'
+export type PlayableBattleMode = 'combo' | 'team' | 'online'
 export type BattleTab = 'battle' | 'training' | 'attribute' | 'ranking'
 export type RpsHand = 'rock' | 'scissors' | 'paper'
 export type TurnAction = 'attack' | 'ultimate' | 'guard' | 'run'
@@ -45,6 +45,7 @@ export const MODE_LABELS: Record<BattleMode, string> = {
   turn: '⚔️ ターン',
   tap: '👆 タップ',
   team: '🏆 3vs3',
+  online: 'ふたりで対戦(たいせん)',
 }
 
 export const HAND_LABELS: Record<RpsHand, string> = {

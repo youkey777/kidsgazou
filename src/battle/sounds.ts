@@ -29,6 +29,10 @@ function isPageVisible() {
   return typeof document === 'undefined' || document.visibilityState !== 'hidden'
 }
 
+function canPlaySfx() {
+  return typeof document === 'undefined' || document.visibilityState === 'visible'
+}
+
 function setMediaSessionState(state: 'playing' | 'paused') {
   try {
     if ('mediaSession' in navigator) {
@@ -70,6 +74,7 @@ function getContext() {
 }
 
 function duckBgm(duration = 520) {
+  if (!canPlaySfx()) return
   if (!bgm || bgm.paused) return
   const token = ++duckToken
   bgm.volume = BGM_DUCK_VOLUME
@@ -84,9 +89,10 @@ function boosted(gain: number) {
 
 function tone(frequency: number, duration: number, type: OscillatorType, gain = 0.08) {
   try {
+    if (!canPlaySfx()) return
     duckBgm(Math.max(320, duration * 1000 + 180))
     const ctx = getContext()
-    if (ctx.state === 'suspended') void ctx.resume()
+    if (ctx.state === 'suspended' && canPlaySfx()) void ctx.resume()
     const osc = ctx.createOscillator()
     const volume = ctx.createGain()
     osc.type = type
@@ -104,9 +110,10 @@ function tone(frequency: number, duration: number, type: OscillatorType, gain = 
 
 function sweep(startFrequency: number, endFrequency: number, duration: number, type: OscillatorType, gain = 0.06) {
   try {
+    if (!canPlaySfx()) return
     duckBgm(Math.max(360, duration * 1000 + 220))
     const ctx = getContext()
-    if (ctx.state === 'suspended') void ctx.resume()
+    if (ctx.state === 'suspended' && canPlaySfx()) void ctx.resume()
     const osc = ctx.createOscillator()
     const volume = ctx.createGain()
     osc.type = type
@@ -125,9 +132,10 @@ function sweep(startFrequency: number, endFrequency: number, duration: number, t
 
 function noiseBurst(duration: number, gain = 0.045, filterFrequency = 900) {
   try {
+    if (!canPlaySfx()) return
     duckBgm(Math.max(360, duration * 1000 + 220))
     const ctx = getContext()
-    if (ctx.state === 'suspended') void ctx.resume()
+    if (ctx.state === 'suspended' && canPlaySfx()) void ctx.resume()
     const bufferSize = Math.max(1, Math.floor(ctx.sampleRate * duration))
     const buffer = ctx.createBuffer(1, bufferSize, ctx.sampleRate)
     const data = buffer.getChannelData(0)
@@ -222,6 +230,7 @@ export function isBgmEnabled() {
 
 export function unlockAudio() {
   try {
+    if (!canPlaySfx()) return
     const ctx = getContext()
     if (ctx.state === 'suspended') void ctx.resume()
     if (bgmEnabled && isPageVisible()) playBgm()

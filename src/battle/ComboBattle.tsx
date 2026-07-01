@@ -41,6 +41,15 @@ type Props = {
   right: ImageRecord
   onDone: () => Promise<void> | void
   onExit: () => void
+  saveResult?: boolean
+  initialLeftHp?: number
+  initialRightHp?: number
+  onBattleEnd?: (
+    winner: ImageRecord,
+    loser: ImageRecord,
+    winnerSide: Side,
+    finalHp: { left: number; right: number }
+  ) => Promise<void> | void
 }
 
 type Side = 'left' | 'right'
@@ -166,11 +175,13 @@ function HandSlot({ hand, cycling }: { hand: RpsHand; cycling: boolean }) {
   )
 }
 
-export default function ComboBattle({ left, right, onDone, onExit }: Props) {
-  const [leftHp, setLeftHp] = useState(left.hp)
-  const [rightHp, setRightHp] = useState(right.hp)
-  const leftHpRef = useRef(left.hp)
-  const rightHpRef = useRef(right.hp)
+export default function ComboBattle({ left, right, onDone, onExit, saveResult = true, initialLeftHp, initialRightHp, onBattleEnd }: Props) {
+  const startingLeftHp = initialLeftHp ?? left.hp
+  const startingRightHp = initialRightHp ?? right.hp
+  const [leftHp, setLeftHp] = useState(startingLeftHp)
+  const [rightHp, setRightHp] = useState(startingRightHp)
+  const leftHpRef = useRef(startingLeftHp)
+  const rightHpRef = useRef(startingRightHp)
   const busyRef = useRef(false)
   const doneRef = useRef(false)
   const [round, setRound] = useState(1)
@@ -230,7 +241,11 @@ export default function ComboBattle({ left, right, onDone, onExit }: Props) {
     playVictory()
     fireBattleConfetti()
     setVictory({ winner: result.winner, outcome: result.winner.id === left.id ? 'win' : 'lose' })
-    setSaveMessage(await saveBattleResult('combo', result))
+    if (saveResult) setSaveMessage(await saveBattleResult('combo', result))
+    await onBattleEnd?.(result.winner, result.loser, result.winner.id === left.id ? 'left' : 'right', {
+      left: nextLeftHp,
+      right: nextRightHp,
+    })
     await onDone()
   }
 
@@ -354,7 +369,7 @@ export default function ComboBattle({ left, right, onDone, onExit }: Props) {
     await sleep(620)
     setDodgeSide(undefined)
 
-    setSpecialTitle('ドリアン投げ')
+    setSpecialTitle('ドリアン投(な)げ')
     setMessage('ドリアン投(な)げ！')
     await sleep(680)
     setSpecialTitle(null)
@@ -366,7 +381,7 @@ export default function ComboBattle({ left, right, onDone, onExit }: Props) {
       attribute: 'くさ',
       variant: 4,
       imageUrl: '/battle/durian-3d.png',
-      label: 'ドリアン投げ',
+      label: 'ドリアン投(な)げ',
     })
     playAttributeWhoosh('durian')
     await sleep(1840)
@@ -390,7 +405,7 @@ export default function ComboBattle({ left, right, onDone, onExit }: Props) {
       kind: 'dice',
       attribute: defender.species,
       variant: 2,
-      label: '通常攻撃',
+      label: '通常攻撃(つうじょうこうげき)',
     })
     setMessage('さらに通常攻撃(つうじょうこうげき)！')
     playAttributeWhoosh(defender.species)

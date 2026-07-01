@@ -4,13 +4,14 @@ import { listBattleCharacters } from './battle-db'
 import AttributeGuide from './AttributeGuide'
 import CharSelect from './CharSelect'
 import ComboBattle from './ComboBattle'
+import OnlineBattle from './OnlineBattle'
 import Ranking from './Ranking'
 import TeamBattle from './TeamBattle'
 import Training from './Training'
 import { playBgm, playSelect } from './sounds'
 import { MODE_LABELS, type BattleTab, type PlayableBattleMode } from './types'
 
-const MODES: PlayableBattleMode[] = ['combo', 'team']
+const MODES: PlayableBattleMode[] = ['combo', 'team', 'online']
 
 export default function BattleHub() {
   const [tab, setTab] = useState<BattleTab>('battle')
@@ -56,8 +57,8 @@ export default function BattleHub() {
   const start = () => {
     playSelect()
     playBgm()
-    if (mode === 'team') {
-      setStartedKey(`team-${Date.now()}`)
+    if (mode === 'team' || mode === 'online') {
+      setStartedKey(`${mode}-${Date.now()}`)
       return
     }
     if (!left || !right) return
@@ -66,6 +67,9 @@ export default function BattleHub() {
 
   const battle = () => {
     if (!startedKey) return null
+    if (mode === 'online') {
+      return <OnlineBattle key={startedKey} characters={characters} onDone={refresh} onExit={() => setStartedKey(null)} />
+    }
     if (mode === 'team') {
       return (
         <TeamBattle
@@ -144,9 +148,9 @@ export default function BattleHub() {
                 {item === 'battle'
                   ? 'バトル'
                   : item === 'training'
-                    ? '育てる'
+                    ? '育(そだ)てる'
                     : item === 'attribute'
-                      ? '属性'
+                      ? '属性(ぞくせい)'
                       : 'ランキング'}
               </button>
             ))}
@@ -197,8 +201,14 @@ export default function BattleHub() {
 
                 {loading ? (
                   <div className="rounded-3xl bg-white/85 p-6 text-center font-black text-purple-800">
-                    キャラをよみこみ中...
+                    キャラをよみこみ中(ちゅう)...
                   </div>
+                ) : mode === 'online' ? (
+                  <section className="rounded-3xl bg-white/85 p-3 shadow-lg">
+                    <h3 className="text-base font-black text-purple-900">
+                      スマホとiPadで同(おな)じ部屋(へや)に入(はい)って対戦(たいせん)します
+                    </h3>
+                  </section>
                 ) : mode !== 'team' ? (
                   <>
                     <CharSelect
@@ -234,7 +244,7 @@ export default function BattleHub() {
 
                 <button
                   onClick={start}
-                  disabled={loading || (mode !== 'team' && (!left || !right)) || (mode === 'team' && (ruiTeamIds.length < 3 || mioTeamIds.length < 3))}
+                  disabled={loading || (mode === 'combo' && (!left || !right)) || (mode === 'team' && (ruiTeamIds.length < 3 || mioTeamIds.length < 3))}
                   className="min-h-16 w-full rounded-3xl bg-gradient-to-r from-yellow-300 to-orange-400 text-2xl font-black text-zinc-900 shadow-2xl active:scale-95 disabled:opacity-50"
                 >
                   バトルスタート！

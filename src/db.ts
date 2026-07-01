@@ -93,7 +93,7 @@ function uid() {
 function ensure() {
   if (!isConfigured || !supabase) {
     throw new Error(
-      'Supabase が未設定です。VITE_SUPABASE_URL と VITE_SUPABASE_ANON_KEY を設定してください'
+      'Supabase が未設定(みせってい)です。VITE_SUPABASE_URL と VITE_SUPABASE_ANON_KEY を設定(せってい)してください'
     )
   }
   return supabase
@@ -151,7 +151,7 @@ export async function addImages(
       contentType: file.type || 'image/png',
       upsert: false,
     })
-    if (upload.error) throw new Error(`アップロード失敗: ${upload.error.message}`)
+    if (upload.error) throw new Error(`アップロード失敗(しっぱい): ${upload.error.message}`)
 
     const createdAt = now + i
     const stats = randomBattleStats()
@@ -189,7 +189,7 @@ export async function addImages(
     }
     if (insert.error) {
       await sb.storage.from(BUCKET).remove([path])
-      throw new Error(`DB保存失敗: ${insert.error.message}`)
+      throw new Error(`DB保存(ほぞん)失敗(しっぱい): ${insert.error.message}`)
     }
 
     records.push(
@@ -220,7 +220,7 @@ async function selectImages(child?: ChildKey): Promise<ImageRow[]> {
   if (!oldBattleResult.error) return (oldBattleResult.data || []) as unknown as ImageRow[]
 
   const baseResult = await selectWithColumns(BASE_SELECT, child)
-  if (baseResult.error) throw new Error(`一覧取得失敗: ${baseResult.error.message}`)
+  if (baseResult.error) throw new Error(`一覧(いちらん)取得(しゅとく)失敗(しっぱい): ${baseResult.error.message}`)
   return (baseResult.data || []) as unknown as ImageRow[]
 }
 
@@ -264,12 +264,12 @@ export async function updateImageStats(
   const { data, error } = await sb.from('images').update(payload).eq('id', id).select('id')
   if (error) {
     throw new Error(
-      `ステータス保存失敗: ${error.message}。SETUP.md の追加SQLを実行してください`
+      `ステータス保存(ほぞん)失敗(しっぱい): ${error.message}。SETUP.md の追加SQL(ついかえすきゅーえる)を実行(じっこう)してください`
     )
   }
   if (!data || data.length === 0) {
     throw new Error(
-      'ステータス保存失敗: Supabase の UPDATE ポリシーが未設定です。SETUP.md の追加SQLを実行してください'
+      'ステータス保存(ほぞん)失敗(しっぱい): Supabase の UPDATE ポリシーが未設定(みせってい)です。SETUP.md の追加SQL(ついかえすきゅーえる)を実行(じっこう)してください'
     )
   }
 }
@@ -295,7 +295,7 @@ export async function rerollCharacterStat(
   stat: StatKey,
   nextValue: number
 ): Promise<void> {
-  if (character.crystals <= 0) throw new Error('クリスタルが足りません')
+  if (character.crystals <= 0) throw new Error('クリスタルが足(た)りません')
   await updateImageStats(character.id, {
     [stat]: nextValue,
     crystals: character.crystals - 1,
@@ -306,7 +306,7 @@ export async function rerollCharacterAttribute(
   character: ImageRecord,
   attribute: string
 ): Promise<void> {
-  if (character.crystals <= 0) throw new Error('クリスタルが足りません')
+  if (character.crystals <= 0) throw new Error('クリスタルが足(た)りません')
   await updateImageStats(character.id, {
     species: attribute,
     crystals: character.crystals - 1,
@@ -365,7 +365,7 @@ export async function updateBattleResultStats(
 
   const [winnerResult, loserResult] = await Promise.all([winnerUpdate, loserUpdate])
   if (winnerResult.error || loserResult.error) {
-    throw new Error('バトル結果の保存に失敗しました。追加SQLの実行を確認してください')
+    throw new Error('バトル結果(けっか)の保存(ほぞん)に失敗(しっぱい)しました。追加SQL(ついかえすきゅーえる)の実行(じっこう)を確認(かくにん)してください')
   }
 }
 
@@ -376,11 +376,11 @@ export async function deleteImage(id: string): Promise<void> {
     .select('path')
     .eq('id', id)
     .maybeSingle()
-  if (getErr) throw new Error(`削除前取得失敗: ${getErr.message}`)
+  if (getErr) throw new Error(`削除前(さくじょまえ)取得(しゅとく)失敗(しっぱい): ${getErr.message}`)
   if (!row) return
 
   const { error: delErr } = await sb.from('images').delete().eq('id', id)
-  if (delErr) throw new Error(`DB削除失敗: ${delErr.message}`)
+  if (delErr) throw new Error(`DB削除(さくじょ)失敗(しっぱい): ${delErr.message}`)
   await sb.storage.from(BUCKET).remove([row.path])
 }
 
@@ -390,6 +390,6 @@ export async function countImages(child: ChildKey): Promise<number> {
     .from('images')
     .select('id', { count: 'exact', head: true })
     .eq('child', child)
-  if (error) throw new Error(`カウント失敗: ${error.message}`)
+  if (error) throw new Error(`カウント失敗(しっぱい): ${error.message}`)
   return count || 0
 }

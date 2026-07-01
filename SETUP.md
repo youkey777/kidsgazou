@@ -262,3 +262,66 @@ set
   ultimate5_name = coalesce(ultimate5_name, ultimate_name, 'ひっさつわざ5'),
   ultimate6_name = coalesce(ultimate6_name, ultimate_name, 'ひっさつわざ6');
 ```
+
+## ふたりで対戦の追加SQL
+
+スマホとiPadなど別端末で同じ部屋に入り、各自が選んだキャラでオンライン対戦するため、Supabase SQL Editor で以下を実行してください。
+
+```sql
+create table if not exists battle_rooms (
+  id text primary key,
+  code text not null,
+  status text not null default 'selecting',
+  host_player_id text not null,
+  guest_player_id text,
+  host_character_id text references images(id) on delete set null,
+  guest_character_id text references images(id) on delete set null,
+  host_hp int,
+  guest_hp int,
+  round int default 1,
+  host_hand text,
+  guest_hand text,
+  last_winner_side text,
+  last_die int,
+  last_damage int,
+  winner_side text,
+  result_saved boolean default false,
+  created_at timestamptz default now(),
+  updated_at timestamptz default now()
+);
+
+create index if not exists battle_rooms_code_idx on battle_rooms (code);
+create index if not exists battle_rooms_updated_idx on battle_rooms (updated_at desc);
+
+alter table battle_rooms enable row level security;
+
+do $$
+begin
+  if not exists (
+    select 1 from pg_policies
+    where schemaname = 'public'
+      and tablename = 'battle_rooms'
+      and policyname = 'anon read battle rooms'
+  ) then
+    create policy "anon read battle rooms" on battle_rooms for select using (true);
+  end if;
+
+  if not exists (
+    select 1 from pg_policies
+    where schemaname = 'public'
+      and tablename = 'battle_rooms'
+      and policyname = 'anon insert battle rooms'
+  ) then
+    create policy "anon insert battle rooms" on battle_rooms for insert with check (true);
+  end if;
+
+  if not exists (
+    select 1 from pg_policies
+    where schemaname = 'public'
+      and tablename = 'battle_rooms'
+      and policyname = 'anon update battle rooms'
+  ) then
+    create policy "anon update battle rooms" on battle_rooms for update using (true) with check (true);
+  end if;
+end $$;
+```

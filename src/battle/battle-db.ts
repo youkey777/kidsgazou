@@ -66,7 +66,7 @@ async function autoRepairCharacters(characters: ImageRecord[]) {
       try {
         await updateImageProfile(character.id, patch)
       } catch {
-        // SQL未実行時でも、画面上は補正した値で遊べるようにする。
+        // SQL未実行(みじっこう)時(じ)でも、画面上(がめんじょう)は補正(ほせい)した値(あたい)で遊(あそ)べるようにする。
       }
       return repaired
     })
@@ -94,7 +94,7 @@ export async function saveBattleResult(
   })
 
   if (error) {
-    return `バトル記録の保存に失敗しました。SETUP.md の追加SQLを実行してください: ${error.message}`
+    return `バトル記録(きろく)の保存(ほぞん)に失敗(しっぱい)しました。SETUP.md の追加SQL(ついかえすきゅーえる)を実行(じっこう)してください: ${error.message}`
   }
 
   try {

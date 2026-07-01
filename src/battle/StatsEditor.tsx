@@ -51,7 +51,7 @@ export default function StatsEditor({ character, onClose, onSaved }: Props) {
     setUltimate4Name(ULTIMATES[Math.floor(Math.random() * ULTIMATES.length)])
     setUltimate5Name(ULTIMATES[Math.floor(Math.random() * ULTIMATES.length)])
     setUltimate6Name(ULTIMATES[Math.floor(Math.random() * ULTIMATES.length)])
-    setMessage('ランダムでパラメータを作ったよ')
+    setMessage('ランダムでパラメータを作(つく)ったよ')
   }
 
   const autoGenerate = async () => {
@@ -61,14 +61,14 @@ export default function StatsEditor({ character, onClose, onSaved }: Props) {
       image.src = character.url
       await new Promise<void>((resolve, reject) => {
         image.onload = () => resolve()
-        image.onerror = () => reject(new Error('画像を読めませんでした'))
+        image.onerror = () => reject(new Error('画像(がぞう)を読(よ)めませんでした'))
       })
       const canvas = document.createElement('canvas')
       const size = 16
       canvas.width = size
       canvas.height = size
       const context = canvas.getContext('2d')
-      if (!context) throw new Error('Canvas が使えません')
+      if (!context) throw new Error('Canvas が使(つか)えません')
       context.drawImage(image, 0, 0, size, size)
       const data = context.getImageData(0, 0, size, size).data
       let red = 0
@@ -95,10 +95,10 @@ export default function StatsEditor({ character, onClose, onSaved }: Props) {
       setUltimate4Name(red > green ? 'スパークスラッシュ' : 'フルーツスピン')
       setUltimate5Name(red + blue > green * 2 ? 'レインボーフラッシュ' : 'ミラクルスパーク')
       setUltimate6Name(red > blue ? 'ゴールデンバースト' : 'スターライトキャノン')
-      setMessage('画像の色からパラメータを作ったよ')
+      setMessage('画像(がぞう)の色(いろ)からパラメータを作(つく)ったよ')
     } catch {
       randomize()
-      setMessage('画像解析ができなかったのでランダム生成したよ')
+      setMessage('画像解析(がぞうかいせき)ができなかったのでランダム生成(せいせい)したよ')
     }
   }
 
@@ -133,7 +133,7 @@ export default function StatsEditor({ character, onClose, onSaved }: Props) {
         <div className="flex items-start gap-3">
           <img src={character.url} alt="" className="h-24 w-24 rounded-2xl object-cover" />
           <div className="min-w-0 flex-1">
-            <h2 className="truncate text-xl font-black text-zinc-900">パラメータ編集</h2>
+            <h2 className="truncate text-xl font-black text-zinc-900">パラメータ編集(へんしゅう)</h2>
             <p className="truncate text-sm font-bold text-purple-700">{character.name}</p>
             <p className="mt-1 text-sm font-black text-yellow-500">
               Lv.{character.level} {stars} / 💎 {character.crystals}
@@ -143,7 +143,7 @@ export default function StatsEditor({ character, onClose, onSaved }: Props) {
           <button
             onClick={onClose}
             className="h-11 w-11 rounded-full bg-zinc-900 text-xl font-black text-white"
-            aria-label="閉じる"
+            aria-label="閉(と)じる"
           >
             ×
           </button>
@@ -187,7 +187,7 @@ export default function StatsEditor({ character, onClose, onSaved }: Props) {
           </label>
 
           <label className="block">
-            <span className="text-sm font-black text-zinc-700">必殺技</span>
+            <span className="text-sm font-black text-zinc-700">必殺技(ひっさつわざ)</span>
             <input
               value={ultimateName}
               onChange={(event) => setUltimateName(event.target.value)}
@@ -234,13 +234,13 @@ export default function StatsEditor({ character, onClose, onSaved }: Props) {
             onClick={randomize}
             className="min-h-12 rounded-2xl bg-cyan-500 px-3 py-3 font-black text-white shadow-lg"
           >
-            ランダム生成
+            ランダム生成(せいせい)
           </button>
           <button
             onClick={autoGenerate}
             className="min-h-12 rounded-2xl bg-fuchsia-500 px-3 py-3 font-black text-white shadow-lg"
           >
-            画像から自動生成
+            画像(がぞう)から自動生成(じどうせいせい)
           </button>
         </div>
         <button
@@ -248,7 +248,7 @@ export default function StatsEditor({ character, onClose, onSaved }: Props) {
           disabled={saving}
           className="mt-3 min-h-14 w-full rounded-2xl bg-zinc-900 px-4 py-3 text-lg font-black text-yellow-300 shadow-xl disabled:opacity-50"
         >
-          {saving ? '保存中...' : 'このパラメータで保存'}
+          {saving ? '保存(ほぞん)中(ちゅう)...' : 'このパラメータで保存(ほぞん)'}
         </button>
       </div>
     </div>

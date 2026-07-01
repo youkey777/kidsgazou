@@ -680,7 +680,7 @@ export default function Training({ characters, onChanged }: Props) {
           const saveError = (error as Error).message
           setQuizSaveError(saveError)
           patchLocalCharacter(selected.id, { crystals: quizBaseCrystalsRef.current })
-          setMessage(`繧ｯ繝ｪ繧ｹ繧ｿ繝ｫ菫晏ｭ・縺ｻ縺槭ｓ)縺ｫ螟ｱ謨・縺励∪縺励◆: ${saveError}`)
+          setMessage(`クリスタル保存(ほぞん)に失敗(しっぱい)しました: ${saveError}`)
         }
       }
     } else {

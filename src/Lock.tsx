@@ -6,7 +6,7 @@ const CODE_LEN = 4
 
 export function isUnlocked(): boolean {
   const expected = (import.meta.env.VITE_GALLERY_PASSCODE as string | undefined) || ''
-  if (!expected) return true // パスコード未設定なら鍵なし
+  if (!expected) return true // パスコード未設定(みせってい)なら鍵(かぎ)なし
   return localStorage.getItem(LS_KEY) === expected
 }
 
@@ -81,7 +81,7 @@ export default function Lock({ onUnlock }: { onUnlock: () => void }) {
 
         {!expected && (
           <p className="text-amber-300 text-xs mt-4">
-            VITE_GALLERY_PASSCODE 未設定（誰でも入れます）
+            VITE_GALLERY_PASSCODE 未設定(みせってい)（誰(だれ)でも入(はい)れます）
           </p>
         )}
       </div>
