@@ -65,6 +65,8 @@ export default function OnlineBattle({ characters, onDone, onExit }: Props) {
   const [damageEvents, setDamageEvents] = useState<DamageEvent[]>([])
   const [attackEffect, setAttackEffect] = useState<AttackEffectData | null>(null)
   const [hitSide, setHitSide] = useState<'left' | 'right' | undefined>()
+  const roomRef = useRef<BattleRoom | null>(null)
+  const advanceResultKeyRef = useRef<string | null>(null)
   const resolvingRef = useRef(false)
   const animatedKeyRef = useRef<string | null>(null)
   const savedRef = useRef(false)
@@ -76,6 +78,14 @@ export default function OnlineBattle({ characters, onDone, onExit }: Props) {
   const ownCharacterId = side === 'host' ? room?.hostCharacterId : room?.guestCharacterId
   const ownHand = side === 'host' ? room?.hostHand : room?.guestHand
   const roomId = room?.id
+  const resultKey =
+    room?.status === 'result' && room.lastWinnerSide && room.lastDie && room.lastDamage
+      ? `${room.id}-${room.round}-${room.lastWinnerSide}-${room.lastDie}-${room.lastDamage}`
+      : null
+
+  useEffect(() => {
+    roomRef.current = room
+  }, [room])
 
   useEffect(() => {
     if (!roomId) return
@@ -162,12 +172,15 @@ export default function OnlineBattle({ characters, onDone, onExit }: Props) {
   }, [guest, host, room])
 
   useEffect(() => {
-    if (!room || side !== 'host' || room.status !== 'result') return
+    if (!resultKey || side !== 'host' || advanceResultKeyRef.current === resultKey) return
+    advanceResultKeyRef.current = resultKey
     const timer = window.setTimeout(async () => {
       try {
-        setRoom(await updateOnlineBattle(room, {
+        const currentRoom = roomRef.current
+        if (!currentRoom || currentRoom.status !== 'result') return
+        setRoom(await updateOnlineBattle(currentRoom, {
           status: 'choose',
-          round: room.round + 1,
+          round: currentRoom.round + 1,
           hostHand: null,
           guestHand: null,
           lastDie: null,
@@ -177,9 +190,9 @@ export default function OnlineBattle({ characters, onDone, onExit }: Props) {
       } catch (e) {
         setError((e as Error).message)
       }
-    }, 2600)
+    }, 1800)
     return () => window.clearTimeout(timer)
-  }, [room, side])
+  }, [resultKey, side])
 
   useEffect(() => {
     if (!room || room.status !== 'finished' || savedRef.current || side !== 'host' || !host || !guest || !room.winnerSide) return
@@ -265,10 +278,10 @@ export default function OnlineBattle({ characters, onDone, onExit }: Props) {
 
   return (
     <div className="space-y-3">
-      <section className="rounded-3xl bg-white/92 p-3 text-center shadow-lg">
-        <p className="text-sm font-black text-purple-800">部屋(へや)コード</p>
-        <p className="text-4xl font-black tracking-[0.25em] text-zinc-950">{room.code}</p>
-        <p className="mt-1 text-sm font-bold text-zinc-700">{side === 'host' ? 'あなたはホスト' : 'あなたはゲスト'}</p>
+      <section className="rounded-[1.8rem] border-4 border-yellow-300 bg-zinc-950 p-4 text-center shadow-[0_0_28px_rgba(250,204,21,.45)]">
+        <p className="text-base font-black text-yellow-200">部屋(へや)コード</p>
+        <p className="mt-1 rounded-2xl bg-white px-3 py-3 text-5xl font-black tracking-[0.22em] text-zinc-950 shadow-inner">{room.code}</p>
+        <p className="mt-2 rounded-full bg-yellow-300 px-3 py-1 text-base font-black text-zinc-950">{side === 'host' ? 'あなたはホスト' : 'あなたはゲスト'}</p>
       </section>
 
       {room.status === 'selecting' && (
@@ -311,7 +324,7 @@ export default function OnlineBattle({ characters, onDone, onExit }: Props) {
             attackEffect={attackEffect}
           />
           {room.status === 'choose' && (
-            <section className="rounded-3xl bg-white/92 p-3 shadow-lg">
+            <section className="rounded-3xl bg-white p-3 shadow-lg">
               <p className="mb-2 text-center text-lg font-black text-purple-900">
                 ラウンド {room.round} / 手(て)を選(えら)んでね
               </p>
@@ -331,6 +344,12 @@ export default function OnlineBattle({ characters, onDone, onExit }: Props) {
               <p className="mt-2 text-center text-sm font-black text-zinc-700">
                 {ownHand ? '送信(そうしん)したよ。相手(あいて)を待(ま)っているよ' : 'まだ送信(そうしん)していません'}
               </p>
+            </section>
+          )}
+          {room.status === 'result' && (
+            <section className="rounded-3xl bg-white p-3 text-center shadow-lg">
+              <p className="text-lg font-black text-zinc-950">次(つぎ)のラウンドへ進(すす)んでいるよ...</p>
+              <p className="mt-1 text-sm font-bold text-zinc-700">少(すこ)し待(ま)ってね</p>
             </section>
           )}
           {room.status === 'finished' && room.winnerSide && (
