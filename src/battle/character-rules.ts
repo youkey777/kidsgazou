@@ -153,6 +153,7 @@ export function randomBattleStats() {
     tech: randomStat(),
     species: randomAttribute(),
     ultimateName: 'ひっさつわざ',
+    ultimate4Name: 'ひっさつわざ4',
     ultimate5Name: 'ひっさつわざ5',
     ultimate6Name: 'ひっさつわざ6',
   }
@@ -170,6 +171,7 @@ export function growWinnerStats(character: ImageRecord) {
 }
 
 export function calculateDiceDamage(attacker: ImageRecord, defender: ImageRecord, die: number) {
+  if (die === 6) return defender.hp
   const diePower = [0, 0.42, 0.56, 0.72, 0.9, 1.08, 1.32][die] ?? 1
   const attackScore = attacker.atk * diePower * 0.58
   const techScore = attacker.tech * (0.06 + die * 0.025)

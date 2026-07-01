@@ -104,18 +104,18 @@ export default function BattleStage({
   return (
     <div
       data-testid="battle-stage"
-      className="relative min-h-[560px] overflow-hidden rounded-[2rem] bg-gradient-to-br from-violet-700 via-fuchsia-600 to-indigo-900 p-2 shadow-2xl sm:min-h-[680px] sm:p-3"
+      className="relative min-h-[560px] overflow-hidden rounded-[2rem] bg-gradient-to-br from-violet-200 via-slate-100 to-indigo-200 p-2 shadow-2xl sm:min-h-[680px] sm:p-3"
       style={{
-        backgroundImage: 'linear-gradient(rgba(88,28,135,.35),rgba(49,46,129,.55)), url(/battle/rich-battle-bg.png)',
+        backgroundImage: 'linear-gradient(rgba(255,255,255,.44),rgba(15,23,42,.22)), url(/battle/rich-battle-bg.png)',
         backgroundSize: 'cover',
         backgroundPosition: 'center',
       }}
     >
-      <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_20%,rgba(255,255,255,0.35),transparent_34%)]" />
+      <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_20%,rgba(255,255,255,0.46),transparent_38%)]" />
       <motion.div
         key={message || 'empty-message'}
         className={`relative z-20 mb-2 flex min-h-[4.4rem] items-center justify-center rounded-2xl px-3 py-2 text-center text-base font-black leading-snug shadow-lg sm:text-lg ${
-          message ? 'bg-black/60 text-yellow-200' : 'bg-black/28 text-transparent'
+          message ? 'bg-black/52 text-yellow-100' : 'bg-black/18 text-transparent'
         }`}
         initial={{ scale: 0.98, opacity: 0.75 }}
         animate={{ scale: 1, opacity: 1 }}

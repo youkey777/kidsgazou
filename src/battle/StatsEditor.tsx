@@ -30,6 +30,7 @@ export default function StatsEditor({ character, onClose, onSaved }: Props) {
   })
   const [attribute, setAttribute] = useState(character.species)
   const [ultimateName, setUltimateName] = useState(character.ultimateName)
+  const [ultimate4Name, setUltimate4Name] = useState(character.ultimate4Name || 'ひっさつわざ4')
   const [ultimate5Name, setUltimate5Name] = useState(character.ultimate5Name || 'ひっさつわざ5')
   const [ultimate6Name, setUltimate6Name] = useState(character.ultimate6Name || 'ひっさつわざ6')
   const [saving, setSaving] = useState(false)
@@ -47,6 +48,7 @@ export default function StatsEditor({ character, onClose, onSaved }: Props) {
     })
     setAttribute(randomAttribute())
     setUltimateName(ULTIMATES[Math.floor(Math.random() * ULTIMATES.length)])
+    setUltimate4Name(ULTIMATES[Math.floor(Math.random() * ULTIMATES.length)])
     setUltimate5Name(ULTIMATES[Math.floor(Math.random() * ULTIMATES.length)])
     setUltimate6Name(ULTIMATES[Math.floor(Math.random() * ULTIMATES.length)])
     setMessage('ランダムでパラメータを作ったよ')
@@ -90,6 +92,7 @@ export default function StatsEditor({ character, onClose, onSaved }: Props) {
       })
       setAttribute(red > blue && red > green ? 'ほのお' : blue > green ? 'みず' : 'くさ')
       setUltimateName(red + blue > green * 2 ? 'レインボーフラッシュ' : 'ミラクルスパーク')
+      setUltimate4Name(red > green ? 'スパークスラッシュ' : 'フルーツスピン')
       setUltimate5Name(red + blue > green * 2 ? 'レインボーフラッシュ' : 'ミラクルスパーク')
       setUltimate6Name(red > blue ? 'ゴールデンバースト' : 'スターライトキャノン')
       setMessage('画像の色からパラメータを作ったよ')
@@ -111,6 +114,7 @@ export default function StatsEditor({ character, onClose, onSaved }: Props) {
         tech: clampStat(stats.tech),
         species: attribute.trim() || 'ふしぎ',
         ultimateName: ultimateName.trim() || 'ひっさつわざ',
+        ultimate4Name: ultimate4Name.trim() || 'ひっさつわざ4',
         ultimate5Name: ultimate5Name.trim() || 'ひっさつわざ5',
         ultimate6Name: ultimate6Name.trim() || 'ひっさつわざ6',
       })
@@ -187,6 +191,15 @@ export default function StatsEditor({ character, onClose, onSaved }: Props) {
             <input
               value={ultimateName}
               onChange={(event) => setUltimateName(event.target.value)}
+              className="mt-1 h-12 w-full rounded-2xl border-2 border-purple-200 px-3 text-base font-bold outline-none focus:border-purple-500"
+            />
+          </label>
+
+          <label className="block">
+            <span className="text-sm font-black text-zinc-700">4の必殺技(ひっさつわざ)</span>
+            <input
+              value={ultimate4Name}
+              onChange={(event) => setUltimate4Name(event.target.value)}
               className="mt-1 h-12 w-full rounded-2xl border-2 border-purple-200 px-3 text-base font-bold outline-none focus:border-purple-500"
             />
           </label>

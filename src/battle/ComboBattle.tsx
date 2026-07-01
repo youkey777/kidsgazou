@@ -50,6 +50,14 @@ function rollDie() {
   return Math.floor(Math.random() * 6) + 1
 }
 
+function randomHand() {
+  return HANDS[Math.floor(Math.random() * HANDS.length)]
+}
+
+function isBlueberryHashinini(character: ImageRecord) {
+  return character.id === 'mr0pa7o3-pkaaxx0' || character.name.includes('ブルーベリーハシニーニ')
+}
+
 function judge(leftHand: RpsHand, rightHand: RpsHand) {
   if (leftHand === rightHand) return 0
   if (
@@ -63,6 +71,7 @@ function judge(leftHand: RpsHand, rightHand: RpsHand) {
 }
 
 function ultimateName(character: ImageRecord, die: number) {
+  if (die === 4) return character.ultimate4Name || character.ultimateName || 'ひっさつわざ4'
   if (die === 5) return character.ultimate5Name || character.ultimateName || 'ひっさつわざ5'
   if (die === 6) return character.ultimate6Name || character.ultimateName || 'ひっさつわざ6'
   return 'エナジーアタック'
@@ -148,8 +157,8 @@ export default function ComboBattle({ left, right, onDone, onExit }: Props) {
   useEffect(() => {
     if (!cycling || doneRef.current) return
     const timer = window.setInterval(() => {
-      setCpuPreview((current) => HANDS[(HANDS.indexOf(current) + 1) % HANDS.length])
-    }, 150)
+      setCpuPreview(randomHand())
+    }, 112)
     return () => window.clearInterval(timer)
   }, [cycling])
 
@@ -168,8 +177,8 @@ export default function ComboBattle({ left, right, onDone, onExit }: Props) {
     await onDone()
   }
 
-  const resetForNext = async (nextRound: number) => {
-    await sleep(1900)
+  const resetForNext = async (nextRound: number, delay = 880) => {
+    await sleep(delay)
     setPlayerHand(null)
     setCpuHand(null)
     setRoundResult(null)
@@ -178,8 +187,89 @@ export default function ComboBattle({ left, right, onDone, onExit }: Props) {
     setCinematic(null)
     setRound(nextRound)
     setMessage('次(つぎ)の手(て)を選(えら)んでね')
+    setCpuPreview(randomHand())
     setCycling(true)
     busyRef.current = false
+  }
+
+  const tryDurianCounter = async (
+    attackerSide: Side,
+    attacker: ImageRecord,
+    defender: ImageRecord
+  ) => {
+    if (!isBlueberryHashinini(defender) || Math.random() >= 0.33) return false
+    const defenderSide: Side = attackerSide === 'left' ? 'right' : 'left'
+    let nextLeftHp = leftHpRef.current
+    let nextRightHp = rightHpRef.current
+    const applyDamage = (target: Side, amount: number) => {
+      if (target === 'left') {
+        nextLeftHp = Math.max(0, nextLeftHp - amount)
+        leftHpRef.current = nextLeftHp
+        setLeftHp(nextLeftHp)
+      } else {
+        nextRightHp = Math.max(0, nextRightHp - amount)
+        rightHpRef.current = nextRightHp
+        setRightHp(nextRightHp)
+      }
+      setEvents((prev) => [...prev, { id: makeEventId(), target, amount }])
+    }
+
+    setMessage('ブルーベリーハシニーニがよけた！')
+    setActiveSide(defenderSide)
+    playWhoosh()
+    await sleep(520)
+
+    setAttackEffect({
+      id: makeEventId(),
+      side: defenderSide,
+      kind: 'counter',
+      attribute: 'くさ',
+      variant: 4,
+      imageUrl: '/battle/durian-3d.png',
+      label: 'ドリアン投げ',
+    })
+    setMessage('ドリアン投げ！')
+    playPunch()
+    await sleep(760)
+
+    playDamage()
+    applyDamage(attackerSide, 10)
+    setEvents((prev) => [...prev, { id: makeEventId(), target: attackerSide, amount: 0, label: 'ぐるぐる' }])
+    setMessage('10ダメージ！相手(あいて)が混乱(こんらん)！')
+    await sleep(1050)
+    setAttackEffect(null)
+
+    if (nextLeftHp <= 0 || nextRightHp <= 0) {
+      await finish(nextLeftHp, nextRightHp)
+      return true
+    }
+
+    setAttackEffect({
+      id: makeEventId(),
+      side: defenderSide,
+      kind: 'dice',
+      attribute: defender.species,
+      variant: 2,
+      label: '通常攻撃',
+    })
+    setMessage('さらに通常攻撃(つうじょうこうげき)！')
+    playWhoosh()
+    playPunch()
+    await sleep(720)
+    const followDamage = calculateDiceDamage(defender, attacker, 2)
+    playDamage()
+    applyDamage(attackerSide, followDamage)
+    setMessage(`${followDamage}ダメージ！`)
+    await sleep(1100)
+    setAttackEffect(null)
+    setActiveSide(undefined)
+
+    if (nextLeftHp <= 0 || nextRightHp <= 0) {
+      await finish(nextLeftHp, nextRightHp)
+      return true
+    }
+    await resetForNext(round + 1, 520)
+    return true
   }
 
   const rollAndAttack = async (winnerSide: Side, winner: ImageRecord, loser: ImageRecord) => {
@@ -190,26 +280,29 @@ export default function ComboBattle({ left, right, onDone, onExit }: Props) {
     playDiceRoll()
     for (let i = 0; i < 10; i++) {
       setDiceThrowEffect({ id: throwId, side: winnerSide, face: rollDie() })
-      await sleep(70 + i * 8)
+      await sleep(48 + i * 5)
     }
 
     const die = rollDie()
     setDiceThrowEffect({ id: throwId, side: winnerSide, face: die })
     playDiceLand()
     setMessage(`出目(でめ)は ${die}！`)
-    await sleep(1900)
+    await sleep(1050)
 
     const attackName = ultimateName(winner, die)
-    if (die >= 5) {
+    const countered = await tryDurianCounter(winnerSide, winner, loser)
+    if (countered) return
+
+    if (die >= 4) {
       const cinematicData = {
         id: makeEventId(),
         name: attackName,
         attribute: winner.species,
-        die: die as 5 | 6,
+        die: die as 4 | 5 | 6,
       }
       setCinematic(cinematicData)
       playUltimate()
-      await sleep(1450)
+      await sleep(die === 4 ? 950 : die === 5 ? 1180 : 1450)
     }
 
     setActiveSide(winnerSide)
@@ -219,16 +312,15 @@ export default function ComboBattle({ left, right, onDone, onExit }: Props) {
       kind: 'dice',
       attribute: winner.species,
       variant: die,
-      symbol: String(die),
       label: attackName,
     })
     setDiceThrowEffect(null)
-    setMessage(die >= 5 ? `${attackName}！` : `${shortBattleName(winner.name)} の攻撃(こうげき)！`)
+    setMessage(die >= 4 ? `${attackName}！` : `${shortBattleName(winner.name)} の攻撃(こうげき)！`)
     playWhoosh()
-    if (die < 5) playPunch()
-    await sleep(1150)
+    if (die < 4) playPunch()
+    await sleep(die >= 4 ? 980 : 760)
 
-    const damage = calculateDiceDamage(winner, loser, die)
+    const damage = die === 6 ? (target === 'right' ? rightHpRef.current : leftHpRef.current) : calculateDiceDamage(winner, loser, die)
     playDamage()
     let nextLeftHp = leftHpRef.current
     let nextRightHp = rightHpRef.current
@@ -242,8 +334,8 @@ export default function ComboBattle({ left, right, onDone, onExit }: Props) {
       setLeftHp(nextLeftHp)
     }
     setEvents((prev) => [...prev, { id: makeEventId(), target, amount: damage }])
-    setMessage(`${damage}ダメージ！`)
-    await sleep(1700)
+    setMessage(die === 6 ? `一撃必殺(いちげきひっさつ)！ ${damage}ダメージ！` : `${damage}ダメージ！`)
+    await sleep(die >= 4 ? 1800 : 1150)
     setActiveSide(undefined)
     setAttackEffect(null)
     setCinematic(null)
@@ -255,7 +347,7 @@ export default function ComboBattle({ left, right, onDone, onExit }: Props) {
       busyRef.current = false
       return
     }
-    await resetForNext(round + 1)
+    await resetForNext(round + 1, 620)
   }
 
   const choose = async (hand: RpsHand) => {
@@ -268,9 +360,9 @@ export default function ComboBattle({ left, right, onDone, onExit }: Props) {
     setCycling(false)
     setPlayerHand(hand)
     setMessage('じゃんけん...')
-    await sleep(850)
+    await sleep(430)
 
-    const cpu = cpuPreview
+    const cpu = randomHand()
     const result = judge(hand, cpu)
     setCpuHand(cpu)
     setCpuPreview(cpu)
@@ -282,10 +374,10 @@ export default function ComboBattle({ left, right, onDone, onExit }: Props) {
           ? `${HAND_LABELS[hand]} の勝(か)ち！サイコロへ！`
           : `CPUの ${HAND_LABELS[cpu]} が勝(か)ち！`
     )
-    await sleep(result === 0 ? 2100 : 1700)
+    await sleep(result === 0 ? 760 : 920)
 
     if (result === 0) {
-      await resetForNext(round)
+      await resetForNext(round, 260)
       return
     }
 

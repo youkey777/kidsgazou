@@ -526,6 +526,7 @@ export default function Training({ characters, onChanged }: Props) {
   const [bulkBusy, setBulkBusy] = useState(false)
   const [profileDraft, setProfileDraft] = useState({
     name: selected?.name ?? '',
+    ultimate4Name: selected?.ultimate4Name ?? 'ひっさつわざ4',
     ultimate5Name: selected?.ultimate5Name ?? 'ひっさつわざ5',
     ultimate6Name: selected?.ultimate6Name ?? 'ひっさつわざ6',
   })
@@ -545,6 +546,7 @@ export default function Training({ characters, onChanged }: Props) {
     if (!selected) return
     setProfileDraft({
       name: selected.name,
+      ultimate4Name: selected.ultimate4Name || selected.ultimateName || 'ひっさつわざ4',
       ultimate5Name: selected.ultimate5Name || selected.ultimateName || 'ひっさつわざ5',
       ultimate6Name: selected.ultimate6Name || selected.ultimateName || 'ひっさつわざ6',
     })
@@ -574,6 +576,7 @@ export default function Training({ characters, onChanged }: Props) {
     setProfileSaving(true)
     const patch = {
       name: profileDraft.name.trim() || selected.name,
+      ultimate4Name: profileDraft.ultimate4Name.trim() || 'ひっさつわざ4',
       ultimate5Name: profileDraft.ultimate5Name.trim() || 'ひっさつわざ5',
       ultimate6Name: profileDraft.ultimate6Name.trim() || 'ひっさつわざ6',
     }
@@ -898,6 +901,14 @@ export default function Training({ characters, onChanged }: Props) {
                   <input
                     value={profileDraft.name}
                     onChange={(event) => setProfileDraft((current) => ({ ...current, name: event.target.value }))}
+                    className="mt-1 min-h-12 w-full rounded-2xl bg-white px-3 text-base font-black text-zinc-950"
+                  />
+                </label>
+                <label className="block text-left">
+                  <span className="text-sm font-black text-cyan-100">4の必殺技(ひっさつわざ)</span>
+                  <input
+                    value={profileDraft.ultimate4Name}
+                    onChange={(event) => setProfileDraft((current) => ({ ...current, ultimate4Name: event.target.value }))}
                     className="mt-1 min-h-12 w-full rounded-2xl bg-white px-3 text-base font-black text-zinc-950"
                   />
                 </label>

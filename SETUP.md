@@ -249,14 +249,16 @@ set crystals = 0;
 
 ## じゃんけん＋サイコロ統合バトルの追加SQL
 
-必殺技5・必殺技6の名前をキャラごとに保存するため、Supabase SQL Editor で以下を実行してください。
+必殺技4・必殺技5・必殺技6の名前をキャラごとに保存するため、Supabase SQL Editor で以下を実行してください。
 
 ```sql
+alter table images add column if not exists ultimate4_name text default 'ひっさつわざ4';
 alter table images add column if not exists ultimate5_name text default 'ひっさつわざ5';
 alter table images add column if not exists ultimate6_name text default 'ひっさつわざ6';
 
 update images
 set
+  ultimate4_name = coalesce(ultimate4_name, ultimate_name, 'ひっさつわざ4'),
   ultimate5_name = coalesce(ultimate5_name, ultimate_name, 'ひっさつわざ5'),
   ultimate6_name = coalesce(ultimate6_name, ultimate_name, 'ひっさつわざ6');
 ```
