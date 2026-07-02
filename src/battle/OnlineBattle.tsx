@@ -2,7 +2,7 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import type { ImageRecord } from '../db'
 import { saveBattleResult } from './battle-db'
 import type { AttackEffectData } from './effects/AttackFlyEffect'
-import BattleStage from './effects/BattleStage'
+import BattleStage, { type DynamiteExplosion, type DynamiteMarker } from './effects/BattleStage'
 import CinematicAttackOverlay, { type CinematicAttack } from './effects/CinematicAttackOverlay'
 import type { DiceThrowEffectData } from './effects/DiceThrowEffect'
 import VictoryOverlay from './effects/VictoryOverlay'
@@ -28,9 +28,10 @@ import {
   startOnlineBattle,
   updateOnlineBattle,
   type BattleRoom,
+  type OnlinePendingDynamite,
   type OnlineSide,
 } from './online-db'
-import { playAttributeHit, playAttributeUltimate, playAttributeWhoosh, playDamage, playDiceLand, playDiceRoll, playDynamiteExplosion, playRpsReveal, playSelect, playUltimate } from './sounds'
+import { playAttributeHit, playAttributeUltimate, playAttributeWhoosh, playDamage, playDiceLand, playDiceRoll, playDynamiteExplosion, playDynamiteFuse, playDynamiteSet, playRpsReveal, playSelect, playUltimate, playWhoosh } from './sounds'
 import { HAND_LABELS, type DamageEvent, type RpsHand, makeEventId, shortBattleName } from './types'
 
 type Props = {
@@ -39,11 +40,23 @@ type Props = {
   onExit: () => void
 }
 
-type OnlinePendingDynamite = {
-  id: string
-  owner: OnlineSide
-  target: OnlineSide
-  explodeRound: number
+const sleep = (ms: number) => new Promise((resolve) => window.setTimeout(resolve, ms))
+
+type StageSide = 'left' | 'right'
+
+function toStageSide(side: OnlineSide): StageSide {
+  return side === 'host' ? 'left' : 'right'
+}
+
+function onlineTargetToStage(side: OnlineSide): StageSide {
+  return side === 'host' ? 'left' : 'right'
+}
+
+function toDynamiteMarkers(items: OnlinePendingDynamite[]): DynamiteMarker[] {
+  return items.map((item) => ({
+    id: item.id,
+    target: onlineTargetToStage(item.target),
+  }))
 }
 
 function resultText(hostHand: RpsHand | null, guestHand: RpsHand | null) {
@@ -101,7 +114,12 @@ export default function OnlineBattle({ characters, onDone, onExit }: Props) {
   const [attackEffect, setAttackEffect] = useState<AttackEffectData | null>(null)
   const [diceThrowEffect, setDiceThrowEffect] = useState<DiceThrowEffectData | null>(null)
   const [cinematic, setCinematic] = useState<CinematicAttack | null>(null)
+  const [activeSide, setActiveSide] = useState<StageSide | undefined>()
+  const [dodgeSide, setDodgeSide] = useState<StageSide | undefined>()
+  const [confusedSide, setConfusedSide] = useState<StageSide | undefined>()
   const [hitSide, setHitSide] = useState<'left' | 'right' | undefined>()
+  const [specialTitle, setSpecialTitle] = useState<string | null>(null)
+  const [dynamiteExplosion, setDynamiteExplosion] = useState<DynamiteExplosion | null>(null)
   const [showVictory, setShowVictory] = useState(false)
   const [scores, setScores] = useState({ host: 0, guest: 0 })
   const roomRef = useRef<BattleRoom | null>(null)
@@ -137,6 +155,7 @@ export default function OnlineBattle({ characters, onDone, onExit }: Props) {
 
   useEffect(() => {
     roomRef.current = room
+    pendingDynamitesRef.current = room?.pendingDynamites ?? []
   }, [room])
 
   useEffect(() => {
@@ -190,11 +209,13 @@ export default function OnlineBattle({ characters, onDone, onExit }: Props) {
       try {
         const currentRoom = roomRef.current
         if (!currentRoom || currentRoom.status !== 'reveal' || !host || !guest) return
-        const dueDynamite = pendingDynamitesRef.current
+        const currentDynamites = currentRoom.pendingDynamites ?? []
+        const dueDynamite = currentDynamites
           .filter((item) => item.explodeRound <= currentRoom.round)
           .sort((a, b) => a.explodeRound - b.explodeRound)[0]
         if (dueDynamite) {
-          pendingDynamitesRef.current = pendingDynamitesRef.current.filter((item) => item.id !== dueDynamite.id)
+          const remainingDynamites = currentDynamites.filter((item) => item.id !== dueDynamite.id)
+          pendingDynamitesRef.current = remainingDynamites
           const defender = dueDynamite.target === 'host' ? host : guest
           const currentTargetHp = dueDynamite.target === 'host' ? currentRoom.hostHp ?? defender.hp : currentRoom.guestHp ?? defender.hp
           await updateOnlineBattle(currentRoom, {
@@ -202,6 +223,8 @@ export default function OnlineBattle({ characters, onDone, onExit }: Props) {
             lastWinnerSide: dueDynamite.owner,
             lastDie: -4,
             lastDamage: Math.min(currentTargetHp, rollDynamiteDamage()),
+            pendingDynamites: remainingDynamites,
+            lastSequence: [{ kind: 'dynamiteExplode', side: dueDynamite.owner, target: dueDynamite.target }],
           })
           return
         }
@@ -213,6 +236,7 @@ export default function OnlineBattle({ characters, onDone, onExit }: Props) {
             lastDie: null,
             lastDamage: null,
             lastWinnerSide: null,
+            lastSequence: [],
           })
           return
         }
@@ -236,10 +260,12 @@ export default function OnlineBattle({ characters, onDone, onExit }: Props) {
         }
         const die = rollBattleDie()
         const damage = calculateBattleDamage(attacker, defender, die, currentTargetHp)
+        let nextDynamites = currentDynamites
+        const nextSequence: BattleRoom['lastSequence'] = [{ kind: 'dice', side: winnerSide, target, die, damage }]
         if (shouldPlantDynamite(attacker)) {
           const count = rollDynamiteCount()
-          pendingDynamitesRef.current = [
-            ...pendingDynamitesRef.current,
+          nextDynamites = [
+            ...currentDynamites,
             ...Array.from({ length: count }, (_, index) => ({
               id: makeEventId(),
               owner: winnerSide,
@@ -247,11 +273,15 @@ export default function OnlineBattle({ characters, onDone, onExit }: Props) {
               explodeRound: currentRoom.round + (index + 1) * 2,
             })),
           ]
+          pendingDynamitesRef.current = nextDynamites
+          nextSequence.unshift({ kind: 'dynamiteSet', side: winnerSide, target, damage: count })
         }
         await updateOnlineBattle(currentRoom, {
           status: 'rolling',
           lastDie: die,
           lastDamage: damage,
+          pendingDynamites: nextDynamites,
+          lastSequence: nextSequence,
         })
       } catch (e) {
         setError((e as Error).message)
@@ -265,6 +295,7 @@ export default function OnlineBattle({ characters, onDone, onExit }: Props) {
     if (rollingAdvanceKeyRef.current === rollingKey) return
     rollingAdvanceKeyRef.current = rollingKey
     const currentDie = roomRef.current?.lastDie ?? 1
+    const delay = currentDie === -2 ? 5600 : currentDie === -4 ? 3300 : currentDie >= 4 ? 5200 : 2850
     const timer = window.setTimeout(async () => {
       try {
         const currentRoom = roomRef.current
@@ -282,7 +313,7 @@ export default function OnlineBattle({ characters, onDone, onExit }: Props) {
       } catch (e) {
         setError((e as Error).message)
       }
-    }, currentDie >= 4 ? 3600 : 2050)
+    }, delay)
     return () => window.clearTimeout(timer)
   }, [guest, host, rollingKey, side])
 
@@ -290,45 +321,154 @@ export default function OnlineBattle({ characters, onDone, onExit }: Props) {
     if (!rollingKey || !room || !host || !guest || !room.lastWinnerSide || !room.lastDie) return
     if (rollKeyRef.current === rollingKey) return
     rollKeyRef.current = rollingKey
+    const lastDie = room.lastDie
     const attacker = room.lastWinnerSide === 'host' ? host : guest
+    const defender = room.lastWinnerSide === 'host' ? guest : host
     const sideForDice = room.lastWinnerSide === 'host' ? 'left' : 'right'
+    const targetSide: StageSide = room.lastWinnerSide === 'host' ? 'right' : 'left'
+    const sequence = room.lastSequence ?? []
+    const hasDynamiteSet = sequence.some((step) => step.kind === 'dynamiteSet')
+    let cancelled = false
+
+    const clearTransient = () => {
+      setActiveSide(undefined)
+      setDodgeSide(undefined)
+      setConfusedSide(undefined)
+      setSpecialTitle(null)
+      setDynamiteExplosion(null)
+    }
+
     if (room.lastDie === -2) {
-      setMessage('ドリアン投(な)げが発動(はつどう)！')
-      return
+      ;(async () => {
+        setMessage(`${shortBattleName(defender.name)} が後(うし)ろに下(さ)がってよけた！`)
+        setDodgeSide(sideForDice)
+        playWhoosh()
+        await sleep(620)
+        if (cancelled) return
+        setDodgeSide(undefined)
+        setSpecialTitle('ドリアン投(な)げ')
+        setMessage('ドリアン投(な)げ！')
+        await sleep(680)
+        if (cancelled) return
+        setSpecialTitle(null)
+        await sleep(120)
+        if (cancelled) return
+        setAttackEffect({
+          id: makeEventId(),
+          side: sideForDice,
+          kind: 'counter',
+          attribute: 'くさ',
+          variant: 4,
+          imageUrl: '/battle/durian-3d.png',
+          label: 'ドリアン投(な)げ',
+        })
+        playAttributeWhoosh('durian')
+        await sleep(1840)
+        if (cancelled) return
+        playAttributeHit('durian')
+        playDamage()
+        setHitSide(targetSide)
+        setConfusedSide(targetSide)
+        setDamageEvents((prev) => [...prev, { id: makeEventId(), target: targetSide, amount: 10, scale: 'counter' }])
+        setMessage('10ダメージ！相手(あいて)が混乱(こんらん)！')
+        window.setTimeout(() => setHitSide(undefined), 560)
+        await sleep(1050)
+        if (cancelled) return
+        setAttackEffect(null)
+        setAttackEffect({
+          id: makeEventId(),
+          side: sideForDice,
+          kind: 'dice',
+          attribute: defender.species,
+          variant: 2,
+          label: '通常攻撃(つうじょうこうげき)',
+        })
+        setMessage('さらに通常攻撃(つうじょうこうげき)！')
+        playAttributeWhoosh(defender.species)
+        await sleep(1620)
+        if (cancelled) return
+        playAttributeHit(defender.species)
+        playDamage()
+        setHitSide(targetSide)
+        const followDamage = Math.max(0, (room.lastDamage ?? 10) - 10)
+        if (followDamage > 0) {
+          setDamageEvents((prev) => [...prev, { id: makeEventId(), target: targetSide, amount: followDamage, scale: 'normal' }])
+          setMessage(`${followDamage}ダメージ！`)
+        }
+        window.setTimeout(() => setHitSide(undefined), 560)
+        await sleep(900)
+        if (cancelled) return
+        setAttackEffect(null)
+      })()
+      return () => {
+        cancelled = true
+        clearTransient()
+      }
     }
     if (room.lastDie === -4) {
-      setMessage('ダイナマイトがばくはつ！')
-      return
-    }
-    const throwId = makeEventId()
-    setMessage(`${shortBattleName(attacker.name)} がサイコロを振(ふ)るよ`)
-    setDiceThrowEffect({ id: throwId, side: sideForDice, face: null })
-    playDiceRoll()
-    const faceTimer = window.setTimeout(() => {
-      setDiceThrowEffect({ id: throwId, side: sideForDice, face: room.lastDie })
-      playDiceLand()
-      setMessage(`出目(でめ)は ${room.lastDie}！`)
-    }, 760)
-    const cinematicTimer = window.setTimeout(() => {
-      if (room.lastDie && room.lastDie >= 4) {
-        setCinematic({
-          id: makeEventId(),
-          name: ultimateName(attacker, room.lastDie),
-          attribute: attacker.species,
-          die: room.lastDie as 4 | 5 | 6,
-        })
-        playAttributeUltimate(attacker.species, room.lastDie as 4 | 5 | 6)
-        playUltimate()
+      ;(async () => {
+        setMessage('ダイナマイトのどうかせんに火(ひ)がついた！')
+        playDynamiteFuse()
+        await sleep(640)
+        if (cancelled) return
+        setDynamiteExplosion({ id: `${room.id}-${room.round}-boom`, target: targetSide })
+        setMessage('ダイナマイトがばくはつ！')
+        playDynamiteExplosion()
+        await sleep(1450)
+        if (cancelled) return
+        setDynamiteExplosion(null)
+      })()
+      return () => {
+        cancelled = true
+        clearTransient()
       }
-    }, 1950)
-    const clearTimer = window.setTimeout(() => {
-      setDiceThrowEffect(null)
-      setCinematic(null)
-    }, room.lastDie >= 4 ? 3500 : 1900)
+    }
+
+    const timers: number[] = []
+    const run = async () => {
+      if (hasDynamiteSet) {
+        const count = sequence.find((step) => step.kind === 'dynamiteSet')?.damage ?? 1
+        setSpecialTitle('ダイナマイト')
+        setMessage(`${shortBattleName(attacker.name)} のダイナマイト！`)
+        playDynamiteSet()
+        await sleep(720)
+        if (cancelled) return
+        setSpecialTitle(null)
+        setMessage(`ダイナマイトを ${count}こ しかけた！`)
+        await sleep(640)
+        if (cancelled) return
+      }
+      const throwId = makeEventId()
+      setMessage(`${shortBattleName(attacker.name)} がサイコロを振(ふ)るよ`)
+      setDiceThrowEffect({ id: throwId, side: sideForDice, face: null })
+      playDiceRoll()
+      timers.push(window.setTimeout(() => {
+        setDiceThrowEffect({ id: throwId, side: sideForDice, face: lastDie })
+        playDiceLand()
+        setMessage(`出目(でめ)は ${lastDie}！`)
+      }, 760))
+      timers.push(window.setTimeout(() => {
+        if (lastDie >= 4) {
+          setCinematic({
+            id: makeEventId(),
+            name: ultimateName(attacker, lastDie),
+            attribute: attacker.species,
+            die: lastDie as 4 | 5 | 6,
+          })
+          playAttributeUltimate(attacker.species, lastDie as 4 | 5 | 6)
+          playUltimate()
+        }
+      }, 1950))
+      timers.push(window.setTimeout(() => {
+        setDiceThrowEffect(null)
+        setCinematic(null)
+      }, lastDie >= 4 ? 5000 : 2550))
+    }
+    void run()
     return () => {
-      window.clearTimeout(faceTimer)
-      window.clearTimeout(cinematicTimer)
-      window.clearTimeout(clearTimer)
+      cancelled = true
+      timers.forEach((timer) => window.clearTimeout(timer))
+      clearTransient()
     }
   }, [guest, host, rollingKey, room])
 
@@ -338,33 +478,41 @@ export default function OnlineBattle({ characters, onDone, onExit }: Props) {
     if (animatedKeyRef.current === key) return
     animatedKeyRef.current = key
     const attacker = room.lastWinnerSide === 'host' ? host : guest
+    const attackerStageSide = toStageSide(room.lastWinnerSide)
     const targetSide = room.lastWinnerSide === 'host' ? 'right' : 'left'
     const specialLabel = room.lastDie === -2 ? 'ドリアン投(な)げ' : room.lastDie === -4 ? 'ダイナマイト' : null
-    const specialImage = room.lastDie === -2 ? '/battle/durian-3d.png' : room.lastDie === -4 ? '/battle/dynamite-explosion.png' : undefined
     const attackAttribute = room.lastDie === -2 ? 'くさ' : room.lastDie === -4 ? 'ほのお' : attacker.species
     setDiceThrowEffect(null)
     setCinematic(null)
+    setSpecialTitle(null)
     setMessage(specialLabel ? `${specialLabel}！` : room.lastDie >= 4 ? `${ultimateName(attacker, room.lastDie)}！` : `${shortBattleName(attacker.name)} の攻撃(こうげき)！`)
-    setAttackEffect({
-      id: makeEventId(),
-      side: room.lastWinnerSide === 'host' ? 'left' : 'right',
-      kind: specialLabel ? 'counter' : 'dice',
-      attribute: attackAttribute,
-      variant: Math.max(1, room.lastDie),
-      imageUrl: specialImage,
-      label: specialLabel ?? (room.lastDie >= 4 ? ultimateName(attacker, room.lastDie) : 'オンライン攻撃(こうげき)'),
-    })
-    if (room.lastDie === -4) playDynamiteExplosion()
-    else playAttributeWhoosh(attackAttribute)
+    if (room.lastDie === -2) {
+      setConfusedSide(targetSide)
+    } else if (room.lastDie > 0) {
+      setActiveSide(attackerStageSide)
+      setAttackEffect({
+        id: makeEventId(),
+        side: attackerStageSide,
+        kind: 'dice',
+        attribute: attackAttribute,
+        variant: Math.max(1, room.lastDie),
+        label: room.lastDie >= 4 ? ultimateName(attacker, room.lastDie) : 'オンライン攻撃(こうげき)',
+      })
+      playAttributeWhoosh(attackAttribute)
+    }
     window.setTimeout(() => {
-      playAttributeHit(attackAttribute)
+      if (room.lastDie !== -4) playAttributeHit(attackAttribute)
       playDamage()
       setHitSide(targetSide)
       setDamageEvents((prev) => [...prev, { id: makeEventId(), target: targetSide, amount: room.lastDamage!, scale: room.lastDie! >= 4 || room.lastDie === -4 ? 'ultimate' : room.lastDie === -2 ? 'counter' : 'normal' }])
       setMessage(room.lastDie === 6 ? `一撃必殺(いちげきひっさつ)！ ${room.lastDamage}ダメージ！` : `${room.lastDamage}ダメージ！`)
       window.setTimeout(() => setHitSide(undefined), 760)
     }, 820)
-    window.setTimeout(() => setAttackEffect(null), 1800)
+    window.setTimeout(() => {
+      setAttackEffect(null)
+      setActiveSide(undefined)
+      if (room.lastDie === -2) setConfusedSide(undefined)
+    }, 1800)
   }, [guest, host, room])
 
   useEffect(() => {
@@ -466,6 +614,15 @@ export default function OnlineBattle({ characters, onDone, onExit }: Props) {
   const sendHand = async (hand: RpsHand) => {
     if (!room || !side || room.status !== 'choose' || ownHand) return
     playSelect()
+    setAttackEffect(null)
+    setDiceThrowEffect(null)
+    setCinematic(null)
+    setActiveSide(undefined)
+    setDodgeSide(undefined)
+    setConfusedSide(undefined)
+    setHitSide(undefined)
+    setSpecialTitle(null)
+    setDynamiteExplosion(null)
     setRoom(await sendOnlineHand(room, side, hand))
     setMessage('相手(あいて)の手(て)を待(ま)っているよ')
   }
@@ -477,7 +634,12 @@ export default function OnlineBattle({ characters, onDone, onExit }: Props) {
     setAttackEffect(null)
     setDiceThrowEffect(null)
     setCinematic(null)
+    setActiveSide(undefined)
+    setDodgeSide(undefined)
+    setConfusedSide(undefined)
     setHitSide(undefined)
+    setSpecialTitle(null)
+    setDynamiteExplosion(null)
     setShowVictory(false)
     animatedKeyRef.current = null
     advanceResultKeyRef.current = null
@@ -500,6 +662,8 @@ export default function OnlineBattle({ characters, onDone, onExit }: Props) {
       lastDamage: null,
       winnerSide: null,
       resultSaved: false,
+      pendingDynamites: [],
+      lastSequence: [],
     }))
     setMessage('同(おな)じ部屋(へや)でもう一回(いっかい)！キャラを選(えら)んでね')
   }
@@ -586,11 +750,17 @@ export default function OnlineBattle({ characters, onDone, onExit }: Props) {
             leftHp={room.hostHp ?? host.hp}
             rightHp={room.guestHp ?? guest.hp}
             damageEvents={damageEvents}
+            activeSide={activeSide}
+            dodgeSide={dodgeSide}
+            confusedSide={confusedSide}
             hitSide={hitSide}
             koSide={room.winnerSide === 'host' ? 'right' : room.winnerSide === 'guest' ? 'left' : undefined}
             message={message}
+            specialTitle={specialTitle}
             attackEffect={attackEffect}
             diceThrowEffect={diceThrowEffect}
+            dynamites={toDynamiteMarkers(room.pendingDynamites)}
+            dynamiteExplosion={dynamiteExplosion}
           />
           {(room.status === 'reveal' || room.status === 'rolling' || room.status === 'result') && (
             <OnlineRpsReveal hostHand={room.hostHand} guestHand={room.guestHand} status={room.status} />

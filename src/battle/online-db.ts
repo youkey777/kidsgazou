@@ -5,6 +5,22 @@ import type { RpsHand } from './types'
 export type OnlineSide = 'host' | 'guest'
 export type OnlinePhase = 'waiting' | 'selecting' | 'choose' | 'reveal' | 'rolling' | 'result' | 'finished'
 
+export type OnlinePendingDynamite = {
+  id: string
+  owner: OnlineSide
+  target: OnlineSide
+  explodeRound: number
+}
+
+export type OnlineSequenceStep = {
+  kind: string
+  side?: OnlineSide
+  target?: OnlineSide
+  text?: string
+  die?: number
+  damage?: number
+}
+
 export type BattleRoom = {
   id: string
   code: string
@@ -23,6 +39,8 @@ export type BattleRoom = {
   lastDamage: number | null
   winnerSide: OnlineSide | null
   resultSaved: boolean
+  pendingDynamites: OnlinePendingDynamite[]
+  lastSequence: OnlineSequenceStep[]
   updatedAt: number
 }
 
@@ -44,6 +62,8 @@ type RoomRow = {
   last_damage: number | null
   winner_side: OnlineSide | null
   result_saved: boolean | null
+  pending_dynamites?: unknown
+  last_sequence?: unknown
   updated_at: string
 }
 
@@ -61,6 +81,12 @@ function roomCode() {
 }
 
 function normalize(row: RoomRow): BattleRoom {
+  const pendingDynamites = Array.isArray(row.pending_dynamites)
+    ? (row.pending_dynamites as OnlinePendingDynamite[])
+    : []
+  const lastSequence = Array.isArray(row.last_sequence)
+    ? (row.last_sequence as OnlineSequenceStep[])
+    : []
   return {
     id: row.id,
     code: row.code,
@@ -79,12 +105,14 @@ function normalize(row: RoomRow): BattleRoom {
     lastDamage: row.last_damage,
     winnerSide: row.winner_side,
     resultSaved: row.result_saved ?? false,
+    pendingDynamites,
+    lastSequence,
     updatedAt: new Date(row.updated_at).getTime(),
   }
 }
 
 const SELECT =
-  'id, code, status, host_player_id, guest_player_id, host_character_id, guest_character_id, host_hp, guest_hp, round, host_hand, guest_hand, last_winner_side, last_die, last_damage, winner_side, result_saved, updated_at'
+  'id, code, status, host_player_id, guest_player_id, host_character_id, guest_character_id, host_hp, guest_hp, round, host_hand, guest_hand, last_winner_side, last_die, last_damage, winner_side, result_saved, pending_dynamites, last_sequence, updated_at'
 
 export function getOnlinePlayerId() {
   const key = 'kids_gallery_online_player_id'
@@ -104,6 +132,8 @@ export async function createBattleRoom(playerId: string) {
     host_player_id: playerId,
     round: 1,
     result_saved: false,
+    pending_dynamites: [],
+    last_sequence: [],
   }
   const { data, error } = await sb.from('battle_rooms').insert(payload).select(SELECT).single()
   if (error) throw new Error(`部屋(へや)作成(さくせい)失敗(しっぱい): ${error.message}`)
@@ -164,6 +194,8 @@ export async function startOnlineBattle(room: BattleRoom) {
       last_damage: null,
       winner_side: null,
       result_saved: false,
+      pending_dynamites: [],
+      last_sequence: [],
       updated_at: new Date().toISOString(),
     })
     .eq('id', room.id)
@@ -200,6 +232,8 @@ export async function updateOnlineBattle(room: BattleRoom, patch: Partial<Battle
     last_damage: patch.lastDamage,
     winner_side: patch.winnerSide,
     result_saved: patch.resultSaved,
+    pending_dynamites: patch.pendingDynamites,
+    last_sequence: patch.lastSequence,
     updated_at: new Date().toISOString(),
   }
   const cleanPayload = Object.fromEntries(Object.entries(payload).filter(([, value]) => value !== undefined))

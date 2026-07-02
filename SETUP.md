@@ -286,9 +286,14 @@ create table if not exists battle_rooms (
   last_damage int,
   winner_side text,
   result_saved boolean default false,
+  pending_dynamites jsonb default '[]'::jsonb,
+  last_sequence jsonb default '[]'::jsonb,
   created_at timestamptz default now(),
   updated_at timestamptz default now()
 );
+
+alter table battle_rooms add column if not exists pending_dynamites jsonb default '[]'::jsonb;
+alter table battle_rooms add column if not exists last_sequence jsonb default '[]'::jsonb;
 
 create index if not exists battle_rooms_code_idx on battle_rooms (code);
 create index if not exists battle_rooms_updated_idx on battle_rooms (updated_at desc);
