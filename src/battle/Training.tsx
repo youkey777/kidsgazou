@@ -86,7 +86,7 @@ function statValues(character: ImageRecord): StatValues {
   }
 }
 
-function radarGeometry(stats: StatValues, center = 128, maxRadius = 86) {
+function radarGeometry(stats: StatValues, center = 128, maxRadius = 78, labelRadius = 112) {
   const points = STAT_KEYS.map((key, index) => {
     const angle = -Math.PI / 2 + (index * 2 * Math.PI) / STAT_KEYS.length
     const radius = (stats[key] / 99) * maxRadius
@@ -96,8 +96,8 @@ function radarGeometry(stats: StatValues, center = 128, maxRadius = 86) {
       value: stats[key],
       x: center + Math.cos(angle) * radius,
       y: center + Math.sin(angle) * radius,
-      lx: center + Math.cos(angle) * 111,
-      ly: center + Math.sin(angle) * 111,
+      lx: center + Math.cos(angle) * labelRadius,
+      ly: center + Math.sin(angle) * labelRadius,
       ax: center + Math.cos(angle) * maxRadius,
       ay: center + Math.sin(angle) * maxRadius,
     }
@@ -189,44 +189,22 @@ function makeRandomCandidate(character: ImageRecord): BulkCandidate {
 }
 
 function RadarChart({ character }: { character: ImageRecord }) {
-  const center = 112
-  const maxRadius = 82
-  const axisPoints = STAT_KEYS.map((key, index) => {
-    const angle = -Math.PI / 2 + (index * 2 * Math.PI) / STAT_KEYS.length
-    const radius = (character[key] / 99) * maxRadius
-    return {
-      key,
-      label: STAT_CHART_LABELS[key],
-      x: center + Math.cos(angle) * radius,
-      y: center + Math.sin(angle) * radius,
-      lx: center + Math.cos(angle) * 103,
-      ly: center + Math.sin(angle) * 103,
-      ax: center + Math.cos(angle) * maxRadius,
-      ay: center + Math.sin(angle) * maxRadius,
-    }
-  })
-  const polygon = axisPoints.map((point) => `${point.x},${point.y}`).join(' ')
-  const rings = [0.25, 0.5, 0.75, 1].map((ratio) =>
-    STAT_KEYS.map((_, index) => {
-      const angle = -Math.PI / 2 + (index * 2 * Math.PI) / STAT_KEYS.length
-      return `${center + Math.cos(angle) * maxRadius * ratio},${center + Math.sin(angle) * maxRadius * ratio}`
-    }).join(' ')
-  )
+  const { center, points, polygon, rings } = radarGeometry(statValues(character), 128, 74, 112)
 
   return (
-    <div className="relative mx-auto w-full max-w-[260px]">
-      <svg viewBox="0 0 224 224" className="drop-shadow-[0_0_18px_rgba(103,232,249,0.7)]">
+    <div className="relative mx-auto w-full max-w-[280px]">
+      <svg viewBox="0 0 256 256" className="drop-shadow-[0_0_18px_rgba(103,232,249,0.7)]">
         {rings.map((points) => (
-          <polygon key={points} points={points} fill="none" stroke="rgba(255,255,255,0.28)" strokeWidth="1.5" />
+          <polygon key={points} points={points} fill="none" stroke="rgba(255,255,255,0.36)" strokeWidth="1.5" />
         ))}
-        {axisPoints.map((point) => (
+        {points.map((point) => (
           <line
             key={point.key}
             x1={center}
             y1={center}
             x2={point.ax}
             y2={point.ay}
-            stroke="rgba(255,255,255,0.28)"
+            stroke="rgba(255,255,255,0.34)"
             strokeWidth="1.5"
           />
         ))}
@@ -236,18 +214,18 @@ function RadarChart({ character }: { character: ImageRecord }) {
           fill="rgba(250,204,21,0.45)"
           stroke="#facc15"
           strokeWidth="4"
-          initial={{ scale: 0.72, opacity: 0, transformOrigin: '112px 112px' }}
+          initial={{ scale: 0.72, opacity: 0, transformOrigin: '128px 128px' }}
           animate={{ scale: 1, opacity: 1 }}
           transition={{ duration: 0.55, ease: 'easeOut' }}
         />
-        {axisPoints.map((point) => (
+        {points.map((point) => (
           <g key={point.key}>
             <circle cx={point.x} cy={point.y} r="4" fill="#22d3ee" />
             <text
               x={point.lx}
               y={point.ly}
               fill="white"
-              fontSize="10"
+              fontSize="11"
               fontWeight="900"
               textAnchor="middle"
               dominantBaseline="middle"
@@ -278,16 +256,17 @@ function StatChangeOverlay({
   const diff = newValue - oldValue
   const diffText = diff > 0 ? `+${diff}` : `${diff}`
   const diffClass = diff > 0 ? 'text-emerald-200' : diff < 0 ? 'text-rose-200' : 'text-yellow-100'
+  const changeColor = diff >= 0 ? '#34d399' : '#fb7185'
 
   return (
     <motion.div
-      className="fixed inset-0 z-[70] flex items-center justify-center overflow-hidden bg-black/86 p-3 text-white"
+      className="fixed inset-0 z-[70] flex items-center justify-center overflow-hidden bg-black/90 p-3 text-white"
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       exit={{ opacity: 0 }}
     >
       <div
-        className="absolute inset-0 opacity-45"
+        className="absolute inset-0 opacity-30"
         style={{
           background: `radial-gradient(circle at 50% 28%, ${visual.glow}, transparent 34%), linear-gradient(145deg, ${visual.from}, ${visual.to})`,
         }}
@@ -306,7 +285,7 @@ function StatChangeOverlay({
       ))}
 
       <motion.div
-        className="relative w-full max-w-[430px] rounded-[2.2rem] border border-white/25 bg-zinc-950/82 p-4 text-center shadow-[0_0_70px_rgba(250,204,21,.45)] backdrop-blur-md"
+        className="relative w-full max-w-[430px] rounded-[2.2rem] border border-white/30 bg-slate-950/94 p-4 text-center shadow-[0_0_70px_rgba(34,211,238,.35)] backdrop-blur-md"
         initial={{ y: 34, scale: 0.86 }}
         animate={{ y: 0, scale: 1 }}
         transition={{ type: 'spring', stiffness: 160, damping: 17 }}
@@ -315,37 +294,31 @@ function StatChangeOverlay({
         <h3 className="mt-1 text-2xl font-black text-yellow-200">能力(のうりょく)チェンジ！</h3>
         <p className="mt-1 text-lg font-black text-white">{STAT_LABELS[showcase.stat]}</p>
 
-        <div className="mt-3 grid grid-cols-[1fr_auto_1fr] items-center gap-2">
-          <motion.div
-            className="rounded-3xl bg-white/12 p-3"
-            initial={{ x: -24, opacity: 0 }}
-            animate={{ x: 0, opacity: 1 }}
-          >
-            <p className="text-xs font-black text-white/70">まえ</p>
-            <p className="text-4xl font-black text-white">{oldValue}</p>
-          </motion.div>
+        <div className="mt-3 flex flex-wrap items-center justify-center gap-2">
           <motion.p
-            className={`rounded-full bg-white/18 px-3 py-2 text-xl font-black ${diffClass}`}
+            className="rounded-3xl bg-white px-5 py-3 text-4xl font-black text-purple-950 shadow-xl"
+            initial={{ y: 16, opacity: 0, scale: 0.9 }}
+            animate={{ y: 0, opacity: 1, scale: [0.9, 1.08, 1] }}
+            transition={{ duration: 0.55 }}
+          >
+            {oldValue}
+            <span className="px-2 text-3xl text-purple-500">→</span>
+            {newValue}
+          </motion.p>
+          <motion.p
+            className={`rounded-full bg-black/45 px-4 py-2 text-xl font-black ring-1 ring-white/25 ${diffClass}`}
             initial={{ scale: 0.5, rotate: -12 }}
             animate={{ scale: [0.5, 1.35, 1], rotate: [12, -8, 0] }}
-            transition={{ delay: 0.28, duration: 0.65 }}
+            transition={{ delay: 0.5, duration: 0.65 }}
           >
             {diffText}
           </motion.p>
-          <motion.div
-            className="rounded-3xl bg-yellow-300 p-3 text-zinc-950"
-            initial={{ x: 24, opacity: 0 }}
-            animate={{ x: 0, opacity: 1 }}
-          >
-            <p className="text-xs font-black">あと</p>
-            <p className="text-4xl font-black">{newValue}</p>
-          </motion.div>
         </div>
 
         <div className="relative mx-auto mt-3 aspect-square w-full max-w-[310px]">
-          <svg viewBox="0 0 256 256" className="h-full w-full drop-shadow-[0_0_24px_rgba(103,232,249,.75)]">
+          <svg viewBox="0 0 256 256" className="h-full w-full rounded-[2rem] bg-black/24 drop-shadow-[0_0_24px_rgba(103,232,249,.75)]">
             {after.rings.map((points) => (
-              <polygon key={points} points={points} fill="none" stroke="rgba(255,255,255,0.25)" strokeWidth="1.6" />
+              <polygon key={points} points={points} fill="none" stroke="rgba(255,255,255,0.42)" strokeWidth="1.7" />
             ))}
             {after.points.map((point) => (
               <line
@@ -354,35 +327,44 @@ function StatChangeOverlay({
                 y1={after.center}
                 x2={point.ax}
                 y2={point.ay}
-                stroke="rgba(255,255,255,0.26)"
-                strokeWidth="1.6"
+                stroke="rgba(255,255,255,0.40)"
+                strokeWidth="1.7"
               />
             ))}
-            <polygon points={before.polygon} fill="rgba(255,255,255,.12)" stroke="rgba(255,255,255,.5)" strokeWidth="2" strokeDasharray="5 6" />
+            <motion.polygon
+              points={before.polygon}
+              fill="rgba(255,255,255,.16)"
+              stroke="rgba(255,255,255,.78)"
+              strokeWidth="3"
+              strokeDasharray="5 6"
+              initial={{ opacity: 0, scale: 0.9, transformOrigin: '128px 128px' }}
+              animate={{ opacity: [0, 1, 1, 0.58], scale: 1 }}
+              transition={{ duration: 1.25, times: [0, 0.25, 0.82, 1] }}
+            />
             <motion.polygon
               points={after.polygon}
-              fill="rgba(250,204,21,0.46)"
-              stroke="#facc15"
-              strokeWidth="4.5"
-              initial={{ scale: 0.72, opacity: 0, transformOrigin: '128px 128px' }}
-              animate={{ scale: [0.72, 1.08, 0.98, 1], opacity: 1 }}
-              transition={{ duration: 1.05, ease: 'easeOut' }}
+              fill={diff >= 0 ? 'rgba(52,211,153,0.42)' : 'rgba(251,113,133,0.38)'}
+              stroke={changeColor}
+              strokeWidth="5"
+              initial={{ scale: 0.96, opacity: 0, transformOrigin: '128px 128px' }}
+              animate={{ scale: [0.96, 1.08, 0.98, 1], opacity: [0, 0, 1, 1] }}
+              transition={{ delay: 1.0, duration: 1.0, ease: 'easeOut' }}
             />
             <motion.line
-              x1={after.center}
-              y1={after.center}
+              x1={changedBefore.x}
+              y1={changedBefore.y}
               x2={changedBefore.x}
               y2={changedBefore.y}
-              stroke="#67e8f9"
-              strokeWidth="7"
+              stroke={changeColor}
+              strokeWidth="8"
               strokeLinecap="round"
-              initial={{ opacity: 0.4 }}
+              initial={{ opacity: 0 }}
               animate={{
-                x2: [changedBefore.x, changedAfter.x, changedAfter.x + (changedAfter.x - after.center) * 0.14, changedAfter.x],
-                y2: [changedBefore.y, changedAfter.y, changedAfter.y + (changedAfter.y - after.center) * 0.14, changedAfter.y],
-                opacity: [0.4, 1, 1, 0.75],
+                x2: [changedBefore.x, changedBefore.x, changedAfter.x, changedAfter.x],
+                y2: [changedBefore.y, changedBefore.y, changedAfter.y, changedAfter.y],
+                opacity: [0, 1, 1, 0.86],
               }}
-              transition={{ delay: 0.35, duration: 1.15, ease: 'easeOut' }}
+              transition={{ delay: 1.05, duration: 1.15, ease: 'easeOut' }}
             />
             {after.points.map((point) => (
               <g key={point.key}>
@@ -403,28 +385,29 @@ function StatChangeOverlay({
             <motion.circle
               cx={changedBefore.x}
               cy={changedBefore.y}
-              r="10"
-              fill="#fef08a"
-              initial={{ opacity: 0, scale: 0.2 }}
+              r="9"
+              fill={changeColor}
+              initial={{ opacity: 0, scale: 0.5 }}
               animate={{
-                x: [0, changedAfter.x - changedBefore.x, changedAfter.x - changedBefore.x + (changedAfter.x - after.center) * 0.12, changedAfter.x - changedBefore.x],
-                y: [0, changedAfter.y - changedBefore.y, changedAfter.y - changedBefore.y + (changedAfter.y - after.center) * 0.12, changedAfter.y - changedBefore.y],
-                scale: [0.2, 1.5, 0.85, 1.1],
-                opacity: [0, 1, 0.72, 1],
+                x: [0, 0, changedAfter.x - changedBefore.x, changedAfter.x - changedBefore.x],
+                y: [0, 0, changedAfter.y - changedBefore.y, changedAfter.y - changedBefore.y],
+                scale: [0.5, 1.2, 1.7, 1.1],
+                opacity: [0, 1, 1, 1],
               }}
-              transition={{ delay: 0.3, duration: 1.2, ease: 'easeOut' }}
+              transition={{ delay: 1.05, duration: 1.15, ease: 'easeOut' }}
+            />
+            <motion.circle
+              cx={changedBefore.x}
+              cy={changedBefore.y}
+              r="7"
+              fill="white"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: [0, 1, 1, 0.4] }}
+              transition={{ duration: 1.1 }}
             />
           </svg>
         </div>
 
-        <motion.p
-          className="mt-2 rounded-2xl bg-white/12 px-3 py-2 text-base font-black text-white"
-          initial={{ y: 16, opacity: 0 }}
-          animate={{ y: 0, opacity: 1 }}
-          transition={{ delay: 0.85 }}
-        >
-          変(か)わったところだけ、形(かたち)がウニョーン！
-        </motion.p>
         <button
           type="button"
           onClick={onClose}

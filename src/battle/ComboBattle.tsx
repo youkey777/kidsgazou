@@ -587,7 +587,11 @@ export default function ComboBattle({ left, right, onDone, onExit, saveResult = 
       </section>
 
       <CinematicAttackOverlay attack={cinematic} />
-      {saveMessage && <p className="rounded-2xl bg-red-100 p-3 text-sm font-bold text-red-700">{saveMessage}</p>}
+      {saveMessage && (
+        <p className="fixed inset-x-4 bottom-24 z-[80] mx-auto max-w-md rounded-2xl bg-red-100 p-3 text-sm font-bold text-red-700 shadow-2xl ring-2 ring-red-300">
+          {saveMessage}
+        </p>
+      )}
       {victory && <VictoryOverlay winner={victory.winner} outcome={victory.outcome} onNext={onExit} />}
     </div>
   )

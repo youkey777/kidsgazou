@@ -78,6 +78,10 @@ type ImageRow = {
   crystals?: number | null
 }
 
+type BattleProgressRow = Partial<
+  Pick<ImageRecord, 'atk' | 'def' | 'spd' | 'luck' | 'tech' | 'level' | 'xp' | 'wins' | 'losses' | 'streak'>
+> & { id: string }
+
 const BASE_SELECT = 'id, child, path, name, created_at'
 const OLD_BATTLE_SELECT =
   'id, child, path, name, created_at, hp, atk, def, spd, species, ultimate_name, level, wins, losses, streak'
@@ -85,6 +89,10 @@ const BATTLE_SELECT =
   'id, child, path, name, created_at, hp, atk, def, spd, luck, tech, species, ultimate_name, ultimate4_name, ultimate5_name, ultimate6_name, level, xp, wins, losses, streak, crystals'
 const BATTLE_SELECT_WITHOUT_ULTIMATE4 =
   'id, child, path, name, created_at, hp, atk, def, spd, luck, tech, species, ultimate_name, ultimate5_name, ultimate6_name, level, xp, wins, losses, streak, crystals'
+const BATTLE_SELECT_WITH_XP_NO_ULTIMATES =
+  'id, child, path, name, created_at, hp, atk, def, spd, luck, tech, species, ultimate_name, level, xp, wins, losses, streak, crystals'
+const BATTLE_SELECT_WITH_XP_NO_OPTIONALS =
+  'id, child, path, name, created_at, hp, atk, def, spd, species, ultimate_name, level, xp, wins, losses, streak'
 
 function uid() {
   return `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`
@@ -216,6 +224,12 @@ async function selectImages(child?: ChildKey): Promise<ImageRow[]> {
   const battleWithoutUltimate4Result = await selectWithColumns(BATTLE_SELECT_WITHOUT_ULTIMATE4, child)
   if (!battleWithoutUltimate4Result.error) return (battleWithoutUltimate4Result.data || []) as unknown as ImageRow[]
 
+  const battleWithXpNoUltimatesResult = await selectWithColumns(BATTLE_SELECT_WITH_XP_NO_ULTIMATES, child)
+  if (!battleWithXpNoUltimatesResult.error) return (battleWithXpNoUltimatesResult.data || []) as unknown as ImageRow[]
+
+  const battleWithXpNoOptionalsResult = await selectWithColumns(BATTLE_SELECT_WITH_XP_NO_OPTIONALS, child)
+  if (!battleWithXpNoOptionalsResult.error) return (battleWithXpNoOptionalsResult.data || []) as unknown as ImageRow[]
+
   const oldBattleResult = await selectWithColumns(OLD_BATTLE_SELECT, child)
   if (!oldBattleResult.error) return (oldBattleResult.data || []) as unknown as ImageRow[]
 
@@ -318,6 +332,57 @@ export async function updateBattleResultStats(
   loser: ImageRecord
 ): Promise<void> {
   const sb = ensure()
+  const fullProgressResult = await sb
+    .from('images')
+    .select('id, atk, def, spd, luck, tech, level, xp, wins, losses, streak')
+    .in('id', [winner.id, loser.id])
+
+  const progressResult = fullProgressResult.error
+    ? await sb
+      .from('images')
+      .select('id, level, xp, wins, losses, streak')
+      .in('id', [winner.id, loser.id])
+    : fullProgressResult
+
+  if (progressResult.error) {
+    throw new Error(
+      `経験値(けいけんち)を読(よ)み込(こ)めません。images.xp などの追加SQL(ついかえすきゅーえる)を実行(じっこう)してください: ${progressResult.error.message}`
+    )
+  }
+
+  const progressRows = (progressResult.data || []) as unknown as BattleProgressRow[]
+  const rowById = new Map(progressRows.map((row) => [row.id, row]))
+  const winnerRow = rowById.get(winner.id)
+  const loserRow = rowById.get(loser.id)
+  if (!winnerRow || !loserRow) {
+    throw new Error('経験値(けいけんち)保存(ほぞん)失敗(しっぱい): キャラが見(み)つかりません')
+  }
+  const currentWinner: ImageRecord = {
+    ...winner,
+    atk: winnerRow.atk ?? winner.atk,
+    def: winnerRow.def ?? winner.def,
+    spd: winnerRow.spd ?? winner.spd,
+    luck: winnerRow.luck ?? winner.luck,
+    tech: winnerRow.tech ?? winner.tech,
+    level: winnerRow.level ?? winner.level,
+    xp: winnerRow.xp ?? winner.xp,
+    wins: winnerRow.wins ?? winner.wins,
+    losses: winnerRow.losses ?? winner.losses,
+    streak: winnerRow.streak ?? winner.streak,
+  }
+  const currentLoser: ImageRecord = {
+    ...loser,
+    atk: loserRow.atk ?? loser.atk,
+    def: loserRow.def ?? loser.def,
+    spd: loserRow.spd ?? loser.spd,
+    luck: loserRow.luck ?? loser.luck,
+    tech: loserRow.tech ?? loser.tech,
+    level: loserRow.level ?? loser.level,
+    xp: loserRow.xp ?? loser.xp,
+    wins: loserRow.wins ?? loser.wins,
+    losses: loserRow.losses ?? loser.losses,
+    streak: loserRow.streak ?? loser.streak,
+  }
   const applyExp = (character: ImageRecord, amount: number) => {
     const total = character.xp + amount
     const levelUps = Math.min(99 - character.level, Math.floor(total / 100))
@@ -327,11 +392,11 @@ export async function updateBattleResultStats(
       levelUps,
     }
   }
-  const winnerExp = applyExp(winner, 35)
-  const loserExp = applyExp(loser, 10)
+  const winnerExp = applyExp(currentWinner, 35)
+  const loserExp = applyExp(currentLoser, 10)
   let growth = {}
   if (winnerExp.levelUps > 0) {
-    growth = growWinnerStats(winner)
+    growth = growWinnerStats(currentWinner)
     for (let i = 1; i < winnerExp.levelUps; i++) {
       growth = {
         atk: clampStat((growth as Pick<ImageRecord, 'atk'>).atk * 1.04),
@@ -345,8 +410,8 @@ export async function updateBattleResultStats(
   const winnerUpdate = sb
     .from('images')
     .update({
-      wins: winner.wins + 1,
-      streak: winner.streak + 1,
+      wins: currentWinner.wins + 1,
+      streak: currentWinner.streak + 1,
       level: winnerExp.level,
       xp: winnerExp.xp,
       ...growth,
@@ -357,7 +422,7 @@ export async function updateBattleResultStats(
   const loserUpdate = sb
     .from('images')
     .update({
-      losses: loser.losses + 1,
+      losses: currentLoser.losses + 1,
       streak: 0,
       level: loserExp.level,
       xp: loserExp.xp,
