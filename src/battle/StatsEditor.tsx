@@ -1,5 +1,6 @@
 import { useMemo, useState } from 'react'
 import { updateImageStats, type ImageRecord } from '../db'
+import { isKingKarubi } from './battle-logic'
 import {
   ATTRIBUTES,
   attributeMark,
@@ -148,6 +149,25 @@ export default function StatsEditor({ character, onClose, onSaved }: Props) {
             ×
           </button>
         </div>
+
+        {isKingKarubi(character) && (
+          <section className="mt-4 overflow-hidden rounded-3xl border-4 border-yellow-200 bg-gradient-to-br from-red-950 via-amber-800 to-yellow-500 p-3 text-white shadow-[0_0_24px_rgba(251,191,36,.45)]">
+            <div className="flex items-center gap-3">
+              <img
+                src="/battle/king-karubi-feast-20260714.png"
+                alt="王冠(おうかん)つきの焼(や)きカルビ"
+                className="h-24 w-24 shrink-0 object-contain drop-shadow-[0_0_14px_rgba(253,224,71,.9)]"
+              />
+              <div className="min-w-0">
+                <p className="text-xs font-black text-yellow-100">固有能力(こゆうのうりょく)</p>
+                <h3 className="text-xl font-black">王(おう)のごちそう</h3>
+                <p className="mt-1 text-sm font-bold leading-snug">
+                  ダメージを受(う)けたとき、25%の確率(かくりつ)で焼(や)きカルビを食(た)べてHPが全回復(ぜんかいふく)！
+                </p>
+              </div>
+            </div>
+          </section>
+        )}
 
         <div className="mt-4 space-y-4">
           {STAT_KEYS.map((key) => (

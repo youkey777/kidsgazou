@@ -1,4 +1,5 @@
 import type { ImageRecord } from '../db'
+import { isKingKarubi } from './battle-logic'
 import { attributeMark } from './character-rules'
 import XpBar from './effects/XpBar'
 import { starsForLevel } from './types'
@@ -36,11 +37,18 @@ export default function CharSelect({ title, characters, selectedId, onSelect }: 
                       selected ? 'border-yellow-400 ring-4 ring-yellow-200' : 'border-white'
                     }`}
                   >
-                    <img
-                      src={character.url}
-                      alt=""
-                      className="aspect-square w-full rounded-xl object-cover"
-                    />
+                    <div className="relative">
+                      <img
+                        src={character.url}
+                        alt=""
+                        className="aspect-square w-full rounded-xl object-cover"
+                      />
+                      {isKingKarubi(character) && (
+                        <span className="absolute bottom-1 left-1 right-1 rounded-full border border-yellow-100 bg-gradient-to-r from-red-800/95 to-amber-500/95 px-1 py-1 text-center text-[9px] font-black leading-none text-white shadow-lg">
+                          🍖 25%で全回復
+                        </span>
+                      )}
+                    </div>
                     <p className="mt-1 truncate text-xs font-black text-zinc-900">
                       {character.name}
                     </p>

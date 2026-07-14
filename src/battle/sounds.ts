@@ -373,6 +373,18 @@ export function playDynamiteExplosion() {
   setTimeout(() => sweep(220, 72, 0.4, 'sawtooth', 0.11), 250)
 }
 
+export function playKingKarubiFeast() {
+  noiseBurst(0.08, 0.045, 760)
+  setTimeout(() => tone(150, 0.08, 'square', 0.075), 90)
+  setTimeout(() => tone(210, 0.07, 'square', 0.065), 190)
+  setTimeout(() => {
+    ;[523, 659, 784, 1046, 1318].forEach((frequency, index) => {
+      setTimeout(() => tone(frequency, 0.16, 'triangle', 0.075), index * 90)
+    })
+  }, 520)
+  setTimeout(() => sweep(420, 1480, 0.62, 'sine', 0.06), 720)
+}
+
 export function playRouletteStart() {
   tone(300, 0.08, 'triangle', 0.05)
   setTimeout(() => tone(620, 0.1, 'triangle', 0.045), 80)

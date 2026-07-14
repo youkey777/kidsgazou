@@ -19,7 +19,7 @@ const KNOWN_CHARACTER_NAMES: Record<string, string> = {
   'mr1eqopu-2w31550': 'オクトパスフロッグ',
   'mr0panc5-qvnlm10': 'タオルケットもふもふしかちゃん',
   'mr0pa9q7-lmq4pn0': 'ストロベリーピョン',
-  'mr0pa9fv-ypib1x0': 'キングガルビー',
+  'mr0pa9fv-ypib1x0': 'キングカルビ',
   'mr0pa92q-axyh3w0': 'キャプテンフロッグ',
   'mr0pa7o3-pkaaxx0': 'ブルーベリーハシニーニ',
 }

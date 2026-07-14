@@ -10,6 +10,9 @@ export const RPS_HAND_IMAGES: Record<RpsHand, string> = {
   paper: '/battle/rps-paper.png',
 }
 
+export const KING_KARUBI_FEAST_CHANCE = 0.25
+export const KING_KARUBI_ID = 'mr0pa9fv-ypib1x0'
+
 export function judgeRps(leftHand: RpsHand, rightHand: RpsHand) {
   if (leftHand === rightHand) return 0
   if (
@@ -49,12 +52,29 @@ export function isCaptainFrog(character: ImageRecord) {
   )
 }
 
+export function isKingKarubi(character: ImageRecord) {
+  const normalizedName = character.name.replace(/[\s_.・-]/g, '')
+  return (
+    character.id === KING_KARUBI_ID ||
+    normalizedName.includes('キングカルビ') ||
+    normalizedName.includes('キングガルビー') ||
+    normalizedName.includes('キングカルビー')
+  )
+}
+
 export function shouldDurianCounter(defender: ImageRecord) {
   return isBlueberryHashinini(defender) && Math.random() < 0.5
 }
 
 export function shouldPlantDynamite(attacker: ImageRecord) {
   return isCaptainFrog(attacker) && Math.random() < 0.5
+}
+
+export function shouldKingKarubiFeast(
+  defender: ImageRecord,
+  random: () => number = Math.random
+) {
+  return isKingKarubi(defender) && random() < KING_KARUBI_FEAST_CHANCE
 }
 
 export function rollDynamiteCount() {

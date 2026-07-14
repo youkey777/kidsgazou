@@ -5,6 +5,7 @@ import type { AttackEffectData } from './effects/AttackFlyEffect'
 import BattleStage, { type DynamiteExplosion, type DynamiteMarker } from './effects/BattleStage'
 import CinematicAttackOverlay, { type CinematicAttack } from './effects/CinematicAttackOverlay'
 import type { DiceThrowEffectData } from './effects/DiceThrowEffect'
+import type { KingKarubiFeastEffectData } from './effects/KingKarubiFeastEffect'
 import VictoryOverlay from './effects/VictoryOverlay'
 import {
   RPS_HANDS as HANDS,
@@ -15,6 +16,7 @@ import {
   rollDynamiteCount,
   rollDynamiteDamage,
   shouldDurianCounter,
+  shouldKingKarubiFeast,
   shouldPlantDynamite,
   ultimateName,
 } from './battle-logic'
@@ -31,7 +33,7 @@ import {
   type OnlinePendingDynamite,
   type OnlineSide,
 } from './online-db'
-import { playAttributeHit, playAttributeUltimate, playAttributeWhoosh, playDamage, playDiceLand, playDiceRoll, playDynamiteExplosion, playDynamiteFuse, playDynamiteSet, playRpsReveal, playSelect, playUltimate, playWhoosh } from './sounds'
+import { playAttributeHit, playAttributeUltimate, playAttributeWhoosh, playDamage, playDiceLand, playDiceRoll, playDynamiteExplosion, playDynamiteFuse, playDynamiteSet, playKingKarubiFeast, playRpsReveal, playSelect, playUltimate, playWhoosh } from './sounds'
 import { HAND_LABELS, type DamageEvent, type RpsHand, makeEventId, shortBattleName } from './types'
 
 type Props = {
@@ -120,6 +122,8 @@ export default function OnlineBattle({ characters, onDone, onExit }: Props) {
   const [hitSide, setHitSide] = useState<'left' | 'right' | undefined>()
   const [specialTitle, setSpecialTitle] = useState<string | null>(null)
   const [dynamiteExplosion, setDynamiteExplosion] = useState<DynamiteExplosion | null>(null)
+  const [healingEffect, setHealingEffect] = useState<KingKarubiFeastEffectData | null>(null)
+  const [healingAppliedKey, setHealingAppliedKey] = useState<string | null>(null)
   const [showVictory, setShowVictory] = useState(false)
   const [scores, setScores] = useState({ host: 0, guest: 0 })
   const roomRef = useRef<BattleRoom | null>(null)
@@ -152,6 +156,18 @@ export default function OnlineBattle({ characters, onDone, onExit }: Props) {
     room?.status === 'rolling' && room.lastWinnerSide && room.lastDie && room.lastDamage
       ? `${room.id}-${room.round}-${room.lastWinnerSide}-${room.lastDie}-${room.lastDamage}`
       : null
+  const kingKarubiHealStep =
+    room?.status === 'result'
+      ? room.lastSequence.find((step) => step.kind === 'kingKarubiFeast')
+      : undefined
+  const displayedHostHp =
+    kingKarubiHealStep?.target === 'host' && healingAppliedKey !== resultKey
+      ? kingKarubiHealStep.damage ?? room?.hostHp ?? host?.hp ?? 0
+      : room?.hostHp ?? host?.hp ?? 0
+  const displayedGuestHp =
+    kingKarubiHealStep?.target === 'guest' && healingAppliedKey !== resultKey
+      ? kingKarubiHealStep.damage ?? room?.guestHp ?? guest?.hp ?? 0
+      : room?.guestHp ?? guest?.hp ?? 0
 
   useEffect(() => {
     roomRef.current = room
@@ -255,6 +271,7 @@ export default function OnlineBattle({ characters, onDone, onExit }: Props) {
             lastWinnerSide: counterSide,
             lastDie: -2,
             lastDamage: counterDamage,
+            lastSequence: [{ kind: 'durianCounter', side: counterSide, target: winnerSide }],
           })
           return
         }
@@ -302,13 +319,25 @@ export default function OnlineBattle({ characters, onDone, onExit }: Props) {
         if (!currentRoom || currentRoom.status !== 'rolling' || !host || !guest || !currentRoom.lastWinnerSide || !currentRoom.lastDamage) return
         const target = currentRoom.lastWinnerSide === 'host' ? 'guest' : 'host'
         const currentTargetHp = target === 'guest' ? currentRoom.guestHp ?? guest.hp : currentRoom.hostHp ?? host.hp
-        const nextHostHp = target === 'host' ? Math.max(0, currentTargetHp - currentRoom.lastDamage) : currentRoom.hostHp ?? host.hp
-        const nextGuestHp = target === 'guest' ? Math.max(0, currentTargetHp - currentRoom.lastDamage) : currentRoom.guestHp ?? guest.hp
+        const damagedTargetHp = Math.max(0, currentTargetHp - currentRoom.lastDamage)
+        const targetCharacter = target === 'host' ? host : guest
+        const feastActivated =
+          damagedTargetHp < targetCharacter.hp && shouldKingKarubiFeast(targetCharacter)
+        const resolvedTargetHp = feastActivated ? targetCharacter.hp : damagedTargetHp
+        const nextHostHp = target === 'host' ? resolvedTargetHp : currentRoom.hostHp ?? host.hp
+        const nextGuestHp = target === 'guest' ? resolvedTargetHp : currentRoom.guestHp ?? guest.hp
+        const nextSequence: BattleRoom['lastSequence'] = feastActivated
+          ? [
+              ...(currentRoom.lastSequence ?? []),
+              { kind: 'kingKarubiFeast', target, damage: damagedTargetHp },
+            ]
+          : currentRoom.lastSequence
         await updateOnlineBattle(currentRoom, {
           status: 'result',
           hostHp: nextHostHp,
           guestHp: nextGuestHp,
           winnerSide: nextHostHp <= 0 ? 'guest' : nextGuestHp <= 0 ? 'host' : null,
+          lastSequence: nextSequence,
         })
       } catch (e) {
         setError((e as Error).message)
@@ -473,51 +502,71 @@ export default function OnlineBattle({ characters, onDone, onExit }: Props) {
   }, [guest, host, rollingKey, room])
 
   useEffect(() => {
-    if (!room || room.status !== 'result' || !host || !guest || !room.lastDamage || !room.lastDie || !room.lastWinnerSide) return
-    const key = `${room.round}-${room.lastWinnerSide}-${room.lastDie}-${room.lastDamage}-${room.status}`
+    const resultRoom = roomRef.current
+    if (!resultKey || !resultRoom || resultRoom.status !== 'result' || !host || !guest || !resultRoom.lastDamage || !resultRoom.lastDie || !resultRoom.lastWinnerSide) return
+    const key = `${resultRoom.round}-${resultRoom.lastWinnerSide}-${resultRoom.lastDie}-${resultRoom.lastDamage}-${resultRoom.status}`
     if (animatedKeyRef.current === key) return
     animatedKeyRef.current = key
-    const attacker = room.lastWinnerSide === 'host' ? host : guest
-    const attackerStageSide = toStageSide(room.lastWinnerSide)
-    const targetSide = room.lastWinnerSide === 'host' ? 'right' : 'left'
-    const specialLabel = room.lastDie === -2 ? 'ドリアン投(な)げ' : room.lastDie === -4 ? 'ダイナマイト' : null
-    const attackAttribute = room.lastDie === -2 ? 'くさ' : room.lastDie === -4 ? 'ほのお' : attacker.species
+    const attacker = resultRoom.lastWinnerSide === 'host' ? host : guest
+    const attackerStageSide = toStageSide(resultRoom.lastWinnerSide)
+    const targetSide = resultRoom.lastWinnerSide === 'host' ? 'right' : 'left'
+    const specialLabel = resultRoom.lastDie === -2 ? 'ドリアン投(な)げ' : resultRoom.lastDie === -4 ? 'ダイナマイト' : null
+    const attackAttribute = resultRoom.lastDie === -2 ? 'くさ' : resultRoom.lastDie === -4 ? 'ほのお' : attacker.species
     setDiceThrowEffect(null)
     setCinematic(null)
     setSpecialTitle(null)
-    setMessage(specialLabel ? `${specialLabel}！` : room.lastDie >= 4 ? `${ultimateName(attacker, room.lastDie)}！` : `${shortBattleName(attacker.name)} の攻撃(こうげき)！`)
-    if (room.lastDie === -2) {
+    setMessage(specialLabel ? `${specialLabel}！` : resultRoom.lastDie >= 4 ? `${ultimateName(attacker, resultRoom.lastDie)}！` : `${shortBattleName(attacker.name)} の攻撃(こうげき)！`)
+    if (resultRoom.lastDie === -2) {
       setConfusedSide(targetSide)
-    } else if (room.lastDie > 0) {
+    } else if (resultRoom.lastDie > 0) {
       setActiveSide(attackerStageSide)
       setAttackEffect({
         id: makeEventId(),
         side: attackerStageSide,
         kind: 'dice',
         attribute: attackAttribute,
-        variant: Math.max(1, room.lastDie),
-        label: room.lastDie >= 4 ? ultimateName(attacker, room.lastDie) : 'オンライン攻撃(こうげき)',
+        variant: Math.max(1, resultRoom.lastDie),
+        label: resultRoom.lastDie >= 4 ? ultimateName(attacker, resultRoom.lastDie) : 'オンライン攻撃(こうげき)',
       })
       playAttributeWhoosh(attackAttribute)
     }
-    window.setTimeout(() => {
-      if (room.lastDie !== -4) playAttributeHit(attackAttribute)
+    const timers: number[] = []
+    timers.push(window.setTimeout(() => {
+      if (resultRoom.lastDie !== -4) playAttributeHit(attackAttribute)
       playDamage()
       setHitSide(targetSide)
-      setDamageEvents((prev) => [...prev, { id: makeEventId(), target: targetSide, amount: room.lastDamage!, scale: room.lastDie! >= 4 || room.lastDie === -4 ? 'ultimate' : room.lastDie === -2 ? 'counter' : 'normal' }])
-      setMessage(room.lastDie === 6 ? `一撃必殺(いちげきひっさつ)！ ${room.lastDamage}ダメージ！` : `${room.lastDamage}ダメージ！`)
-      window.setTimeout(() => setHitSide(undefined), 760)
-    }, 820)
-    window.setTimeout(() => {
+      setDamageEvents((prev) => [...prev, { id: makeEventId(), target: targetSide, amount: resultRoom.lastDamage!, scale: resultRoom.lastDie! >= 4 || resultRoom.lastDie === -4 ? 'ultimate' : resultRoom.lastDie === -2 ? 'counter' : 'normal' }])
+      setMessage(resultRoom.lastDie === 6 ? `一撃必殺(いちげきひっさつ)！ ${resultRoom.lastDamage}ダメージ！` : `${resultRoom.lastDamage}ダメージ！`)
+      timers.push(window.setTimeout(() => setHitSide(undefined), 760))
+    }, 820))
+    timers.push(window.setTimeout(() => {
       setAttackEffect(null)
       setActiveSide(undefined)
-      if (room.lastDie === -2) setConfusedSide(undefined)
-    }, 1800)
-  }, [guest, host, room])
+      if (resultRoom.lastDie === -2) setConfusedSide(undefined)
+    }, 1800))
+
+    const healStep = resultRoom.lastSequence.find((step) => step.kind === 'kingKarubiFeast')
+    if (healStep?.target) {
+      const healedCharacter = healStep.target === 'host' ? host : guest
+      const healedSide = onlineTargetToStage(healStep.target)
+      timers.push(window.setTimeout(() => {
+        setHealingEffect({ id: `${key}-king-karubi-feast`, side: healedSide })
+        setMessage(`${shortBattleName(healedCharacter.name)} が焼(や)きカルビを食(た)べた！`)
+        playKingKarubiFeast()
+      }, 1520))
+      timers.push(window.setTimeout(() => {
+        setHealingAppliedKey(resultKey)
+        setMessage('王(おう)のごちそう！ HPが全回復(ぜんかいふく)！')
+      }, 3340))
+      timers.push(window.setTimeout(() => setHealingEffect(null), 4770))
+    }
+    return () => timers.forEach((timer) => window.clearTimeout(timer))
+  }, [guest, host, resultKey])
 
   useEffect(() => {
     if (!resultKey || side !== 'host' || advanceResultKeyRef.current === resultKey) return
     advanceResultKeyRef.current = resultKey
+    const hasKingKarubiHeal = roomRef.current?.lastSequence.some((step) => step.kind === 'kingKarubiFeast')
     const timer = window.setTimeout(async () => {
       try {
         const currentRoom = roomRef.current
@@ -534,11 +583,12 @@ export default function OnlineBattle({ characters, onDone, onExit }: Props) {
           lastDie: null,
           lastDamage: null,
           lastWinnerSide: null,
+          lastSequence: [],
         }))
       } catch (e) {
         setError((e as Error).message)
       }
-    }, roomRef.current?.winnerSide ? 2500 : 1800)
+    }, roomRef.current?.winnerSide ? 2500 : hasKingKarubiHeal ? 5200 : 1800)
     return () => window.clearTimeout(timer)
   }, [resultKey, side])
 
@@ -623,6 +673,8 @@ export default function OnlineBattle({ characters, onDone, onExit }: Props) {
     setHitSide(undefined)
     setSpecialTitle(null)
     setDynamiteExplosion(null)
+    setHealingEffect(null)
+    setHealingAppliedKey(null)
     setRoom(await sendOnlineHand(room, side, hand))
     setMessage('相手(あいて)の手(て)を待(ま)っているよ')
   }
@@ -640,6 +692,8 @@ export default function OnlineBattle({ characters, onDone, onExit }: Props) {
     setHitSide(undefined)
     setSpecialTitle(null)
     setDynamiteExplosion(null)
+    setHealingEffect(null)
+    setHealingAppliedKey(null)
     setShowVictory(false)
     animatedKeyRef.current = null
     advanceResultKeyRef.current = null
@@ -747,8 +801,8 @@ export default function OnlineBattle({ characters, onDone, onExit }: Props) {
           <BattleStage
             left={host}
             right={guest}
-            leftHp={room.hostHp ?? host.hp}
-            rightHp={room.guestHp ?? guest.hp}
+            leftHp={displayedHostHp}
+            rightHp={displayedGuestHp}
             damageEvents={damageEvents}
             activeSide={activeSide}
             dodgeSide={dodgeSide}
@@ -761,6 +815,7 @@ export default function OnlineBattle({ characters, onDone, onExit }: Props) {
             diceThrowEffect={diceThrowEffect}
             dynamites={toDynamiteMarkers(room.pendingDynamites)}
             dynamiteExplosion={dynamiteExplosion}
+            healingEffect={healingEffect}
           />
           {(room.status === 'reveal' || room.status === 'rolling' || room.status === 'result') && (
             <OnlineRpsReveal hostHand={room.hostHand} guestHand={room.guestHand} status={room.status} />

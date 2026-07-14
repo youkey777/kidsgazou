@@ -1,4 +1,5 @@
 import { AnimatePresence, motion } from 'framer-motion'
+import { isKingKarubi } from '../battle-logic'
 import { attributeMark } from '../character-rules'
 import type { BattleCharacter, DamageEvent } from '../types'
 import { hpPercent, starsForLevel } from '../types'
@@ -6,6 +7,7 @@ import AttackFlyEffect, { type AttackEffectData } from './AttackFlyEffect'
 import DamageBurstOverlay from './DamageBurstOverlay'
 import DamageNumber from './DamageNumber'
 import DiceThrowEffect, { type DiceThrowEffectData } from './DiceThrowEffect'
+import KingKarubiFeastEffect, { type KingKarubiFeastEffectData } from './KingKarubiFeastEffect'
 
 export type DynamiteMarker = {
   id: string
@@ -35,6 +37,7 @@ type Props = {
   diceThrowEffect?: DiceThrowEffectData | null
   dynamites?: DynamiteMarker[]
   dynamiteExplosion?: DynamiteExplosion | null
+  healingEffect?: KingKarubiFeastEffectData | null
 }
 
 function shortName(name: string) {
@@ -51,6 +54,7 @@ function FighterCard({
   hit,
   ko,
   glowing,
+  healing,
   dynamiteCount,
 }: {
   character: BattleCharacter
@@ -62,9 +66,11 @@ function FighterCard({
   hit: boolean
   ko: boolean
   glowing: boolean
+  healing: boolean
   dynamiteCount: number
 }) {
   const stars = '★'.repeat(starsForLevel(character.level))
+  const hasKingKarubiFeast = isKingKarubi(character)
 
   return (
     <motion.div
@@ -81,13 +87,19 @@ function FighterCard({
                 rotate: side === 'left' ? [0, -4, 3, -2, 0] : [0, 4, -3, 2, 0],
                 scale: [1, 0.94, 1.05, 0.98, 1],
               }
+          : healing
+            ? {
+                y: [0, -10, 2, -7, 0],
+                rotate: [0, -2, 2, -1, 0],
+                scale: [1, 1.08, 0.98, 1.06, 1],
+              }
           : dodging
             ? { x: side === 'left' ? [-8, -58, -36] : [8, 58, 36], y: [0, -12, 0], rotate: side === 'left' ? [-2, -10, -4] : [2, 10, 4], scale: [1, 0.9, 0.94] }
           : active
             ? { x: [0, side === 'left' ? 10 : -10, 0], scale: [1, 1.035, 1] }
             : { x: 0, scale: 1, rotate: 0, opacity: 1 }
       }
-      transition={{ duration: ko ? 0.75 : hit ? 0.56 : dodging ? 0.62 : 0.22 }}
+      transition={{ duration: ko ? 0.75 : hit ? 0.56 : healing ? 1.35 : dodging ? 0.62 : 0.22 }}
     >
       {glowing && <div className="absolute -inset-3 -z-10 rounded-3xl bg-yellow-300/45 blur-xl" />}
       <AnimatePresence>
@@ -162,6 +174,15 @@ function FighterCard({
           </motion.div>
         )}
       </AnimatePresence>
+      {hasKingKarubiFeast && (
+        <motion.div
+          className="pointer-events-none absolute left-2 top-2 z-20 rounded-full border-2 border-yellow-100 bg-gradient-to-r from-red-800 to-amber-500 px-2 py-1 text-[10px] font-black leading-none text-white shadow-[0_0_14px_rgba(251,191,36,.85)]"
+          animate={{ scale: [1, 1.05, 1], boxShadow: ['0 0 10px rgba(251,191,36,.6)', '0 0 20px rgba(251,191,36,1)', '0 0 10px rgba(251,191,36,.6)'] }}
+          transition={{ duration: 1.8, repeat: Infinity }}
+        >
+          🍖 25% 全回復
+        </motion.div>
+      )}
       <img
         src={character.url}
         alt={character.name}
@@ -210,6 +231,7 @@ export default function BattleStage({
   diceThrowEffect,
   dynamites = [],
   dynamiteExplosion,
+  healingEffect,
 }: Props) {
   const leftDynamites = dynamites.filter((item) => item.target === 'left').length
   const rightDynamites = dynamites.filter((item) => item.target === 'right').length
@@ -246,7 +268,8 @@ export default function BattleStage({
             confused={confusedSide === 'left'}
             hit={hitSide === 'left'}
             ko={koSide === 'left'}
-            glowing={glowingSide === 'left'}
+            glowing={glowingSide === 'left' || healingEffect?.side === 'left'}
+            healing={healingEffect?.side === 'left'}
             dynamiteCount={leftDynamites}
           />
           <div className="rounded-full bg-zinc-950 px-2 py-2 text-center text-sm font-black text-yellow-300 shadow-[0_0_18px_rgba(250,204,21,.32)] ring-2 ring-yellow-200/30 sm:text-xl">
@@ -261,7 +284,8 @@ export default function BattleStage({
             confused={confusedSide === 'right'}
             hit={hitSide === 'right'}
             ko={koSide === 'right'}
-            glowing={glowingSide === 'right'}
+            glowing={glowingSide === 'right' || healingEffect?.side === 'right'}
+            healing={healingEffect?.side === 'right'}
             dynamiteCount={rightDynamites}
           />
         </div>
@@ -305,6 +329,7 @@ export default function BattleStage({
         )}
         {diceThrowEffect && <DiceThrowEffect key={diceThrowEffect.id} effect={diceThrowEffect} />}
         {attackEffect && <AttackFlyEffect key={attackEffect.id} effect={attackEffect} />}
+        {healingEffect && <KingKarubiFeastEffect key={healingEffect.id} effect={healingEffect} />}
         {dynamiteExplosion && (
           <motion.div
             key={dynamiteExplosion.id}
