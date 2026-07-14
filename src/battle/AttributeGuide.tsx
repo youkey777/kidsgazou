@@ -21,10 +21,18 @@ const RANK_STYLES: Record<AttributeAffinityRank, string> = {
 
 const RANKS: AttributeAffinityRank[] = [3, 2, 1, 0, -1, -2, -3]
 
-export default function AttributeGuide() {
+type Props = {
+  embedded?: boolean
+}
+
+export default function AttributeGuide({ embedded = false }: Props) {
   return (
     <section
-      className="-mx-3 min-h-[calc(100vh-116px)] overflow-hidden bg-purple-950 px-3 py-4 text-white sm:-mx-4 sm:px-4"
+      className={
+        embedded
+          ? 'min-h-full overflow-hidden bg-purple-950 px-3 py-4 text-white'
+          : '-mx-3 min-h-[calc(100vh-116px)] overflow-hidden bg-purple-950 px-3 py-4 text-white sm:-mx-4 sm:px-4'
+      }
       style={{
         backgroundImage: `linear-gradient(rgba(16,5,37,.2),rgba(16,5,37,.82)), url(${BG})`,
         backgroundSize: 'cover',

@@ -162,7 +162,7 @@ export default function StatsEditor({ character, onClose, onSaved }: Props) {
                 <p className="text-xs font-black text-yellow-100">固有能力(こゆうのうりょく)</p>
                 <h3 className="text-xl font-black">王(おう)のごちそう</h3>
                 <p className="mt-1 text-sm font-bold leading-snug">
-                  ダメージを受(う)けたとき、25%の確率(かくりつ)で焼(や)きカルビを食(た)べてHPが全回復(ぜんかいふく)！
+                  2ターン目(め)から毎(まい)ターン、30%の確率(かくりつ)で焼(や)きカルビを食(た)べてHPが全回復(ぜんかいふく)！
                 </p>
               </div>
             </div>

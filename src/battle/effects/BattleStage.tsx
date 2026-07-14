@@ -180,7 +180,7 @@ function FighterCard({
           animate={{ scale: [1, 1.05, 1], boxShadow: ['0 0 10px rgba(251,191,36,.6)', '0 0 20px rgba(251,191,36,1)', '0 0 10px rgba(251,191,36,.6)'] }}
           transition={{ duration: 1.8, repeat: Infinity }}
         >
-          🍖 25% 全回復
+          🍖 2ターン目〜30% 全回復
         </motion.div>
       )}
       <img

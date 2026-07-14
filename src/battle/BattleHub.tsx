@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react'
 import type { ImageRecord } from '../db'
 import { listBattleCharacters } from './battle-db'
 import AttributeGuide from './AttributeGuide'
+import BattleAffinityOverlay from './BattleAffinityOverlay'
 import CharSelect from './CharSelect'
 import ComboBattle from './ComboBattle'
 import OnlineBattle from './OnlineBattle'
@@ -22,8 +23,10 @@ export default function BattleHub() {
   const [ruiTeamIds, setRuiTeamIds] = useState<string[]>([])
   const [mioTeamIds, setMioTeamIds] = useState<string[]>([])
   const [startedKey, setStartedKey] = useState<string | null>(null)
+  const [showBattleAffinity, setShowBattleAffinity] = useState(false)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const closeBattleAffinity = useCallback(() => setShowBattleAffinity(false), [])
 
   const refresh = useCallback(async () => {
     try {
@@ -102,9 +105,9 @@ export default function BattleHub() {
         <h3 className="mb-2 text-base font-black text-purple-900">
           {side === 'rui' ? 'ルイチーム' : 'ミオチーム'} {ids.length}/3
         </h3>
-        <div className="-mx-1 flex snap-x snap-mandatory gap-3 overflow-x-auto px-1 pb-2">
+        <div className="-mx-1 flex items-start snap-x snap-mandatory gap-3 overflow-x-auto px-1 pb-2">
           {Array.from({ length: Math.ceil(list.length / 9) }, (_, page) => list.slice(page * 9, page * 9 + 9)).map((page, pageIndex) => (
-            <div key={pageIndex} className="grid min-w-full snap-start grid-cols-3 gap-2">
+            <div key={pageIndex} className="grid min-w-full snap-start auto-rows-max grid-cols-3 content-start gap-2">
               {page.map((character) => {
                 const selected = ids.includes(character.id)
                 return (
@@ -138,6 +141,10 @@ export default function BattleHub() {
                 key={item}
                 onClick={() => {
                   playSelect()
+                  if (startedKey && item === 'attribute') {
+                    setShowBattleAffinity(true)
+                    return
+                  }
                   setTab(item)
                   setStartedKey(null)
                 }}
@@ -253,18 +260,30 @@ export default function BattleHub() {
             )}
 
             {startedKey && (
-              <button
-                onClick={() => setStartedKey(null)}
-                className="min-h-11 rounded-2xl bg-white/85 px-4 text-sm font-black text-purple-800 shadow"
-              >
-                ← えらびなおす
-              </button>
+              <div className="grid grid-cols-2 gap-2">
+                <button
+                  type="button"
+                  onClick={() => setStartedKey(null)}
+                  className="min-h-12 rounded-2xl bg-white/90 px-3 text-sm font-black text-purple-800 shadow outline-none ring-yellow-300 focus-visible:ring-4 active:scale-95"
+                >
+                  ← えらびなおす
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setShowBattleAffinity(true)}
+                  data-testid="battle-affinity-button"
+                  className="min-h-12 rounded-2xl bg-gradient-to-r from-cyan-300 to-yellow-200 px-3 text-sm font-black text-purple-950 shadow-lg outline-none ring-white focus-visible:ring-4 active:scale-95"
+                >
+                  🧭 相性(あいしょう)を見る
+                </button>
+              </div>
             )}
 
             {battle()}
           </div>
         )}
       </div>
+      <BattleAffinityOverlay open={showBattleAffinity} onClose={closeBattleAffinity} />
     </main>
   )
 }

@@ -203,7 +203,28 @@ export default function ComboBattle({ left, right, onDone, onExit, saveResult = 
     await onDone()
   }
 
+  const playKingKarubiFeastAnimation = async (target: Side, character: ImageRecord) => {
+    const effect: KingKarubiFeastEffectData = { id: makeEventId(), side: target }
+    setActiveSide(undefined)
+    setHealingEffect(effect)
+    setMessage(`${shortBattleName(character.name)} が焼(や)きカルビを食(た)べた！`)
+    playKingKarubiFeast()
+    await sleep(1820)
+
+    if (target === 'left') {
+      leftHpRef.current = character.hp
+      setLeftHp(character.hp)
+    } else {
+      rightHpRef.current = character.hp
+      setRightHp(character.hp)
+    }
+    setMessage('王(おう)のごちそう！ HPが全回復(ぜんかいふく)！')
+    await sleep(1430)
+    setHealingEffect(null)
+  }
+
   const resetForNext = async (nextRound: number, delay = 880) => {
+    const isNewRound = nextRound > round
     await sleep(delay)
     setPlayerHand(null)
     setCpuHand(null)
@@ -218,6 +239,16 @@ export default function ComboBattle({ left, right, onDone, onExit, saveResult = 
     setDynamiteExplosion(null)
     setHealingEffect(null)
     setRound(nextRound)
+    if (isNewRound && nextRound >= 2) {
+      setMessage(`ラウンド ${nextRound}！ 王(おう)のごちそう抽選(ちゅうせん)！`)
+      await sleep(320)
+      if (shouldKingKarubiFeast(left)) {
+        await playKingKarubiFeastAnimation('left', left)
+      }
+      if (shouldKingKarubiFeast(right)) {
+        await playKingKarubiFeastAnimation('right', right)
+      }
+    }
     setMessage('次(つぎ)の手(て)を選(えら)んでね')
     const nextPreview = randomRpsHand()
     cpuPreviewRef.current = nextPreview
@@ -246,30 +277,6 @@ export default function ComboBattle({ left, right, onDone, onExit, saveResult = 
     window.setTimeout(() => setHitSide(undefined), scale === 'ultimate' ? 900 : 620)
     setEvents((prev) => [...prev, { id: makeEventId(), target, amount, scale }])
     return { nextLeftHp, nextRightHp }
-  }
-
-  const tryKingKarubiFeast = async (target: Side, defender: ImageRecord) => {
-    const currentHp = target === 'left' ? leftHpRef.current : rightHpRef.current
-    if (currentHp >= defender.hp || !shouldKingKarubiFeast(defender)) return false
-
-    const effect: KingKarubiFeastEffectData = { id: makeEventId(), side: target }
-    setActiveSide(undefined)
-    setHealingEffect(effect)
-    setMessage(`${shortBattleName(defender.name)} が焼(や)きカルビを食(た)べた！`)
-    playKingKarubiFeast()
-    await sleep(1820)
-
-    if (target === 'left') {
-      leftHpRef.current = defender.hp
-      setLeftHp(defender.hp)
-    } else {
-      rightHpRef.current = defender.hp
-      setRightHp(defender.hp)
-    }
-    setMessage('王(おう)のごちそう！ HPが全回復(ぜんかいふく)！')
-    await sleep(1430)
-    setHealingEffect(null)
-    return true
   }
 
   const placeCaptainDynamites = async (winnerSide: Side, winner: ImageRecord, currentRound: number) => {
@@ -307,14 +314,11 @@ export default function ComboBattle({ left, right, onDone, onExit, saveResult = 
       playDynamiteExplosion()
       await sleep(420)
       const damage = rollDynamiteDamage()
-      let result = applyDamageToSide(dynamite.target, damage, 'ultimate')
+      const result = applyDamageToSide(dynamite.target, damage, 'ultimate')
       playDamage()
       updateDynamites((current) => current.filter((item) => item.id !== dynamite.id))
       await sleep(1050)
       setDynamiteExplosion(null)
-      const defender = dynamite.target === 'left' ? left : right
-      await tryKingKarubiFeast(dynamite.target, defender)
-      result = { nextLeftHp: leftHpRef.current, nextRightHp: rightHpRef.current }
       if (result.nextLeftHp <= 0 || result.nextRightHp <= 0) return result
     }
     return { nextLeftHp: leftHpRef.current, nextRightHp: rightHpRef.current }
@@ -374,7 +378,6 @@ export default function ComboBattle({ left, right, onDone, onExit, saveResult = 
     setConfusedSide(attackerSide)
     setMessage('10ダメージ！相手(あいて)が混乱(こんらん)！')
     await sleep(720)
-    await tryKingKarubiFeast(attackerSide, attacker)
     nextLeftHp = leftHpRef.current
     nextRightHp = rightHpRef.current
     await sleep(330)
@@ -402,7 +405,6 @@ export default function ComboBattle({ left, right, onDone, onExit, saveResult = 
     applyDamage(attackerSide, followDamage)
     setMessage(`${followDamage}ダメージ！`)
     await sleep(720)
-    await tryKingKarubiFeast(attackerSide, attacker)
     nextLeftHp = leftHpRef.current
     nextRightHp = rightHpRef.current
     await sleep(380)
@@ -500,7 +502,6 @@ export default function ComboBattle({ left, right, onDone, onExit, saveResult = 
     setAttackEffect(null)
     setCinematic(null)
 
-    await tryKingKarubiFeast(target, loser)
     nextLeftHp = leftHpRef.current
     nextRightHp = rightHpRef.current
 
@@ -550,7 +551,7 @@ export default function ComboBattle({ left, right, onDone, onExit, saveResult = 
     await sleep(result === 0 ? 760 : 920)
 
     if (result === 0) {
-      await resetForNext(round, 260)
+      await resetForNext(round + 1, 260)
       return
     }
 

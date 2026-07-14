@@ -10,7 +10,7 @@ export const RPS_HAND_IMAGES: Record<RpsHand, string> = {
   paper: '/battle/rps-paper.png',
 }
 
-export const KING_KARUBI_FEAST_CHANCE = 0.25
+export const KING_KARUBI_FEAST_CHANCE = 0.3
 export const KING_KARUBI_ID = 'mr0pa9fv-ypib1x0'
 
 export function judgeRps(leftHand: RpsHand, rightHand: RpsHand) {
@@ -75,6 +75,25 @@ export function shouldKingKarubiFeast(
   random: () => number = Math.random
 ) {
   return isKingKarubi(defender) && random() < KING_KARUBI_FEAST_CHANCE
+}
+
+function seededRandom(seed: string) {
+  let hash = 2166136261
+  for (let index = 0; index < seed.length; index += 1) {
+    hash ^= seed.charCodeAt(index)
+    hash = Math.imul(hash, 16777619)
+  }
+  return (hash >>> 0) / 4294967296
+}
+
+export function shouldKingKarubiFeastOnOnlineTurn(
+  character: ImageRecord,
+  roomId: string,
+  turn: number,
+  side: 'host' | 'guest'
+) {
+  if (turn < 2) return false
+  return shouldKingKarubiFeast(character, () => seededRandom(`${roomId}:${turn}:${side}`))
 }
 
 export function rollDynamiteCount() {
