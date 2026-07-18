@@ -7,7 +7,6 @@ import {
   type ImageStatsUpdate,
 } from '../db'
 import { supabase, isConfigured } from '../lib/supabase'
-import { randomAttribute, randomStat } from './character-rules'
 import type { BattleMode, BattleRecord, BattleResult } from './types'
 
 function uid() {
@@ -15,6 +14,13 @@ function uid() {
 }
 
 const KNOWN_CHARACTER_NAMES: Record<string, string> = {
+  'mrkd1xgg-e5xdn80': 'ルイぴょんぴょん',
+  'mr1szm1e-16ga0k0': 'クラブキュート',
+  'mr3go0rs-2rwsh70': 'サークルクロス',
+  'mr3hory6-frpkfd0': 'ゴールドトレインフロッグ',
+  'mrkkjv3r-kj83580': 'ルイスクール',
+  'mrm0x4iv-8xykh60': 'デビルサン',
+  'mrpyo870-wr2bm10': 'オクトパスゴッド',
   'mr1fcffa-zpl3900': 'ミオぴょんぴょん',
   'mr1eqopu-2w31550': 'オクトパスフロッグ',
   'mr0panc5-qvnlm10': 'タオルケットもふもふしかちゃん',
@@ -24,42 +30,20 @@ const KNOWN_CHARACTER_NAMES: Record<string, string> = {
   'mr0pa7o3-pkaaxx0': 'ブルーベリーハシニーニ',
 }
 
+export function knownCharacterName(id: string) {
+  return KNOWN_CHARACTER_NAMES[id]
+}
+
 function isPlaceholderName(name: string) {
   return /^(file[_-]?0+|file_\d+|ファイル\d+)/i.test(name.replace(/\.[^.]+$/, ''))
 }
 
-function needsStatRepair(character: ImageRecord) {
-  const defaultStats =
-    character.atk === 10 &&
-    character.def === 10 &&
-    character.spd === 10 &&
-    character.luck === 50 &&
-    character.tech === 50 &&
-    character.species === 'ふしぎ'
-  const tooHighAtStart =
-    character.level <= 1 &&
-    [character.atk, character.def, character.spd, character.luck, character.tech].some((value) => value > 50)
-  return defaultStats || tooHighAtStart
-}
-
 async function autoRepairCharacters(characters: ImageRecord[]) {
-  const resetBlanketCrystals =
-    characters.length > 1 && characters.every((character) => character.crystals === 3)
-
   return Promise.all(
     characters.map(async (character) => {
       const patch: ImageStatsUpdate = {}
       const knownName = KNOWN_CHARACTER_NAMES[character.id]
       if (knownName && isPlaceholderName(character.name)) patch.name = knownName
-      if (needsStatRepair(character)) {
-        patch.atk = randomStat()
-        patch.def = randomStat()
-        patch.spd = randomStat()
-        patch.luck = randomStat()
-        patch.tech = randomStat()
-        patch.species = randomAttribute()
-      }
-      if (resetBlanketCrystals) patch.crystals = 0
       if (Object.keys(patch).length === 0) return character
 
       const repaired = { ...character, ...patch }

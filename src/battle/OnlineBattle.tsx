@@ -571,7 +571,7 @@ export default function OnlineBattle({ characters, onDone, onExit }: Props) {
       ;(async () => {
         setActiveSide(attackerStageSide)
         setAttackEffect(null)
-        setMessage('能力技(のうりょくわざ) 発動(はつどう)！ ガシガシガシ！')
+        setMessage('能力技(のうりょくわざ)「3連続攻撃(れんぞくこうげき)」発動(はつどう)！')
         setTripleAttackEffect({ id: effectId, side: attackerStageSide, attackerUrl: attacker.url, attackerName: attacker.name, hit: 0, totalDamage: 0 })
         playTripleAttackCharge()
         await sleep(820)

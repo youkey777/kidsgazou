@@ -12,7 +12,16 @@ export const RPS_HAND_IMAGES: Record<RpsHand, string> = {
 
 export const KING_KARUBI_FEAST_CHANCE = 0.3
 export const KING_KARUBI_ID = 'mr0pa9fv-ypib1x0'
+export const RUI_PYONPYON_ID = 'mrkd1xgg-e5xdn80'
 export const RUI_PYONPYON_TRIPLE_CHANCE = 0.28
+
+export type CharacterAbilityInfo = {
+  id: string
+  icon: string
+  name: string
+  description: string
+  color: string
+}
 
 export function judgeRps(leftHand: RpsHand, rightHand: RpsHand) {
   if (leftHand === rightHand) return 0
@@ -68,7 +77,48 @@ export function isRuiPyonPyon(character: ImageRecord) {
     .replace(/\.[^.]+$/, '')
     .replace(/[\s_.・ー-]/g, '')
     .replace(/ピョン/g, 'ぴょん')
-  return normalizedName.includes('ルイぴょんぴょん')
+  return character.id === RUI_PYONPYON_ID || normalizedName.includes('ルイぴょんぴょん')
+}
+
+export function characterAbilities(character: ImageRecord): CharacterAbilityInfo[] {
+  const abilities: CharacterAbilityInfo[] = []
+  if (isRuiPyonPyon(character)) {
+    abilities.push({
+      id: 'rui-triple',
+      icon: '🐇',
+      name: '3連続攻撃',
+      description: 'じゃんけんに勝ってサイコロを振ったあと、28%の確率で1回ずつダメージが出る3連続攻撃！',
+      color: 'from-yellow-300 via-orange-400 to-fuchsia-500',
+    })
+  }
+  if (isBlueberryHashinini(character)) {
+    abilities.push({
+      id: 'durian-counter',
+      icon: '🥭',
+      name: 'ドリアン投げ',
+      description: '攻撃を受ける時、50%の確率でドリアンを投げ返してカウンター攻撃！',
+      color: 'from-lime-300 via-green-500 to-emerald-700',
+    })
+  }
+  if (isCaptainFrog(character)) {
+    abilities.push({
+      id: 'captain-dynamite',
+      icon: '🧨',
+      name: 'ダイナマイト',
+      description: '攻撃する時、50%の確率で1〜4個のダイナマイトを仕掛ける！',
+      color: 'from-orange-300 via-red-500 to-zinc-900',
+    })
+  }
+  if (isKingKarubi(character)) {
+    abilities.push({
+      id: 'king-feast',
+      icon: '🍖',
+      name: '王のごちそう',
+      description: '2ターン目から毎ターン、30%の確率で焼きカルビを食べてHPが全回復！',
+      color: 'from-yellow-300 via-amber-500 to-red-700',
+    })
+  }
+  return abilities
 }
 
 export function shouldDurianCounter(defender: ImageRecord) {

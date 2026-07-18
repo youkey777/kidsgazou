@@ -59,7 +59,7 @@ export default function RuiTripleAttackOverlay({ effect }: Props) {
           animate={{ scale: [0.25, 1.14, 1], letterSpacing: ['0.5em', '0.04em', '0.04em'], opacity: 1 }}
           transition={{ duration: 0.48, ease: 'backOut' }}
         >
-          ガシガシガシ！
+          3連続攻撃！
         </motion.p>
         <p className="mt-1 text-sm font-black tracking-[0.12em] text-yellow-200">ルイぴょんぴょん・3連続攻撃(れんぞくこうげき)</p>
       </div>

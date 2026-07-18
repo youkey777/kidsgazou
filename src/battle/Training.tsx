@@ -12,10 +12,13 @@ import {
   attributeMark,
   randomAttribute,
   randomStat,
+  effectiveUltimateName,
   STAT_CHART_LABELS,
   STAT_LABELS,
   type StatKey,
 } from './character-rules'
+import { characterAbilities } from './battle-logic'
+import { knownCharacterName } from './battle-db'
 import { attributeVisual } from './attribute-visuals'
 import XpBar from './effects/XpBar'
 import {
@@ -47,12 +50,6 @@ type BulkCandidate = {
   url: string
   currentName: string
   name: string
-  species: string
-  atk: number
-  def: number
-  spd: number
-  luck: number
-  tech: number
   status: 'waiting' | 'reading' | 'ready' | 'error'
 }
 
@@ -174,18 +171,45 @@ function cleanOcrName(text: string, fallback: string) {
   return scored[0]?.value ?? fallback
 }
 
-function makeRandomCandidate(character: ImageRecord): BulkCandidate {
+async function makeNameOcrImage(url: string) {
+  const image = await new Promise<HTMLImageElement>((resolve, reject) => {
+    const nextImage = new Image()
+    nextImage.crossOrigin = 'anonymous'
+    nextImage.onload = () => resolve(nextImage)
+    nextImage.onerror = () => reject(new Error('Image load failed'))
+    nextImage.src = url
+  })
+  const width = image.naturalWidth
+  const topHeight = Math.max(1, Math.floor(image.naturalHeight * 0.42))
+  const bottomHeight = Math.max(1, Math.floor(image.naturalHeight * 0.36))
+  const canvas = document.createElement('canvas')
+  canvas.width = width
+  canvas.height = topHeight + bottomHeight
+  const context = canvas.getContext('2d')
+  if (!context) throw new Error('Canvas unavailable')
+  context.fillStyle = '#ffffff'
+  context.fillRect(0, 0, canvas.width, canvas.height)
+  context.drawImage(image, 0, 0, width, topHeight, 0, 0, width, topHeight)
+  context.drawImage(
+    image,
+    0,
+    image.naturalHeight - bottomHeight,
+    width,
+    bottomHeight,
+    0,
+    topHeight,
+    width,
+    bottomHeight
+  )
+  return canvas.toDataURL('image/png')
+}
+
+function makeNameCandidate(character: ImageRecord): BulkCandidate {
   return {
     id: character.id,
     url: character.url,
     currentName: character.name,
-    name: character.name,
-    species: randomAttribute(),
-    atk: randomStat(),
-    def: randomStat(),
-    spd: randomStat(),
-    luck: randomStat(),
-    tech: randomStat(),
+    name: knownCharacterName(character.id) ?? character.name,
     status: 'waiting',
   }
 }
@@ -517,6 +541,7 @@ function CharacterCard({
   sharedCrystals: number
   onClick: () => void
 }) {
+  const abilities = characterAbilities(character)
   return (
     <motion.button
       type="button"
@@ -539,6 +564,15 @@ function CharacterCard({
           Lv.{character.level} / 属性(ぞくせい): {attributeMark(character.species)} {character.species}
         </p>
         <p className="text-xs font-black text-cyan-700">共通(きょうつう) 💎 {sharedCrystals}こ</p>
+        {abilities.length > 0 && (
+          <div className="mt-1 flex flex-wrap gap-1">
+            {abilities.map((ability) => (
+              <span key={ability.id} className="rounded-full bg-purple-700 px-2 py-0.5 text-[10px] font-black text-white">
+                {ability.icon} {ability.name}
+              </span>
+            ))}
+          </div>
+        )}
         <XpBar xp={character.xp} compact />
       </div>
     </motion.button>
@@ -755,7 +789,7 @@ function BulkUpdateOverlay({
     >
       <div className="mx-auto max-w-md space-y-3 pb-10">
         <div className="sticky top-0 z-10 rounded-3xl bg-black/65 p-4 shadow-2xl backdrop-blur">
-          <h3 className="text-xl font-black text-yellow-200">キャラ設定(せってい)をまとめて更新(こうしん)</h3>
+          <h3 className="text-xl font-black text-yellow-200">画像(がぞう)から名前(なまえ)を読(よ)み取(と)る</h3>
           <p className="mt-1 text-sm font-bold text-white/80">
             読(よ)み取(と)った名前(なまえ)を確認(かくにん)して、違(ちが)っていたら直(なお)してね。
           </p>
@@ -781,14 +815,9 @@ function BulkUpdateOverlay({
                 </p>
               </div>
             </div>
-            <div className="mt-2 grid grid-cols-3 gap-1 text-center text-xs font-black">
-              <span className="rounded-full bg-yellow-300 px-2 py-1 text-zinc-900">属性(ぞくせい) {attributeMark(candidate.species)} {candidate.species}</span>
-              <span className="rounded-full bg-white/15 px-2 py-1">攻(こう) {candidate.atk}</span>
-              <span className="rounded-full bg-white/15 px-2 py-1">防(ぼう) {candidate.def}</span>
-              <span className="rounded-full bg-white/15 px-2 py-1">速(そく) {candidate.spd}</span>
-              <span className="rounded-full bg-white/15 px-2 py-1">運(うん) {candidate.luck}</span>
-              <span className="rounded-full bg-white/15 px-2 py-1">技(わざ) {candidate.tech}</span>
-            </div>
+            <p className="mt-2 rounded-2xl bg-emerald-300/20 px-3 py-2 text-xs font-black text-emerald-100">
+              名前(なまえ)だけを保存(ほぞん)します。能力(のうりょく)と属性(ぞくせい)は変(か)わりません。
+            </p>
           </div>
         ))}
         <div className="grid grid-cols-2 gap-2">
@@ -821,6 +850,10 @@ export default function Training({ characters, onChanged }: Props) {
   const selected = useMemo(
     () => localCharacters.find((character) => character.id === selectedId) ?? localCharacters[0] ?? null,
     [localCharacters, selectedId]
+  )
+  const selectedAbilities = useMemo(
+    () => (selected ? characterAbilities(selected) : []),
+    [selected]
   )
   const [quiz, setQuiz] = useState<MathQuestion[]>([])
   const [index, setIndex] = useState(0)
@@ -1091,7 +1124,7 @@ export default function Training({ characters, onChanged }: Props) {
   const startBulkUpdate = async () => {
     if (bulkBusy || localCharacters.length === 0) return
     setBulkBusy(true)
-    const initial = localCharacters.map(makeRandomCandidate)
+    const initial = localCharacters.map(makeNameCandidate)
     setBulkCandidates(initial)
 
     let recognize: ((url: string, languages: string) => Promise<{ data: { text: string } }>) | null = null
@@ -1109,8 +1142,18 @@ export default function Training({ characters, onChanged }: Props) {
       )
 
       try {
+        const confirmedName = knownCharacterName(character.id)
+        if (confirmedName) {
+          setBulkCandidates((current) =>
+            (current ?? initial).map((item) =>
+              item.id === character.id ? { ...item, name: confirmedName, status: 'ready' } : item
+            )
+          )
+          continue
+        }
         if (!recognize) throw new Error('OCR unavailable')
-        const result = await recognize(character.url, 'jpn+eng')
+        const ocrImage = await makeNameOcrImage(character.url).catch(() => character.url)
+        const result = await recognize(ocrImage, 'jpn+eng')
         const name = cleanOcrName(result.data.text, character.name)
         setBulkCandidates((current) =>
           (current ?? initial).map((item) =>
@@ -1142,25 +1185,13 @@ export default function Training({ characters, onChanged }: Props) {
         const name = candidate.name.trim() || candidate.currentName
         await updateImageProfile(candidate.id, {
           name,
-          species: candidate.species,
-          atk: candidate.atk,
-          def: candidate.def,
-          spd: candidate.spd,
-          luck: candidate.luck,
-          tech: candidate.tech,
         })
         patchLocalCharacter(candidate.id, {
           name,
-          species: candidate.species,
-          atk: candidate.atk,
-          def: candidate.def,
-          spd: candidate.spd,
-          luck: candidate.luck,
-          tech: candidate.tech,
         })
       }
       setBulkCandidates(null)
-      setMessage('キャラ設定(せってい)をまとめて更新(こうしん)しました！')
+      setMessage('画像(がぞう)から読(よ)み取(と)った名前(なまえ)を保存(ほぞん)しました！')
       await onChanged()
     } catch (error) {
       setMessage((error as Error).message)
@@ -1197,7 +1228,7 @@ export default function Training({ characters, onChanged }: Props) {
                 disabled={bulkBusy || localCharacters.length === 0}
                 className="mt-3 min-h-12 w-full rounded-2xl bg-gradient-to-r from-cyan-300 to-yellow-300 px-3 text-sm font-black text-zinc-950 shadow-lg disabled:opacity-50"
               >
-                全員(ぜんいん)の名前(なまえ)・能力(のうりょく)・属性(ぞくせい)を更新(こうしん)
+                画像(がぞう)から全員(ぜんいん)の名前(なまえ)を読(よ)み取(と)る
               </button>
             </div>
             <div className="grid grid-cols-2 gap-3">
@@ -1262,6 +1293,35 @@ export default function Training({ characters, onChanged }: Props) {
                 <XpBar xp={selected.xp} />
               </div>
             </motion.div>
+
+            <div className="mx-4 mt-4 overflow-hidden rounded-[2rem] bg-black/55 p-4 text-left shadow-2xl ring-2 ring-yellow-200/35 backdrop-blur-md">
+              <div className="flex items-center justify-between gap-2">
+                <h3 className="text-xl font-black text-yellow-200">能力(のうりょく)・技(わざ)</h3>
+                <span className="rounded-full bg-white/15 px-3 py-1 text-xs font-black text-cyan-100">いつでも確認(かくにん)</span>
+              </div>
+              {selectedAbilities.length > 0 ? (
+                <div className="mt-3 space-y-2">
+                  {selectedAbilities.map((ability) => (
+                    <div key={ability.id} className={`rounded-2xl bg-gradient-to-r ${ability.color} p-[2px] shadow-lg`}>
+                      <div className="rounded-[14px] bg-purple-950/90 p-3 text-white">
+                        <p className="text-lg font-black"><span className="mr-2 text-2xl">{ability.icon}</span>{ability.name}</p>
+                        <p className="mt-1 text-sm font-bold leading-relaxed text-white/90">{ability.description}</p>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <p className="mt-3 rounded-2xl bg-white/10 p-3 text-sm font-bold text-white/80">このキャラの固有能力(こゆうのうりょく)は、まだありません。</p>
+              )}
+              <div className="mt-3 grid gap-2 sm:grid-cols-3">
+                {([4, 5, 6] as const).map((die) => (
+                  <div key={die} className="rounded-2xl bg-white/12 p-3 ring-1 ring-white/15">
+                    <p className="text-xs font-black text-cyan-100">🎲 {die} の必殺技(ひっさつわざ)</p>
+                    <p className="mt-1 text-sm font-black text-white">{effectiveUltimateName(selected, die)}</p>
+                  </div>
+                ))}
+              </div>
+            </div>
 
             <div className="order-last mx-4 mt-4 rounded-[2rem] bg-black/42 p-3 shadow-2xl ring-1 ring-white/20 backdrop-blur-md">
               <h3 className="mb-3 text-left text-xl font-black text-yellow-200">

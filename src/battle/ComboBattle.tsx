@@ -454,7 +454,7 @@ export default function ComboBattle({ left, right, onDone, onExit, saveResult = 
     setCinematic(null)
     setActiveSide(winnerSide)
     setSpecialTitle(null)
-    setMessage('能力技(のうりょくわざ) 発動(はつどう)！ ガシガシガシ！')
+    setMessage('能力技(のうりょくわざ)「3連続攻撃(れんぞくこうげき)」発動(はつどう)！')
     setTripleAttackEffect({
       id: effectId,
       side: winnerSide,
