@@ -44,7 +44,12 @@ type StageTheme = {
   subtitle: string
 }
 
-const GACHA_MACHINE = '/battle/20260718_gacha-machine-lever.png'
+const GACHA_MACHINE = '/battle/20260718_gacha-machine-body-v2.png'
+const GACHA_LEVER = '/battle/20260718_gacha-lever-v2.png'
+const GACHA_CAPSULE_CLOSED = '/battle/20260718_gacha-capsule-closed-v2.png'
+const GACHA_CAPSULE_TOP = '/battle/20260718_gacha-capsule-top-v2.png'
+const GACHA_CAPSULE_BOTTOM = '/battle/20260718_gacha-capsule-bottom-v2.png'
+const GACHA_SPARKLE = '/battle/20260718_gacha-sparkle-v2.png'
 const GACHA_BG = '/battle/training-slot-bg.png'
 const sleep = (ms: number) => new Promise((resolve) => window.setTimeout(resolve, ms))
 
@@ -170,24 +175,40 @@ function Capsule({ motionPhase, theme }: { motionPhase: GachaMotion; theme: Stag
   if (!visible) return null
   return (
     <motion.div
-      className="absolute bottom-4 left-1/2 z-30 h-28 w-28 -translate-x-1/2"
+      className="absolute bottom-1 left-[44%] z-30 h-36 w-36 -translate-x-1/2 sm:h-40 sm:w-40"
       initial={{ y: -330, rotate: -300, scale: 0.45, opacity: 0 }}
       animate={{ y: 0, rotate: 0, scale: [0.45, 1.18, 1], opacity: 1 }}
       transition={{ duration: 0.7, ease: 'backOut' }}
+      style={{ filter: `drop-shadow(0 0 22px ${theme.glow})` }}
     >
-      <motion.div
-        className="absolute inset-x-0 top-0 h-14 rounded-t-full border-4 border-yellow-100"
-        style={{ background: `radial-gradient(circle at 35% 20%, white, ${theme.from} 34%, ${theme.to})`, boxShadow: `0 0 30px ${theme.glow}` }}
-        animate={opening ? { y: -46, rotate: -22, x: -18 } : { y: 0 }}
-        transition={{ duration: 0.55, ease: 'backOut' }}
-      />
-      <motion.div
-        className="absolute inset-x-0 bottom-0 h-14 rounded-b-full border-4 border-yellow-100"
-        style={{ background: `linear-gradient(145deg, ${theme.to}, #240750)`, boxShadow: `0 0 30px ${theme.glow}` }}
-        animate={opening ? { y: 46, rotate: 18, x: 14 } : { y: 0 }}
-        transition={{ duration: 0.55, ease: 'backOut' }}
-      />
-      <div className="absolute inset-x-0 top-[50%] z-10 h-3 -translate-y-1/2 bg-yellow-100 shadow-[0_0_16px_white]" />
+      {!opening ? (
+        <motion.img
+          src={GACHA_CAPSULE_CLOSED}
+          alt="閉じたクリスタルカプセル"
+          className="absolute inset-0 h-full w-full object-contain"
+          animate={{ rotate: [0, -5, 5, 0], scale: [1, 1.04, 1] }}
+          transition={{ duration: 0.42, repeat: Infinity }}
+        />
+      ) : (
+        <>
+          <motion.img
+            src={GACHA_CAPSULE_TOP}
+            alt="開いたカプセルの上蓋"
+            className="absolute inset-0 h-full w-full object-contain"
+            initial={{ y: 0, rotate: 0, x: 0, scale: 0.98 }}
+            animate={{ y: -58, rotate: -18, x: -24, scale: 1.03 }}
+            transition={{ duration: 0.58, ease: 'backOut' }}
+          />
+          <motion.img
+            src={GACHA_CAPSULE_BOTTOM}
+            alt="開いたカプセルの下容器"
+            className="absolute inset-0 h-full w-full object-contain"
+            initial={{ y: 0, rotate: 0, x: 0, scale: 0.98 }}
+            animate={{ y: 54, rotate: 12, x: 18, scale: 1.03 }}
+            transition={{ duration: 0.58, ease: 'backOut' }}
+          />
+        </>
+      )}
     </motion.div>
   )
 }
@@ -284,9 +305,12 @@ function GachaCinematic({
       />
 
       {Array.from({ length: particleCount }).map((_, index) => (
-        <motion.span
+        <motion.img
           key={`${stage}-${motionPhase}-particle-${index}`}
-          className="pointer-events-none absolute left-1/2 top-1/2 text-xl"
+          src={GACHA_SPARKLE}
+          alt=""
+          className="pointer-events-none absolute left-1/2 top-1/2 h-7 w-7 object-contain"
+          style={{ filter: `drop-shadow(0 0 10px ${theme.glow}) hue-rotate(${stage === 1 ? 0 : stage === 2 ? 35 : -25}deg)` }}
           initial={{ x: 0, y: 0, scale: 0, opacity: 0 }}
           animate={{
             x: Math.cos((index / particleCount) * Math.PI * 2) * (120 + (index % 6) * 46),
@@ -296,9 +320,7 @@ function GachaCinematic({
             rotate: index * 70,
           }}
           transition={{ duration: 1.5 + (index % 4) * 0.25, repeat: Infinity, delay: index * 0.045 }}
-        >
-          {theme.particle}
-        </motion.span>
+        />
       ))}
 
       <div className="relative z-10 flex h-full w-full max-w-lg flex-col text-center text-white">
@@ -337,49 +359,82 @@ function GachaCinematic({
         </div>
 
         <div className="relative mt-1 min-h-0 flex-1 overflow-hidden rounded-[2rem] border-2 border-white/45 bg-black/35 shadow-[inset_0_0_35px_rgba(255,255,255,.16)]">
-          <motion.img
-            src={GACHA_MACHINE}
-            alt="大きなレバーが付いたクリスタルガチャ"
-            className="absolute inset-0 h-full w-full object-contain p-1"
-            initial={motionPhase === 'machine-enter' ? { y: -600, scale: 0.35, rotate: -8, opacity: 0 } : false}
-            animate={
-              motionPhase === 'machine-enter'
-                ? { y: 0, scale: 1, rotate: 0, opacity: 1 }
-                : motionPhase === 'lever'
-                  ? { scale: [1, 1.05, 0.98, 1], rotate: [0, -1, 1, 0] }
-                  : motionPhase === 'mixing'
-                    ? { x: [0, -9, 10, -8, 7, 0], y: [0, 3, -4, 3, 0], rotate: [0, -1.5, 1.5, -1, 0] }
-                    : { y: [0, -3, 0] }
-            }
-            transition={
-              motionPhase === 'machine-enter'
-                ? { duration: 0.65, ease: 'backOut' }
-                : motionPhase === 'mixing'
-                  ? { duration: 0.35, repeat: Infinity }
-                  : { duration: 1.8, repeat: motionPhase === 'ready' ? Infinity : 0 }
-            }
-          />
-
-          {motionPhase === 'mixing' && Array.from({ length: 9 }).map((_, index) => (
-            <motion.span
-              key={`mix-${index}`}
-              className="absolute left-1/2 top-[35%] h-8 w-8 rounded-full border-2 border-yellow-100"
-              style={{ background: `radial-gradient(circle at 30% 20%, white, ${index % 2 ? theme.from : '#67e8f9'}, ${theme.to})`, boxShadow: `0 0 18px ${theme.glow}` }}
-              animate={{ x: [-90 + index * 20, 80 - index * 14, -70 + index * 12], y: [-55 + (index % 3) * 24, 60 - (index % 4) * 18, -35], rotate: 360 }}
-              transition={{ duration: 0.65 + (index % 3) * 0.16, repeat: Infinity, ease: 'linear' }}
-            />
-          ))}
-
-          {motionPhase === 'lever' && (
+          <div className="absolute left-[3%] top-1/2 aspect-square w-[84%] -translate-y-1/2">
             <motion.div
-              className="absolute right-[5%] top-[37%] h-28 w-8 origin-bottom rounded-full bg-gradient-to-b from-yellow-100 via-yellow-400 to-amber-800 shadow-[0_0_26px_white]"
-              initial={{ rotate: -12 }}
-              animate={{ rotate: [0, 145, 190] }}
-              transition={{ duration: 0.65, ease: 'backInOut' }}
+              className="absolute inset-0 z-10"
+              initial={{ y: -600, scale: 0.35, rotate: -8, opacity: 0 }}
+              animate={
+                motionPhase === 'machine-enter'
+                  ? { y: 0, scale: 1, rotate: 0, opacity: 1 }
+                  : motionPhase === 'lever'
+                    ? { scale: [1, 1.04, 0.98, 1], rotate: [0, -1, 1, 0], opacity: 1 }
+                    : motionPhase === 'mixing'
+                      ? { x: [0, -9, 10, -8, 7, 0], y: [0, 3, -4, 3, 0], rotate: [0, -1.5, 1.5, -1, 0], opacity: 1 }
+                      : { y: [0, -3, 0], scale: 1, rotate: 0, opacity: 1 }
+              }
+              transition={
+                motionPhase === 'machine-enter'
+                  ? { duration: 0.65, ease: 'backOut' }
+                  : motionPhase === 'mixing'
+                    ? { duration: 0.35, repeat: Infinity }
+                    : { duration: 1.8, repeat: motionPhase === 'ready' ? Infinity : 0 }
+              }
             >
-              <div className="absolute -left-3 -top-5 h-14 w-14 rounded-full border-4 border-yellow-100 bg-fuchsia-400 shadow-[0_0_30px_white]" />
+              <img
+                src={GACHA_MACHINE}
+                alt="可動レバー式クリスタルガチャ"
+                className="pointer-events-none absolute inset-0 h-full w-full object-contain p-1"
+                draggable={false}
+              />
+
+              {motionPhase === 'mixing' && Array.from({ length: 9 }).map((_, index) => (
+                <motion.img
+                  key={`mix-${index}`}
+                  src={GACHA_CAPSULE_CLOSED}
+                  alt=""
+                  className="pointer-events-none absolute left-1/2 top-[35%] h-10 w-10 object-contain"
+                  style={{ filter: `drop-shadow(0 0 12px ${theme.glow}) hue-rotate(${index * 24}deg)` }}
+                  animate={{ x: [-90 + index * 20, 80 - index * 14, -70 + index * 12], y: [-55 + (index % 3) * 24, 60 - (index % 4) * 18, -35], rotate: 360 }}
+                  transition={{ duration: 0.65 + (index % 3) * 0.16, repeat: Infinity, ease: 'linear' }}
+                />
+              ))}
+
+              <motion.button
+                type="button"
+                onClick={onSpin}
+                data-testid="gacha-lever-button"
+                aria-label="ガチャの実物レバーを倒す"
+                disabled={motionPhase !== 'ready'}
+                className="absolute z-40 cursor-pointer border-0 bg-transparent p-0 disabled:cursor-default"
+                style={{ left: '55.7%', top: '35.2%', height: '48%', aspectRatio: '2 / 3', transformOrigin: '50% 82.4%' }}
+                animate={
+                  motionPhase === 'lever'
+                    ? { rotate: [0, 35, 76, 118] }
+                    : motionPhase === 'mixing'
+                      ? { rotate: [118, 82, 34, 0] }
+                      : { rotate: 0 }
+                }
+                transition={
+                  motionPhase === 'lever'
+                    ? { duration: 0.68, ease: [0.36, 0, 0.18, 1] }
+                    : motionPhase === 'mixing'
+                      ? { duration: 0.55, ease: 'backOut' }
+                      : { duration: 0.3 }
+                }
+              >
+                {motionPhase === 'ready' && (
+                  <motion.img
+                    src={GACHA_SPARKLE}
+                    alt=""
+                    className="pointer-events-none absolute left-1/2 top-[2%] h-[34%] w-[84%] -translate-x-1/2 object-contain"
+                    animate={{ opacity: [0.25, 1, 0.25], scale: [0.75, 1.16, 0.75], rotate: [0, 16, 0] }}
+                    transition={{ duration: 0.9, repeat: Infinity }}
+                  />
+                )}
+                <img src={GACHA_LEVER} alt="" className="pointer-events-none absolute inset-0 h-full w-full object-contain" draggable={false} />
+              </motion.button>
             </motion.div>
-          )}
+          </div>
 
           <Capsule motionPhase={motionPhase} theme={theme} />
           {motionPhase === 'opening' && (
@@ -388,17 +443,15 @@ function GachaCinematic({
           {motionPhase === 'revealed' && <ResultReveal stage={stage} result={result} theme={theme} />}
 
           {motionPhase === 'ready' && (
-            <motion.button
-              type="button"
-              onClick={onSpin}
-              data-testid="gacha-lever-button"
-              className="absolute bottom-3 right-3 z-50 flex min-h-20 items-center gap-2 rounded-3xl border-4 border-yellow-100 bg-gradient-to-br from-yellow-300 via-orange-400 to-fuchsia-600 px-4 text-left font-black text-purple-950 shadow-[0_0_34px_rgba(250,204,21,.9),0_7px_0_#7e22ce] active:translate-y-1 active:shadow-[0_0_20px_rgba(250,204,21,.8),0_2px_0_#7e22ce]"
-              animate={{ scale: [1, 1.06, 1] }}
-              transition={{ duration: 0.85, repeat: Infinity }}
-            >
-              <span className="text-4xl">👆</span>
-              <span><span className="block text-xs">自分(じぶん)で</span>レバーを回(まわ)す！</span>
-            </motion.button>
+            <div className="pointer-events-none absolute bottom-3 left-1/2 z-50 w-[calc(100%_-_1.5rem)] -translate-x-1/2 sm:w-auto">
+              <motion.div
+                className="rounded-full border border-yellow-100/80 bg-purple-950/85 px-3 py-2 text-center text-xs font-black text-yellow-100 shadow-[0_0_22px_rgba(250,204,21,.7)] sm:whitespace-nowrap sm:px-4 sm:text-sm"
+                animate={{ y: [0, -5, 0], opacity: [0.78, 1, 0.78] }}
+                transition={{ duration: 0.9, repeat: Infinity }}
+              >
+                光(ひか)るレバーを押(お)して倒(たお)そう！
+              </motion.div>
+            </div>
           )}
         </div>
 
@@ -611,6 +664,7 @@ export default function Gacha({ characters, onChanged, onGoTraining }: Props) {
       <AnimatePresence>
         {phase === 'playing' && result && (
           <GachaCinematic
+            key={stage}
             stage={stage}
             motionPhase={motionPhase}
             result={result}
