@@ -137,7 +137,7 @@ export default function StatsEditor({ character, onClose, onSaved }: Props) {
             <h2 className="truncate text-xl font-black text-zinc-900">パラメータ編集(へんしゅう)</h2>
             <p className="truncate text-sm font-bold text-purple-700">{character.name}</p>
             <p className="mt-1 text-sm font-black text-yellow-500">
-              Lv.{character.level} {stars} / 💎 {character.crystals}
+              Lv.{character.level} {stars}
             </p>
             <XpBar xp={character.xp} compact />
           </div>

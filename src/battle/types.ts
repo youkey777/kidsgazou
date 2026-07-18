@@ -3,7 +3,7 @@ export { clampStat } from './character-rules'
 
 export type BattleMode = 'combo' | 'dice' | 'rps' | 'turn' | 'tap' | 'team' | 'online'
 export type PlayableBattleMode = 'combo' | 'team' | 'online'
-export type BattleTab = 'battle' | 'training' | 'attribute' | 'ranking'
+export type BattleTab = 'battle' | 'training' | 'gacha' | 'attribute' | 'ranking'
 export type RpsHand = 'rock' | 'scissors' | 'paper'
 export type TurnAction = 'attack' | 'ultimate' | 'guard' | 'run'
 
@@ -29,7 +29,8 @@ export type DamageEvent = {
   target: 'left' | 'right'
   amount: number
   label?: string
-  scale?: 'normal' | 'counter' | 'ultimate'
+  scale?: 'normal' | 'counter' | 'ultimate' | 'triple'
+  comboIndex?: 1 | 2 | 3
 }
 
 export type FighterState = {

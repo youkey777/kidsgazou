@@ -1,3 +1,4 @@
+import { AnimatePresence } from 'framer-motion'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import type { ImageRecord } from '../db'
 import { saveBattleResult } from './battle-db'
@@ -6,6 +7,7 @@ import BattleStage, { type DynamiteExplosion, type DynamiteMarker } from './effe
 import CinematicAttackOverlay, { type CinematicAttack } from './effects/CinematicAttackOverlay'
 import type { DiceThrowEffectData } from './effects/DiceThrowEffect'
 import type { KingKarubiFeastEffectData } from './effects/KingKarubiFeastEffect'
+import RuiTripleAttackOverlay, { type RuiTripleAttackEffectData } from './effects/RuiTripleAttackOverlay'
 import VictoryOverlay from './effects/VictoryOverlay'
 import {
   RPS_HANDS as HANDS,
@@ -18,6 +20,7 @@ import {
   shouldDurianCounter,
   shouldKingKarubiFeastOnOnlineTurn,
   shouldPlantDynamite,
+  shouldRuiTripleAttack,
   ultimateName,
 } from './battle-logic'
 import {
@@ -33,7 +36,7 @@ import {
   type OnlinePendingDynamite,
   type OnlineSide,
 } from './online-db'
-import { playAttributeHit, playAttributeUltimate, playAttributeWhoosh, playDamage, playDiceLand, playDiceRoll, playDynamiteExplosion, playDynamiteFuse, playDynamiteSet, playKingKarubiFeast, playRpsReveal, playSelect, playUltimate, playWhoosh } from './sounds'
+import { playAttributeHit, playAttributeUltimate, playAttributeWhoosh, playDamage, playDiceLand, playDiceRoll, playDynamiteExplosion, playDynamiteFuse, playDynamiteSet, playKingKarubiFeast, playRpsReveal, playSelect, playTripleAttackCharge, playTripleAttackHit, playUltimate, playWhoosh } from './sounds'
 import { HAND_LABELS, type DamageEvent, type RpsHand, makeEventId, shortBattleName } from './types'
 
 type Props = {
@@ -116,6 +119,7 @@ export default function OnlineBattle({ characters, onDone, onExit }: Props) {
   const [attackEffect, setAttackEffect] = useState<AttackEffectData | null>(null)
   const [diceThrowEffect, setDiceThrowEffect] = useState<DiceThrowEffectData | null>(null)
   const [cinematic, setCinematic] = useState<CinematicAttack | null>(null)
+  const [tripleAttackEffect, setTripleAttackEffect] = useState<RuiTripleAttackEffectData | null>(null)
   const [activeSide, setActiveSide] = useState<StageSide | undefined>()
   const [dodgeSide, setDodgeSide] = useState<StageSide | undefined>()
   const [confusedSide, setConfusedSide] = useState<StageSide | undefined>()
@@ -317,9 +321,22 @@ export default function OnlineBattle({ characters, onDone, onExit }: Props) {
           return
         }
         const die = rollBattleDie()
-        const damage = calculateBattleDamage(attacker, defender, die, currentTargetHp)
+        const tripleAttack = shouldRuiTripleAttack(attacker)
+        const firstLethalHit = Math.ceil(currentTargetHp / 3)
+        const secondLethalHit = Math.ceil((currentTargetHp - firstLethalHit) / 2)
+        const tripleDamages = die === 6
+          ? [firstLethalHit, secondLethalHit, Math.max(1, currentTargetHp - firstLethalHit - secondLethalHit)]
+          : Array.from({ length: 3 }, () => calculateBattleDamage(attacker, defender, die, currentTargetHp))
+        const damage = tripleAttack
+          ? tripleDamages.reduce((total, hitDamage) => total + hitDamage, 0)
+          : calculateBattleDamage(attacker, defender, die, currentTargetHp)
         let nextDynamites = currentDynamites
         const nextSequence: BattleRoom['lastSequence'] = [{ kind: 'dice', side: winnerSide, target, die, damage }]
+        if (tripleAttack) {
+          nextSequence.push(
+            ...tripleDamages.map((hitDamage) => ({ kind: 'ruiTriple', side: winnerSide, target, die, damage: hitDamage }))
+          )
+        }
         if (shouldPlantDynamite(attacker)) {
           const count = rollDynamiteCount()
           nextDynamites = [
@@ -388,6 +405,7 @@ export default function OnlineBattle({ characters, onDone, onExit }: Props) {
     const targetSide: StageSide = room.lastWinnerSide === 'host' ? 'right' : 'left'
     const sequence = room.lastSequence ?? []
     const hasDynamiteSet = sequence.some((step) => step.kind === 'dynamiteSet')
+    const hasRuiTriple = sequence.some((step) => step.kind === 'ruiTriple')
     let cancelled = false
 
     const clearTransient = () => {
@@ -508,7 +526,7 @@ export default function OnlineBattle({ characters, onDone, onExit }: Props) {
         setMessage(`出目(でめ)は ${lastDie}！`)
       }, 760))
       timers.push(window.setTimeout(() => {
-        if (lastDie >= 4) {
+        if (lastDie >= 4 && !hasRuiTriple) {
           setCinematic({
             id: makeEventId(),
             name: ultimateName(attacker, lastDie),
@@ -543,9 +561,51 @@ export default function OnlineBattle({ characters, onDone, onExit }: Props) {
     const targetSide = resultRoom.lastWinnerSide === 'host' ? 'right' : 'left'
     const specialLabel = resultRoom.lastDie === -2 ? 'ドリアン投(な)げ' : resultRoom.lastDie === -4 ? 'ダイナマイト' : null
     const attackAttribute = resultRoom.lastDie === -2 ? 'くさ' : resultRoom.lastDie === -4 ? 'ほのお' : attacker.species
+    const tripleSteps = (resultRoom.lastSequence ?? []).filter((step) => step.kind === 'ruiTriple')
     setDiceThrowEffect(null)
     setCinematic(null)
     setSpecialTitle(null)
+    if (tripleSteps.length === 3) {
+      let cancelled = false
+      const effectId = `${resultRoom.id}-${resultRoom.round}-rui-triple`
+      ;(async () => {
+        setActiveSide(attackerStageSide)
+        setAttackEffect(null)
+        setMessage('能力技(のうりょくわざ) 発動(はつどう)！ ガシガシガシ！')
+        setTripleAttackEffect({ id: effectId, side: attackerStageSide, attackerUrl: attacker.url, attackerName: attacker.name, hit: 0, totalDamage: 0 })
+        playTripleAttackCharge()
+        await sleep(820)
+        let totalDamage = 0
+        for (let index = 0; index < tripleSteps.length; index += 1) {
+          if (cancelled) return
+          const hit = (index + 1) as 1 | 2 | 3
+          const hitDamage = tripleSteps[index].damage ?? 0
+          setHitSide(undefined)
+          setTripleAttackEffect({ id: effectId, side: attackerStageSide, attackerUrl: attacker.url, attackerName: attacker.name, hit, totalDamage })
+          await sleep(115)
+          if (cancelled) return
+          playTripleAttackHit(hit)
+          playAttributeHit(attacker.species)
+          setHitSide(targetSide)
+          setDamageEvents((prev) => [...prev, { id: makeEventId(), target: targetSide, amount: hitDamage, scale: 'triple', comboIndex: hit }])
+          totalDamage += hitDamage
+          setTripleAttackEffect({ id: effectId, side: attackerStageSide, attackerUrl: attacker.url, attackerName: attacker.name, hit, totalDamage })
+          setMessage(`ガシ！ ${hit}ヒット！ ${hitDamage}ダメージ！`)
+          await sleep(hit === 3 ? 650 : 460)
+        }
+        if (cancelled) return
+        setMessage(`3連続攻撃(れんぞくこうげき)！ 合計(ごうけい) ${resultRoom.lastDamage}ダメージ！`)
+        await sleep(620)
+        if (cancelled) return
+        setTripleAttackEffect(null)
+        setActiveSide(undefined)
+        setHitSide(undefined)
+      })()
+      return () => {
+        cancelled = true
+        setTripleAttackEffect(null)
+      }
+    }
     setMessage(specialLabel ? `${specialLabel}！` : resultRoom.lastDie >= 4 ? `${ultimateName(attacker, resultRoom.lastDie)}！` : `${shortBattleName(attacker.name)} の攻撃(こうげき)！`)
     if (resultRoom.lastDie === -2) {
       setConfusedSide(targetSide)
@@ -608,7 +668,7 @@ export default function OnlineBattle({ characters, onDone, onExit }: Props) {
       } catch (e) {
         setError((e as Error).message)
       }
-    }, roomRef.current?.winnerSide ? 2500 : 1800)
+    }, (roomRef.current?.lastSequence ?? []).some((step) => step.kind === 'ruiTriple') ? 3900 : roomRef.current?.winnerSide ? 2500 : 1800)
     return () => window.clearTimeout(timer)
   }, [guest, host, resultKey, side])
 
@@ -687,6 +747,7 @@ export default function OnlineBattle({ characters, onDone, onExit }: Props) {
     setAttackEffect(null)
     setDiceThrowEffect(null)
     setCinematic(null)
+    setTripleAttackEffect(null)
     setActiveSide(undefined)
     setDodgeSide(undefined)
     setConfusedSide(undefined)
@@ -889,6 +950,11 @@ export default function OnlineBattle({ characters, onDone, onExit }: Props) {
             </>
           )}
           <CinematicAttackOverlay attack={cinematic} />
+          <AnimatePresence>
+            {tripleAttackEffect && (
+              <RuiTripleAttackOverlay key={tripleAttackEffect.id} effect={tripleAttackEffect} />
+            )}
+          </AnimatePresence>
         </>
       )}
       {error && <p className="rounded-2xl bg-red-100 p-3 text-sm font-bold text-red-700">{error}</p>}

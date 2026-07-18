@@ -12,6 +12,7 @@ export const RPS_HAND_IMAGES: Record<RpsHand, string> = {
 
 export const KING_KARUBI_FEAST_CHANCE = 0.3
 export const KING_KARUBI_ID = 'mr0pa9fv-ypib1x0'
+export const RUI_PYONPYON_TRIPLE_CHANCE = 0.28
 
 export function judgeRps(leftHand: RpsHand, rightHand: RpsHand) {
   if (leftHand === rightHand) return 0
@@ -62,6 +63,14 @@ export function isKingKarubi(character: ImageRecord) {
   )
 }
 
+export function isRuiPyonPyon(character: ImageRecord) {
+  const normalizedName = character.name
+    .replace(/\.[^.]+$/, '')
+    .replace(/[\s_.・ー-]/g, '')
+    .replace(/ピョン/g, 'ぴょん')
+  return normalizedName.includes('ルイぴょんぴょん')
+}
+
 export function shouldDurianCounter(defender: ImageRecord) {
   return isBlueberryHashinini(defender) && Math.random() < 0.5
 }
@@ -75,6 +84,13 @@ export function shouldKingKarubiFeast(
   random: () => number = Math.random
 ) {
   return isKingKarubi(defender) && random() < KING_KARUBI_FEAST_CHANCE
+}
+
+export function shouldRuiTripleAttack(
+  attacker: ImageRecord,
+  random: () => number = Math.random
+) {
+  return isRuiPyonPyon(attacker) && random() < RUI_PYONPYON_TRIPLE_CHANCE
 }
 
 function seededRandom(seed: string) {

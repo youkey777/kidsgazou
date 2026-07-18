@@ -1,6 +1,8 @@
 import { AnimatePresence, motion } from 'framer-motion'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import {
+  sharedCrystalTotal,
+  spendSharedCrystals,
   updateImageProfile,
   type ImageStatsUpdate,
   type ImageRecord,
@@ -507,10 +509,12 @@ function AttributeChangeOverlay({
 function CharacterCard({
   character,
   selected,
+  sharedCrystals,
   onClick,
 }: {
   character: ImageRecord
   selected: boolean
+  sharedCrystals: number
   onClick: () => void
 }) {
   return (
@@ -534,7 +538,7 @@ function CharacterCard({
         <p className="text-xs font-black text-purple-700">
           Lv.{character.level} / 属性(ぞくせい): {attributeMark(character.species)} {character.species}
         </p>
-        <p className="text-xs font-black text-cyan-700">💎 {character.crystals}こ</p>
+        <p className="text-xs font-black text-cyan-700">共通(きょうつう) 💎 {sharedCrystals}こ</p>
         <XpBar xp={character.xp} compact />
       </div>
     </motion.button>
@@ -842,6 +846,7 @@ export default function Training({ characters, onChanged }: Props) {
 
   const currentQuestion = quiz[index]
   const inQuiz = quiz.length > 0 && index < quiz.length
+  const sharedCrystals = useMemo(() => sharedCrystalTotal(localCharacters), [localCharacters])
 
   useEffect(() => {
     setLocalCharacters(
@@ -987,11 +992,10 @@ export default function Training({ characters, onChanged }: Props) {
   }
 
   const runStatRoulette = async (stat: StatKey) => {
-    if (!selected || selected.crystals <= 0 || busy) return
+    if (!selected || sharedCrystals <= 0 || busy) return
     setBusy(true)
     playRouletteStart()
     const beforeStats = statValues(selected)
-    const nextCrystals = Math.max(0, selected.crystals - 1)
     let nextShowcase: ChangeShowcase | null = null
     setConsumeFlash((value) => value + 1)
     setSlot({ label: `${STAT_LABELS[stat]}を変更(へんこう)中(ちゅう)`, value: null, rolling: true })
@@ -1004,21 +1008,21 @@ export default function Training({ characters, onChanged }: Props) {
     playRouletteStop()
     setSlot({ label: `${STAT_LABELS[stat]}が決定(けってい)！`, value: nextValue, rolling: false })
     try {
-      await updateImageProfile(selected.id, {
-        [stat]: nextValue,
-        crystals: nextCrystals,
-      } as ImageStatsUpdate)
+      const updated = await spendSharedCrystals(
+        localCharacters,
+        1,
+        selected.id,
+        { [stat]: nextValue } as ImageStatsUpdate
+      )
       const afterStats = { ...beforeStats, [stat]: nextValue }
-      const changedCharacter = {
+      const changedCharacter = updated.find((character) => character.id === selected.id) ?? {
         ...selected,
         [stat]: nextValue,
-        crystals: nextCrystals,
       } as ImageRecord
-      crystalFloorRef.current[selected.id] = nextCrystals
-      patchLocalCharacter(selected.id, {
-        [stat]: nextValue,
-        crystals: nextCrystals,
-      } as Partial<ImageRecord>)
+      updated.forEach((character) => {
+        crystalFloorRef.current[character.id] = character.crystals
+      })
+      setLocalCharacters(updated)
       setMessage(`${STAT_LABELS[stat]}が ${nextValue} になった！`)
       await onChanged()
       nextShowcase = {
@@ -1038,11 +1042,10 @@ export default function Training({ characters, onChanged }: Props) {
   }
 
   const runAttributeRoulette = async () => {
-    if (!selected || selected.crystals <= 0 || busy) return
+    if (!selected || sharedCrystals <= 0 || busy) return
     setBusy(true)
     playRouletteStart()
     const beforeAttribute = selected.species
-    const nextCrystals = Math.max(0, selected.crystals - 1)
     let nextShowcase: ChangeShowcase | null = null
     setConsumeFlash((value) => value + 1)
     setSlot({ label: '属性(ぞくせい)を変更(へんこう)中(ちゅう)', value: null, rolling: true })
@@ -1058,23 +1061,20 @@ export default function Training({ characters, onChanged }: Props) {
     playRouletteStop()
     setSlot({ label: '属性(ぞくせい)が決定(けってい)！', value: nextAttribute, rolling: false })
     try {
-      await updateImageProfile(selected.id, {
+      const updated = await spendSharedCrystals(localCharacters, 1, selected.id, {
         species: nextAttribute,
-        crystals: nextCrystals,
       })
-      crystalFloorRef.current[selected.id] = nextCrystals
-      patchLocalCharacter(selected.id, {
-        species: nextAttribute,
-        crystals: nextCrystals,
+      updated.forEach((character) => {
+        crystalFloorRef.current[character.id] = character.crystals
       })
+      setLocalCharacters(updated)
       setMessage(`属性(ぞくせい)が「${nextAttribute}」になった！`)
       await onChanged()
       nextShowcase = {
         type: 'attribute',
-        character: {
+        character: updated.find((character) => character.id === selected.id) ?? {
           ...selected,
           species: nextAttribute,
-          crystals: nextCrystals,
         },
         beforeAttribute,
         afterAttribute: nextAttribute,
@@ -1206,6 +1206,7 @@ export default function Training({ characters, onChanged }: Props) {
                   key={character.id}
                   character={character}
                   selected={selected.id === character.id}
+                  sharedCrystals={sharedCrystals}
                   onClick={() => openCharacter(character)}
                 />
               ))}
@@ -1254,7 +1255,7 @@ export default function Training({ characters, onChanged }: Props) {
                   属性(ぞくせい): {attributeMark(selected.species)} {selected.species}
                 </span>
                 <span className="rounded-full bg-cyan-200 px-3 py-1 text-sm font-black text-purple-950 shadow-[0_0_20px_rgba(34,211,238,.55)]">
-                  所持(しょじ) 💎 {selected.crystals}こ
+                  共通(きょうつう) 💎 {sharedCrystals}こ
                 </span>
               </div>
               <div className="mx-auto max-w-56">
@@ -1316,7 +1317,7 @@ export default function Training({ characters, onChanged }: Props) {
 
             <div className="mx-4 mt-4 rounded-[2rem] bg-white/14 p-3 text-center shadow-2xl ring-1 ring-white/20 backdrop-blur-md">
               <p className="text-sm font-black text-cyan-100">
-                クリスタル: <span className="text-2xl text-white">💎 {selected.crystals}</span> こ
+                共通(きょうつう)ガチャクリスタル: <span className="text-2xl text-white">💎 {sharedCrystals}</span> こ
               </p>
               <button
                 type="button"
@@ -1352,18 +1353,18 @@ export default function Training({ characters, onChanged }: Props) {
                     key={key}
                     label={STAT_LABELS[key]}
                     value={selected[key]}
-                    disabled={busy || selected.crystals <= 0}
+                    disabled={busy || sharedCrystals <= 0}
                     onChange={() => void runStatRoulette(key)}
                   />
                 ))}
                 <StatRow
                   label="属性(ぞくせい)"
                   value={`${attributeMark(selected.species)} ${selected.species}`}
-                  disabled={busy || selected.crystals <= 0}
+                  disabled={busy || sharedCrystals <= 0}
                   onChange={() => void runAttributeRoulette()}
                 />
               </div>
-              {selected.crystals <= 0 && (
+              {sharedCrystals <= 0 && (
                 <p className="mt-3 rounded-2xl bg-white/12 p-3 text-sm font-bold text-white">
                   能力(のうりょく)を変更(へんこう)するには、先(さき)に育(そだ)ててクリスタルを集(あつ)めてね。
                 </p>

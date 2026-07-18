@@ -5,6 +5,7 @@ import AttributeGuide from './AttributeGuide'
 import BattleAffinityOverlay from './BattleAffinityOverlay'
 import CharSelect from './CharSelect'
 import ComboBattle from './ComboBattle'
+import Gacha from './Gacha'
 import OnlineBattle from './OnlineBattle'
 import Ranking from './Ranking'
 import TeamBattle from './TeamBattle'
@@ -135,10 +136,11 @@ export default function BattleHub() {
     <main className="px-3 pb-10 sm:px-4">
       <div className="mx-auto max-w-md">
         <div className="sticky top-0 z-20 -mx-3 bg-gradient-to-br from-violet-800 via-fuchsia-700 to-indigo-900 px-3 pb-3 pt-2 sm:-mx-4 sm:px-4">
-          <div className="grid grid-cols-4 gap-1.5 rounded-2xl bg-white/15 p-1.5">
-            {(['battle', 'training', 'attribute', 'ranking'] as BattleTab[]).map((item) => (
+          <div className="grid grid-cols-5 gap-1 rounded-2xl bg-white/15 p-1.5">
+            {(['training', 'gacha', 'battle', 'attribute', 'ranking'] as BattleTab[]).map((item) => (
               <button
                 key={item}
+                data-testid={item === 'gacha' ? 'gacha-tab-button' : undefined}
                 onClick={() => {
                   playSelect()
                   if (startedKey && item === 'attribute') {
@@ -148,17 +150,32 @@ export default function BattleHub() {
                   setTab(item)
                   setStartedKey(null)
                 }}
-                className={`min-h-12 rounded-xl text-xs font-black sm:text-sm ${
-                  tab === item ? 'bg-white text-purple-800' : 'text-white'
+                className={`relative min-h-14 overflow-hidden rounded-xl px-0.5 text-[10px] font-black leading-tight sm:text-xs ${
+                  tab === item
+                    ? item === 'gacha'
+                      ? 'bg-gradient-to-br from-yellow-200 via-fuchsia-200 to-cyan-200 text-purple-950 shadow-[0_0_18px_rgba(250,204,21,.7)]'
+                      : 'bg-white text-purple-800'
+                    : 'text-white'
                 }`}
               >
-                {item === 'battle'
-                  ? 'バトル'
-                  : item === 'training'
-                    ? '育(そだ)てる'
-                    : item === 'attribute'
-                      ? '属性(ぞくせい)'
-                      : 'ランキング'}
+                {item === 'gacha' && (
+                  <img
+                    src="/battle/20260718_gacha-machine-icon.png"
+                    alt=""
+                    className="mx-auto mb-0.5 h-7 w-7 rounded-lg border border-white/60 object-cover shadow"
+                  />
+                )}
+                <span className="block">
+                  {item === 'battle'
+                    ? 'バトル'
+                    : item === 'training'
+                      ? '育(そだ)てる'
+                      : item === 'gacha'
+                        ? 'ガチャ'
+                        : item === 'attribute'
+                          ? '属性(ぞくせい)'
+                          : 'ランキング'}
+                </span>
               </button>
             ))}
           </div>
@@ -181,6 +198,10 @@ export default function BattleHub() {
         ) : tab === 'training' ? (
           <div className="mt-4">
             <Training characters={characters} onChanged={refresh} />
+          </div>
+        ) : tab === 'gacha' ? (
+          <div className="mt-4">
+            <Gacha characters={characters} onChanged={refresh} onGoTraining={() => setTab('training')} />
           </div>
         ) : (
           <div className="mt-3 space-y-3">

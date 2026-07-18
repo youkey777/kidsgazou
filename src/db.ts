@@ -304,6 +304,57 @@ export async function addCharacterCrystals(
   return next
 }
 
+export function sharedCrystalTotal(characters: ImageRecord[]): number {
+  return characters.reduce(
+    (total, character) => total + Math.max(0, Math.floor(character.crystals)),
+    0
+  )
+}
+
+export async function spendSharedCrystals(
+  characters: ImageRecord[],
+  amount: number,
+  targetId?: string,
+  targetPatch: ImageStatsUpdate = {}
+): Promise<ImageRecord[]> {
+  const cost = Math.max(0, Math.floor(amount))
+  if (sharedCrystalTotal(characters) < cost) {
+    throw new Error('共通(きょうつう)ガチャクリスタルが足(た)りません')
+  }
+  if (targetId && !characters.some((character) => character.id === targetId)) {
+    throw new Error('対象(たいしょう)キャラクターが見(み)つかりません')
+  }
+
+  const patches = new Map<string, ImageStatsUpdate>()
+  let remaining = cost
+  const spendOrder = [...characters].sort((left, right) => {
+    if (left.id === targetId) return -1
+    if (right.id === targetId) return 1
+    return right.crystals - left.crystals || left.id.localeCompare(right.id)
+  })
+
+  for (const character of spendOrder) {
+    if (remaining <= 0) break
+    const spent = Math.min(Math.max(0, Math.floor(character.crystals)), remaining)
+    if (spent <= 0) continue
+    patches.set(character.id, { crystals: character.crystals - spent })
+    remaining -= spent
+  }
+
+  if (targetId && Object.keys(targetPatch).length > 0) {
+    patches.set(targetId, { ...patches.get(targetId), ...targetPatch })
+  }
+
+  await Promise.all(
+    [...patches.entries()].map(([id, patch]) => updateImageStats(id, patch))
+  )
+
+  return characters.map((character) => {
+    const patch = patches.get(character.id)
+    return patch ? { ...character, ...patch } : character
+  })
+}
+
 export async function rerollCharacterStat(
   character: ImageRecord,
   stat: StatKey,

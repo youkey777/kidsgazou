@@ -1,4 +1,4 @@
-import { motion } from 'framer-motion'
+import { AnimatePresence, motion } from 'framer-motion'
 import { useEffect, useRef, useState } from 'react'
 import type { ImageRecord } from '../db'
 import { saveBattleResult } from './battle-db'
@@ -14,6 +14,7 @@ import {
   shouldDurianCounter,
   shouldKingKarubiFeast,
   shouldPlantDynamite,
+  shouldRuiTripleAttack,
   ultimateName,
 } from './battle-logic'
 import type { AttackEffectData } from './effects/AttackFlyEffect'
@@ -22,6 +23,7 @@ import CinematicAttackOverlay, { type CinematicAttack } from './effects/Cinemati
 import { fireBattleConfetti } from './effects/Confetti'
 import type { DiceThrowEffectData } from './effects/DiceThrowEffect'
 import type { KingKarubiFeastEffectData } from './effects/KingKarubiFeastEffect'
+import RuiTripleAttackOverlay, { type RuiTripleAttackEffectData } from './effects/RuiTripleAttackOverlay'
 import VictoryOverlay from './effects/VictoryOverlay'
 import {
   playAttributeHit,
@@ -38,6 +40,8 @@ import {
   playSelect,
   playSlotStop,
   playSlotTick,
+  playTripleAttackCharge,
+  playTripleAttackHit,
   playUltimate,
   playVictory,
   playWhoosh,
@@ -158,6 +162,7 @@ export default function ComboBattle({ left, right, onDone, onExit, saveResult = 
   const dynamitesRef = useRef<PlantedDynamite[]>([])
   const [dynamiteExplosion, setDynamiteExplosion] = useState<DynamiteExplosion | null>(null)
   const [healingEffect, setHealingEffect] = useState<KingKarubiFeastEffectData | null>(null)
+  const [tripleAttackEffect, setTripleAttackEffect] = useState<RuiTripleAttackEffectData | null>(null)
   const [saveMessage, setSaveMessage] = useState<string | null>(null)
   const [victory, setVictory] = useState<{ winner: ImageRecord; outcome: 'win' | 'lose' } | null>(null)
   const cpuPreviewRef = useRef(cpuPreview)
@@ -221,6 +226,7 @@ export default function ComboBattle({ left, right, onDone, onExit, saveResult = 
     setMessage('王(おう)のごちそう！ HPが全回復(ぜんかいふく)！')
     await sleep(1430)
     setHealingEffect(null)
+    setTripleAttackEffect(null)
   }
 
   const resetForNext = async (nextRound: number, delay = 880) => {
@@ -232,6 +238,7 @@ export default function ComboBattle({ left, right, onDone, onExit, saveResult = 
     setAttackEffect(null)
     setDiceThrowEffect(null)
     setCinematic(null)
+    setTripleAttackEffect(null)
     setDodgeSide(undefined)
     setConfusedSide(undefined)
     setHitSide(undefined)
@@ -260,7 +267,8 @@ export default function ComboBattle({ left, right, onDone, onExit, saveResult = 
   const applyDamageToSide = (
     target: Side,
     amount: number,
-    scale: 'normal' | 'counter' | 'ultimate' = 'normal'
+    scale: 'normal' | 'counter' | 'ultimate' | 'triple' = 'normal',
+    comboIndex?: 1 | 2 | 3
   ) => {
     let nextLeftHp = leftHpRef.current
     let nextRightHp = rightHpRef.current
@@ -275,7 +283,7 @@ export default function ComboBattle({ left, right, onDone, onExit, saveResult = 
     }
     setHitSide(target)
     window.setTimeout(() => setHitSide(undefined), scale === 'ultimate' ? 900 : 620)
-    setEvents((prev) => [...prev, { id: makeEventId(), target, amount, scale }])
+    setEvents((prev) => [...prev, { id: makeEventId(), target, amount, scale, comboIndex }])
     return { nextLeftHp, nextRightHp }
   }
 
@@ -427,6 +435,90 @@ export default function ComboBattle({ left, right, onDone, onExit, saveResult = 
     return true
   }
 
+  const performRuiTripleAttack = async (
+    winnerSide: Side,
+    winner: ImageRecord,
+    loser: ImageRecord,
+    die: number
+  ) => {
+    const target: Side = winnerSide === 'left' ? 'right' : 'left'
+    const effectId = makeEventId()
+    const targetHpAtStart = target === 'right' ? rightHpRef.current : leftHpRef.current
+    const firstLethalHit = Math.ceil(targetHpAtStart / 3)
+    const secondLethalHit = Math.ceil((targetHpAtStart - firstLethalHit) / 2)
+    const lethalHits = [firstLethalHit, secondLethalHit, Math.max(1, targetHpAtStart - firstLethalHit - secondLethalHit)]
+    let totalDamage = 0
+
+    setDiceThrowEffect(null)
+    setAttackEffect(null)
+    setCinematic(null)
+    setActiveSide(winnerSide)
+    setSpecialTitle(null)
+    setMessage('能力技(のうりょくわざ) 発動(はつどう)！ ガシガシガシ！')
+    setTripleAttackEffect({
+      id: effectId,
+      side: winnerSide,
+      attackerUrl: winner.url,
+      attackerName: winner.name,
+      hit: 0,
+      totalDamage: 0,
+    })
+    playTripleAttackCharge()
+    await sleep(920)
+
+    for (let index = 0; index < 3; index += 1) {
+      const hit = (index + 1) as 1 | 2 | 3
+      const damage = die === 6 ? lethalHits[index] : calculateDiceDamage(winner, loser, die)
+      setHitSide(undefined)
+      setTripleAttackEffect({
+        id: effectId,
+        side: winnerSide,
+        attackerUrl: winner.url,
+        attackerName: winner.name,
+        hit,
+        totalDamage,
+      })
+      await sleep(115)
+      playTripleAttackHit(hit)
+      playAttributeHit(winner.species)
+      applyDamageToSide(target, damage, 'triple', hit)
+      totalDamage += damage
+      setTripleAttackEffect({
+        id: effectId,
+        side: winnerSide,
+        attackerUrl: winner.url,
+        attackerName: winner.name,
+        hit,
+        totalDamage,
+      })
+      setMessage(`ガシ！ ${hit}ヒット！ ${damage}ダメージ！`)
+      await sleep(hit === 3 ? 680 : 490)
+    }
+
+    setMessage(`3連続攻撃(れんぞくこうげき)！ 合計(ごうけい) ${totalDamage}ダメージ！`)
+    await sleep(920)
+    setTripleAttackEffect(null)
+    setActiveSide(undefined)
+    setHitSide(undefined)
+
+    const nextLeftHp = leftHpRef.current
+    const nextRightHp = rightHpRef.current
+    if (nextLeftHp <= 0 || nextRightHp <= 0) {
+      await finish(nextLeftHp, nextRightHp)
+      busyRef.current = false
+      return
+    }
+
+    const explosionResult = await explodeDueDynamites(round)
+    if (!explosionResult) return
+    if (explosionResult.nextLeftHp <= 0 || explosionResult.nextRightHp <= 0) {
+      await finish(explosionResult.nextLeftHp, explosionResult.nextRightHp)
+      busyRef.current = false
+      return
+    }
+    await resetForNext(round + 1, 520)
+  }
+
   const rollAndAttack = async (winnerSide: Side, winner: ImageRecord, loser: ImageRecord) => {
     const target: Side = winnerSide === 'left' ? 'right' : 'left'
     const throwId = makeEventId()
@@ -449,6 +541,11 @@ export default function ComboBattle({ left, right, onDone, onExit, saveResult = 
     if (countered) return
 
     await placeCaptainDynamites(winnerSide, winner, round)
+
+    if (shouldRuiTripleAttack(winner)) {
+      await performRuiTripleAttack(winnerSide, winner, loser, die)
+      return
+    }
 
     if (die >= 4) {
       const cinematicData = {
@@ -633,6 +730,11 @@ export default function ComboBattle({ left, right, onDone, onExit, saveResult = 
       </section>
 
       <CinematicAttackOverlay attack={cinematic} />
+      <AnimatePresence>
+        {tripleAttackEffect && (
+          <RuiTripleAttackOverlay key={tripleAttackEffect.id} effect={tripleAttackEffect} />
+        )}
+      </AnimatePresence>
       {saveMessage && (
         <p className="fixed inset-x-4 bottom-24 z-[80] mx-auto max-w-md rounded-2xl bg-red-100 p-3 text-sm font-bold text-red-700 shadow-2xl ring-2 ring-red-300">
           {saveMessage}

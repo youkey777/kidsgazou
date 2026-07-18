@@ -405,6 +405,41 @@ export function playCrystal() {
   })
 }
 
+export function playGachaCharge(stage: 1 | 2 | 3) {
+  const base = 230 + stage * 90
+  sweep(base, 1250 + stage * 260, 0.82, 'triangle', 0.085)
+  ;[base, base * 1.5, base * 2].forEach((frequency, index) => {
+    setTimeout(() => tone(frequency, 0.12, 'triangle', 0.07), index * 150)
+  })
+}
+
+export function playGachaDrop() {
+  setTimeout(() => tone(130, 0.18, 'sawtooth', 0.12), 520)
+  setTimeout(() => noiseBurst(0.16, 0.07, 850), 570)
+}
+
+export function playGachaReveal(stage: 1 | 2 | 3) {
+  noiseBurst(0.22, 0.08 + stage * 0.01, 1900 + stage * 380)
+  ;[523, 659, 784, 1046, 1318 + stage * 90].forEach((frequency, index) => {
+    setTimeout(() => tone(frequency, 0.18, index === 4 ? 'square' : 'triangle', 0.085), index * 72)
+  })
+}
+
+export function playTripleAttackCharge() {
+  sweep(180, 1880, 0.68, 'sawtooth', 0.1)
+  setTimeout(() => noiseBurst(0.22, 0.07, 2600), 320)
+  ;[440, 660, 990].forEach((frequency, index) => {
+    setTimeout(() => tone(frequency, 0.1, 'triangle', 0.08), index * 110)
+  })
+}
+
+export function playTripleAttackHit(hit: 1 | 2 | 3) {
+  tone(105 + hit * 18, 0.17, 'sawtooth', 0.15)
+  noiseBurst(0.15 + hit * 0.025, 0.09 + hit * 0.012, 1250 + hit * 420)
+  setTimeout(() => sweep(980 + hit * 180, 180 + hit * 45, 0.18, 'square', 0.085), 45)
+  setTimeout(() => tone(720 + hit * 240, 0.11, 'triangle', 0.08), 105)
+}
+
 export function playLevelUp() {
   ;[523, 659, 784, 1046, 1318].forEach((frequency, index) => {
     setTimeout(() => tone(frequency, 0.16, 'triangle', 0.07), index * 90)
