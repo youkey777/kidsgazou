@@ -13,7 +13,7 @@ export const RPS_HAND_IMAGES: Record<RpsHand, string> = {
 export const KING_KARUBI_FEAST_CHANCE = 0.3
 export const KING_KARUBI_ID = 'mr0pa9fv-ypib1x0'
 export const RUI_PYONPYON_ID = 'mrkd1xgg-e5xdn80'
-export const RUI_PYONPYON_TRIPLE_CHANCE = 0.28
+export const RUI_PYONPYON_TRIPLE_CHANCE = 0.45
 
 export type CharacterAbilityInfo = {
   id: string
@@ -87,7 +87,7 @@ export function characterAbilities(character: ImageRecord): CharacterAbilityInfo
       id: 'rui-triple',
       icon: '🐇',
       name: '3連続攻撃',
-      description: 'じゃんけんに勝ってサイコロを振ったあと、28%の確率で1回ずつダメージが出る3連続攻撃！',
+      description: 'じゃんけんに勝ってサイコロを振ったあと、45%の確率で1回ずつダメージが出る3連続攻撃！',
       color: 'from-yellow-300 via-orange-400 to-fuchsia-500',
     })
   }
